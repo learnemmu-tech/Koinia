@@ -9,6 +9,11 @@ lerna-debug.log*
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
+# Firebase Admin SDK (never commit service account keys)
+firebase-service-account.json
+*-service-account.json
+service-account.json
+
 # Runtime data
 pids
 *.pid
