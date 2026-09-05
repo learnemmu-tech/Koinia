@@ -291,7 +291,7 @@ function PlayerControls() {
     <>
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 border-t border-[#282828] bg-[#121212]",
+          "fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card",
           "animate-in slide-in-from-bottom-full duration-300",
           !engine.isReady && "opacity-95"
         )}
@@ -308,7 +308,7 @@ function PlayerControls() {
             type="button"
             aria-label="Expand player"
             onClick={() => setMobileExpanded(true)}
-            className="shrink-0 rounded-full p-2 text-[#b3b3b3] transition-colors hover:text-white"
+            className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:text-foreground"
           >
             <ChevronUp className="size-5" />
           </button>
@@ -323,9 +323,9 @@ function PlayerControls() {
       </div>
 
       <Drawer open={mobileExpanded} onOpenChange={setMobileExpanded}>
-        <DrawerContent className="border-[#282828] bg-[#121212] px-4 pb-8 pt-2">
+        <DrawerContent className="border-border bg-card px-4 pb-8 pt-2">
           <DrawerTitle className="sr-only">Now playing</DrawerTitle>
-          <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#4d4d4d]" />
+          <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-muted-foreground/40" />
           <div className="flex flex-col items-center gap-5">
             <div className="relative aspect-square w-full max-w-[280px] overflow-hidden rounded-md shadow-2xl">
               {currentSong?.image ?
@@ -339,10 +339,10 @@ function PlayerControls() {
               : <Skeleton className="size-full" />}
             </div>
             <div className="w-full text-center">
-              <p className="line-clamp-2 text-xl font-bold text-white">
+              <p className="line-clamp-2 text-xl font-bold text-foreground">
                 {currentSong?.name ?? "Unknown song"}
               </p>
-              <p className="mt-1 line-clamp-1 text-sm text-[#b3b3b3]">
+              <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
                 {currentSong?.subtitle}
               </p>
             </div>
@@ -360,7 +360,7 @@ function PlayerControls() {
 type Engine = ReturnType<typeof usePlayerEngine>;
 
 const playerIconClass =
-  "text-[#b3b3b3] transition-colors hover:text-white disabled:pointer-events-none disabled:opacity-40";
+  "text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40";
 
 const playerActiveClass = "text-[#1db954] hover:text-[#1db954]";
 
@@ -380,7 +380,7 @@ function SpotifyProgressBar({
     <div className={cn("group/progress w-full", className)}>
       <div className="flex items-center gap-2">
         {showTimes ?
-          <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-[#a7a7a7]">
+          <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
             {timeFormat(engine.pos)}
           </span>
         : null}
@@ -396,13 +396,13 @@ function SpotifyProgressBar({
           }}
           className="flex-1"
         >
-          <SliderTrack className="h-1 cursor-pointer bg-[#4d4d4d] group-hover/progress:h-1.5">
-            <SliderRange className="bg-white" />
+          <SliderTrack className="h-1 cursor-pointer bg-muted-foreground/40 group-hover/progress:h-1.5">
+            <SliderRange className="bg-primary" />
           </SliderTrack>
           <SliderThumb className="size-3 cursor-pointer border-none bg-white opacity-0 transition-opacity group-hover/progress:opacity-100 focus-visible:opacity-100" />
         </Slider>
         {showTimes ?
-          <span className="w-10 shrink-0 text-[11px] tabular-nums text-[#a7a7a7]">
+          <span className="w-10 shrink-0 text-[11px] tabular-nums text-muted-foreground">
             {timeFormat(engine.duration)}
           </span>
         : null}
@@ -426,7 +426,7 @@ function NowPlayingMeta({
     <>
       <div
         className={cn(
-          "relative shrink-0 overflow-hidden rounded-[2px] bg-[#282828]",
+          "relative shrink-0 overflow-hidden rounded-[2px] bg-muted",
           coverSize
         )}
       >
@@ -446,17 +446,17 @@ function NowPlayingMeta({
           <>
             <Link
               href={getHref(song.url, song.type === "song" ? "song" : "episode")}
-              className="line-clamp-1 text-sm font-normal text-white hover:underline"
+              className="line-clamp-1 text-sm font-normal text-foreground hover:underline"
             >
               {song.name}
             </Link>
-            <p className="line-clamp-1 text-xs text-[#b3b3b3]">
+            <p className="line-clamp-1 text-xs text-muted-foreground">
               {song.subtitle}
             </p>
           </>
         : <>
-            <Skeleton className="mb-1.5 h-3.5 w-32 bg-[#282828]" />
-            <Skeleton className="h-3 w-24 bg-[#282828]" />
+            <Skeleton className="mb-1.5 h-3.5 w-32 bg-muted" />
+            <Skeleton className="h-3 w-24 bg-muted" />
           </>
         }
       </div>
@@ -466,7 +466,7 @@ function NowPlayingMeta({
             <Link
               href={getHref(song.url, song.type === "song" ? "song" : "episode")}
               aria-label={`View ${song.name}`}
-              className="hidden shrink-0 text-[#b3b3b3] transition-colors hover:text-white sm:inline-flex"
+              className="hidden shrink-0 text-muted-foreground transition-colors hover:text-foreground sm:inline-flex"
             >
               <CirclePlus className="size-4" />
             </Link>
@@ -502,7 +502,7 @@ function PlayPauseButton({
   const isLarge = size === "lg";
   const iconClass = isLarge ? "size-4" : "size-3.5";
   const buttonClass = cn(
-    "flex shrink-0 items-center justify-center rounded-full bg-white text-black transition-transform hover:scale-105 active:scale-95 disabled:opacity-60",
+    "flex shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-60",
     isLarge ? "size-8" : "size-7"
   );
 
@@ -515,7 +515,7 @@ function PlayPauseButton({
       className={buttonClass}
     >
       {engine.isLoading ?
-        <Loader2 className={cn(iconClass, "animate-spin text-black")} />
+        <Loader2 className={cn(iconClass, "animate-spin text-primary-foreground")} />
       : engine.playing ?
         <Pause className={cn(iconClass, "fill-black")} />
       : <Icons.Play className={cn(iconClass, "translate-x-0.5 fill-black")} />}
@@ -656,8 +656,8 @@ function VolumeControls({
             }
           }}
         >
-          <SliderTrack className="h-1 cursor-pointer bg-[#4d4d4d] group-hover/volume:h-1.5">
-            <SliderRange className="bg-white" />
+          <SliderTrack className="h-1 cursor-pointer bg-muted-foreground/40 group-hover/volume:h-1.5">
+            <SliderRange className="bg-primary" />
           </SliderTrack>
           <SliderThumb className="size-3 cursor-pointer border-none bg-white opacity-0 transition-opacity group-hover/volume:opacity-100 focus-visible:opacity-100" />
         </Slider>

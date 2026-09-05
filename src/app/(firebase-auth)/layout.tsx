@@ -8,8 +8,8 @@ export default function FirebaseAuthLayout({
   children,
 }: FirebaseAuthLayoutProps) {
   return (
-    <div className="dark grid min-h-svh lg:grid-cols-2">
-      <div className="flex flex-col gap-4 bg-zinc-950 p-6 text-white md:p-10">
+    <div className="grid min-h-svh bg-background text-foreground lg:grid-cols-2">
+      <div className="flex flex-col gap-4 bg-background p-6 text-foreground md:p-10">
         <div className="flex justify-center md:justify-start">
           <AuthLogo />
         </div>

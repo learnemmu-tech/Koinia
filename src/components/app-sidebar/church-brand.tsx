@@ -17,7 +17,7 @@ export function ChurchBrand() {
       }}
       className="flex min-w-0 items-center gap-2.5"
     >
-      <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#111111]">
+      <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-card">
         <ImageWithFallback
           src={siteConfig.icon}
           fallback="/images/logo.png"
@@ -29,7 +29,7 @@ export function ChurchBrand() {
           priority
         />
       </div>
-      <span className="truncate text-sm font-semibold text-white">
+      <span className="truncate text-sm font-semibold text-sidebar-foreground">
         {siteConfig.name}
       </span>
     </Link>

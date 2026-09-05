@@ -74,8 +74,9 @@ function SongCoverPlayControl({
       className={cn(
         "absolute bottom-2 right-2 z-20 flex h-10 w-10 items-center justify-center rounded-full",
         "bg-primary text-primary-foreground",
-        "translate-y-1 scale-90 opacity-0 transition-all duration-200 ease-out",
-        "group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100",
+        "translate-y-0 scale-100 opacity-100 transition-all duration-200 ease-out",
+        "hover-hover:translate-y-1 hover-hover:scale-90 hover-hover:opacity-0",
+        "hover-hover:group-hover:translate-y-0 hover-hover:group-hover:scale-100 hover-hover:group-hover:opacity-100",
         "group-focus-within:translate-y-0 group-focus-within:scale-100 group-focus-within:opacity-100",
         "hover:scale-105 active:scale-95",
         "focus-visible:translate-y-0 focus-visible:scale-100 focus-visible:opacity-100",
@@ -118,8 +119,8 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
         "group relative w-full",
         "rounded-lg p-2.5",
         "cursor-pointer transition-all duration-200 ease-out",
-        "hover:-translate-y-0.5 hover:bg-white/[0.08]",
-        "focus-within:bg-white/[0.08]",
+        "hover-hover:hover:-translate-y-0.5 hover-hover:hover:bg-accent",
+        "active:bg-accent focus-within:bg-accent",
         className
       )}
     >
@@ -172,7 +173,7 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
         </h3>
 
         {artistLine ?
-          <p className="mt-0.5 line-clamp-2 text-[13px] font-normal leading-[1.25] text-[#b3b3b3]">
+          <p className="mt-0.5 line-clamp-2 text-[13px] font-normal leading-[1.25] text-muted-foreground">
             {artistLine}
           </p>
         : null}

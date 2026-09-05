@@ -53,31 +53,31 @@ export function DonationCampaignDetailSkeleton() {
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
       <div className="grid gap-8 lg:grid-cols-[11fr_9fr] lg:gap-10">
         <div className="space-y-5">
-          <Skeleton className="h-4 w-32 bg-[#1A1A1A]" />
-          <Skeleton className="h-56 w-full rounded-2xl bg-[#111111] sm:h-64 lg:h-[280px]" />
-          <Skeleton className="h-6 w-36 rounded-full bg-[#1A1A1A]" />
-          <Skeleton className="h-8 w-4/5 max-w-md bg-[#1A1A1A]" />
-          <Skeleton className="h-4 w-full max-w-sm bg-[#1A1A1A]" />
-          <Skeleton className="h-2 w-full rounded-full bg-[#1A1A1A]" />
-          <Skeleton className="h-4 w-28 bg-[#1A1A1A]" />
+          <Skeleton className="h-4 w-32 bg-accent" />
+          <Skeleton className="h-56 w-full rounded-2xl bg-card sm:h-64 lg:h-[280px]" />
+          <Skeleton className="h-6 w-36 rounded-full bg-accent" />
+          <Skeleton className="h-8 w-4/5 max-w-md bg-accent" />
+          <Skeleton className="h-4 w-full max-w-sm bg-accent" />
+          <Skeleton className="h-2 w-full rounded-full bg-accent" />
+          <Skeleton className="h-4 w-28 bg-accent" />
           <div className="space-y-3">
-            <Skeleton className="h-4 w-full bg-[#1A1A1A]" />
-            <Skeleton className="h-4 w-full bg-[#1A1A1A]" />
-            <Skeleton className="h-4 w-3/4 bg-[#1A1A1A]" />
+            <Skeleton className="h-4 w-full bg-accent" />
+            <Skeleton className="h-4 w-full bg-accent" />
+            <Skeleton className="h-4 w-3/4 bg-accent" />
           </div>
         </div>
-        <div className="rounded-2xl border border-[#1F1F1F] bg-[#111111] p-7">
-          <Skeleton className="h-7 w-48 bg-[#1A1A1A]" />
-          <Skeleton className="mt-3 h-0.5 w-12 bg-[#1A1A1A]" />
+        <div className="rounded-2xl border border-border bg-card p-7">
+          <Skeleton className="h-7 w-48 bg-accent" />
+          <Skeleton className="mt-3 h-0.5 w-12 bg-accent" />
           <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-[52px] rounded-[10px] bg-[#1A1A1A]" />
+              <Skeleton key={index} className="h-[52px] rounded-[10px] bg-accent" />
             ))}
           </div>
-          <Skeleton className="mt-5 h-12 w-full rounded-[10px] bg-[#1A1A1A]" />
-          <Skeleton className="mt-4 h-12 w-full rounded-[10px] bg-[#1A1A1A]" />
-          <Skeleton className="mt-4 h-12 w-full rounded-[10px] bg-[#1A1A1A]" />
-          <Skeleton className="mt-6 h-[52px] w-full rounded-[10px] bg-[#1A1A1A]" />
+          <Skeleton className="mt-5 h-12 w-full rounded-[10px] bg-accent" />
+          <Skeleton className="mt-4 h-12 w-full rounded-[10px] bg-accent" />
+          <Skeleton className="mt-4 h-12 w-full rounded-[10px] bg-accent" />
+          <Skeleton className="mt-6 h-[52px] w-full rounded-[10px] bg-accent" />
         </div>
       </div>
     </div>
@@ -97,15 +97,15 @@ export function DonationCampaignDetailClient({
   if (!campaign || campaign.status !== "active") {
     return (
       <div className="mx-auto flex min-h-[320px] w-full max-w-lg flex-col items-center justify-center px-4 py-16 text-center">
-        <h1 className="font-heading text-2xl font-bold text-white">
+        <h1 className="font-heading text-2xl font-bold text-foreground">
           Campaign not found
         </h1>
-        <p className="mt-2 text-sm text-[#6B7280]">
+        <p className="mt-2 text-sm text-muted-foreground">
           This campaign is not available for donations.
         </p>
         <Button
           asChild
-          className="mt-6 h-11 rounded-[10px] bg-white px-6 text-black hover:bg-[#E5E5E5]"
+          className="mt-6 h-11 rounded-[10px] bg-primary px-6 text-primary-foreground hover:bg-primary/90"
         >
           <Link href="/donations">← All Campaigns</Link>
         </Button>
@@ -123,12 +123,12 @@ export function DonationCampaignDetailClient({
         <div className="min-w-0 space-y-5">
           <Link
             href="/donations"
-            className="inline-flex items-center text-sm text-[#6B7280] transition-colors hover:text-white"
+            className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             ← All Campaigns
           </Link>
 
-          <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-[#1F1F1F] sm:h-64 lg:h-[280px]">
+          <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-border sm:h-64 lg:h-[280px]">
             <ImageWithFallback
               src={coverUrl}
               fallback={DEFAULT_SONG_COVER}
@@ -141,28 +141,28 @@ export function DonationCampaignDetailClient({
           </div>
 
           <div>
-            <span className="inline-flex items-center rounded-full border border-[#2A2A2A] bg-[#1A1A1A] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#A1A1A1]">
+            <span className="inline-flex items-center rounded-full border border-border bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
               Active Campaign
             </span>
 
-            <h1 className="mt-3 font-heading text-[26px] font-bold leading-tight text-white">
+            <h1 className="mt-3 font-heading text-[26px] font-bold leading-tight text-foreground">
               {campaign.title}
             </h1>
 
             <div className="mt-4 space-y-2">
-              <p className="text-base font-semibold text-white">
+              <p className="text-base font-semibold text-foreground">
                 {formatDonationAmount(campaign.currentAmount, campaign.currency)}{" "}
                 raised of{" "}
                 {formatDonationAmount(campaign.targetAmount, campaign.currency)}{" "}
                 goal
               </p>
-              <div className="h-2 overflow-hidden rounded-full bg-[#1A1A1A]">
+              <div className="h-2 overflow-hidden rounded-full bg-accent">
                 <div
-                  className="h-full rounded-full bg-white transition-all duration-300"
+                  className="h-full rounded-full bg-foreground transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-sm text-[#6B7280]">{progress}% funded</p>
+              <p className="text-sm text-muted-foreground">{progress}% funded</p>
             </div>
 
             {descriptionParagraphs.length > 0 ?
@@ -170,7 +170,7 @@ export function DonationCampaignDetailClient({
                 {descriptionParagraphs.map((paragraph, index) => (
                   <p
                     key={`${index}-${paragraph.slice(0, 24)}`}
-                    className="text-[15px] leading-[1.75] text-[#A1A1A1]"
+                    className="text-[15px] leading-[1.75] text-muted-foreground"
                   >
                     {paragraph}
                   </p>
@@ -181,15 +181,15 @@ export function DonationCampaignDetailClient({
         </div>
 
         <div className="lg:sticky lg:top-6 lg:self-start">
-          <div className="rounded-2xl border border-[#1F1F1F] bg-[#111111] p-7">
+          <div className="rounded-2xl border border-border bg-card p-7">
             <div className="mb-5">
               <div className="flex items-center gap-2">
                 <span className="text-2xl leading-none" aria-hidden>
                   ❤️
                 </span>
-                <h2 className="text-xl font-bold text-white">Make a Donation</h2>
+                <h2 className="text-xl font-bold text-foreground">Make a Donation</h2>
               </div>
-              <div className="mt-3 h-0.5 w-12 rounded-full bg-white" />
+              <div className="mt-3 h-0.5 w-12 rounded-full bg-foreground" />
             </div>
             <DonateForm campaign={campaign} />
           </div>

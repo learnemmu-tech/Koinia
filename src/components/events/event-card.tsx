@@ -25,7 +25,7 @@ export function EventCard({ event, className }: EventCardProps) {
     <Link
       href={href}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 transition-colors duration-200 hover:border-border/80 hover:bg-card/60",
+        "app-interactive group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40",
         className
       )}
     >

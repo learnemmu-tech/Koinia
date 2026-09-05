@@ -183,7 +183,7 @@ export function WaitingApprovalClient() {
     return (
       <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-12 text-center">
         <div className="animate-in zoom-in-50 fade-in duration-500">
-          <CheckCircle2 className="size-20 text-white" aria-hidden />
+          <CheckCircle2 className="size-20 text-foreground" aria-hidden />
         </div>
         <h1 className="mt-6 font-heading text-2xl font-bold">
           You have been approved!

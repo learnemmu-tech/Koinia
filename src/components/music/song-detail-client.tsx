@@ -148,7 +148,7 @@ export function SongDetailClient({ song }: SongDetailClientProps) {
       </div>
 
       {/* Hero card — matches reference layout */}
-      <article className="overflow-hidden rounded-2xl border border-border/50 bg-[#181818] shadow-sm">
+      <article className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
         <div className="flex flex-col items-center gap-5 px-6 py-8 sm:flex-row sm:items-center sm:gap-6 sm:px-8 sm:py-10">
           {/* Cover */}
           <div className="relative shrink-0">
@@ -172,7 +172,7 @@ export function SongDetailClient({ song }: SongDetailClientProps) {
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/70">
                 Worship Song
               </p>
-              <h1 className="font-heading text-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] font-bold leading-tight text-white">
+              <h1 className="font-heading text-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] font-bold leading-tight text-foreground">
                 {displayTitle}
               </h1>
               {alternateTitle && alternateTitle !== displayTitle ?
@@ -214,7 +214,7 @@ export function SongDetailClient({ song }: SongDetailClientProps) {
                   onClick={handleDownloadLyrics}
                   className={cn(
                     actionBtn,
-                    "bg-white font-semibold text-black shadow-sm hover:bg-white/90"
+                    "bg-primary font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                   )}
                 >
                   {downloadingLyrics ?
@@ -294,7 +294,7 @@ export function SongDetailClient({ song }: SongDetailClientProps) {
       {/* Lyrics */}
       <section id="song-lyrics" className="mt-6 scroll-mt-24">
         {hasLyrics ?
-          <div className="overflow-hidden rounded-2xl border border-border/50 bg-[#181818]">
+          <div className="overflow-hidden rounded-2xl border border-border/50 bg-card">
             <div className="border-b border-border/40 px-6 py-4 sm:px-8">
               <div className="flex items-center gap-2">
                 <Music2 className="h-4 w-4 text-primary" aria-hidden />

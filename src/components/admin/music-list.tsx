@@ -343,7 +343,7 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
                       </span>
                     )}
                     {hasLyrics && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#1A1A1A] px-2 py-0.5 text-[10px] font-medium text-[#A1A1A1]">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                         <FileText className="h-2.5 w-2.5" />
                         Lyrics
                       </span>

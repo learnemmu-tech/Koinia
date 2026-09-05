@@ -31,7 +31,7 @@ const signInSchema = z.object({
 type SignInValues = z.infer<typeof signInSchema>;
 
 const authInputClass =
-  "h-9 py-1.5 text-sm border-zinc-800 bg-zinc-900 text-white placeholder:text-zinc-500";
+  "h-9 py-1.5 text-sm border-input bg-background text-foreground placeholder:text-muted-foreground";
 
 type FirebaseSignInFormProps = React.HTMLAttributes<HTMLDivElement> & {
   callbackUrl?: string;
@@ -125,7 +125,7 @@ export function FirebaseSignInForm({
             <Label htmlFor="password">Password</Label>
             <Link
               href="/forgot-password"
-              className="text-sm text-zinc-400 underline-offset-4 hover:text-white hover:underline"
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
               Forgot your password?
             </Link>
@@ -144,7 +144,7 @@ export function FirebaseSignInForm({
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 my-auto text-zinc-400 hover:text-white"
+              className="absolute inset-y-0 right-3 my-auto text-muted-foreground hover:text-foreground"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ?
@@ -161,7 +161,7 @@ export function FirebaseSignInForm({
 
         <Button
           type="submit"
-          className="w-full bg-white font-semibold text-zinc-950 hover:bg-zinc-200"
+          className="w-full font-semibold"
           disabled={isDisabled}
         >
           {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
@@ -171,16 +171,16 @@ export function FirebaseSignInForm({
 
       <div className="relative text-center text-sm">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-zinc-800" />
+          <span className="w-full border-t border-border" />
         </div>
-        <span className="relative bg-zinc-950 px-2 text-xs uppercase tracking-wider text-zinc-500">
+        <span className="relative bg-background px-2 text-xs uppercase tracking-wider text-muted-foreground">
           Or continue with
         </span>
       </div>
 
       <Button
         variant="outline"
-        className="w-full border-zinc-700 bg-transparent text-white hover:bg-zinc-900 hover:text-white"
+        className="w-full"
         onClick={handleGoogleSignIn}
         disabled={isDisabled}
         type="button"
@@ -191,11 +191,11 @@ export function FirebaseSignInForm({
         Sign in with Google
       </Button>
 
-      <p className="text-center text-sm text-zinc-400">
+      <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link
           href={buildAuthHref("/signup", redirectTo)}
-          className="text-white underline underline-offset-4 hover:text-primary"
+          className="text-foreground underline underline-offset-4 hover:text-primary"
         >
           Sign up
         </Link>

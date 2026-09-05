@@ -65,7 +65,7 @@ function ForgotPasswordForm() {
             placeholder="m@example.com"
             autoComplete="email"
             disabled={isLoading}
-            className="border-zinc-800 bg-zinc-900 text-white placeholder:text-zinc-500"
+            className=""
             {...register("email")}
           />
           {errors.email && (
@@ -75,7 +75,7 @@ function ForgotPasswordForm() {
 
         <Button
           type="submit"
-          className="w-full bg-white font-semibold text-zinc-950 hover:bg-zinc-200"
+          className="w-full font-semibold"
           disabled={isLoading}
         >
           {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
@@ -86,7 +86,7 @@ function ForgotPasswordForm() {
       <Button
         asChild
         variant="ghost"
-        className="text-zinc-400 hover:text-white"
+        className="text-muted-foreground hover:text-foreground"
       >
         <Link href="/signin">
           <ArrowLeft className="mr-2 size-4" />

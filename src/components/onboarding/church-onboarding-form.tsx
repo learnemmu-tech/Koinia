@@ -475,10 +475,10 @@ export function ChurchOnboardingForm() {
           <label
             htmlFor="logo-upload"
             className={cn(
-              "relative flex size-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/[0.04] transition-colors",
+              "relative flex size-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border bg-accent transition-colors",
               loading
                 ? "cursor-not-allowed opacity-60"
-                : "hover:border-primary/40 hover:bg-white/[0.07]"
+                : "hover:border-primary/40 hover:bg-accent"
             )}
           >
             {logoPreview ?

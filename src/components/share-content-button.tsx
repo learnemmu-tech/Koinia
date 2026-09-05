@@ -89,12 +89,12 @@ export function ShareContentButton({
 
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer gap-2">
-          {copied ? <Check className="size-4 text-white" /> : <Link2 className="size-4" />}
+          {copied ? <Check className="size-4 text-foreground" /> : <Link2 className="size-4" />}
           {copied ? "Copied!" : "Copy link"}
         </DropdownMenuItem>
 
         <DropdownMenuItem onClick={handleWhatsApp} className="cursor-pointer gap-2">
-          <MessageCircle className="size-4 text-[#A1A1A1]" />
+          <MessageCircle className="size-4 text-muted-foreground" />
           Share on WhatsApp
         </DropdownMenuItem>
 

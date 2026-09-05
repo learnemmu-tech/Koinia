@@ -130,7 +130,7 @@ export function SidebarNavSections({
             )}
           >
             {section.label && !isCollapsed ?
-              <SidebarGroupLabel className="mb-1.5 h-auto px-3 py-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6B7280]">
+              <SidebarGroupLabel className="mb-1.5 h-auto px-3 py-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 {section.label}
               </SidebarGroupLabel>
             : null}
@@ -149,15 +149,15 @@ export function SidebarNavSections({
                         isCollapsed ? collapsedNavLinkClass : expandedNavLinkClass,
                         isActive ?
                           isCollapsed ?
-                            "bg-[#1A1A1A] font-medium text-white"
-                          : "border-l-2 border-white bg-[#1A1A1A] pl-[10px] font-medium text-white"
+                            "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                          : "border-l-2 border-sidebar-primary bg-sidebar-accent pl-[10px] font-medium text-sidebar-accent-foreground"
                         : isCollapsed ?
-                          "text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white"
-                        : "border-l-2 border-transparent text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white",
+                          "text-muted-foreground hover-hover:hover:bg-sidebar-accent hover-hover:hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground"
+                        : "border-l-2 border-transparent text-muted-foreground hover-hover:hover:bg-sidebar-accent hover-hover:hover:text-sidebar-accent-foreground active:bg-sidebar-accent",
                         isCollapsed ?
                           "[&>svg]:size-[22px] [&>svg]:shrink-0"
                         : "[&>svg]:size-4 [&>svg]:shrink-0",
-                        isActive ? "[&>svg]:text-white" : "[&>svg]:text-[#A1A1A1]"
+                        isActive ? "[&>svg]:text-sidebar-accent-foreground" : "[&>svg]:text-muted-foreground"
                       )}
                     >
                       <Icon />

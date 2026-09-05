@@ -28,7 +28,7 @@ import { formatRelativeTime } from "@/lib/format-relative-time";
 import { cn } from "@/lib/utils";
 
 const footerIconClass =
-  "relative flex size-7 shrink-0 items-center justify-center rounded-md p-1.5 text-[#6B7280] transition-colors hover:bg-[#1A1A1A] hover:text-white";
+  "relative flex size-7 shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover-hover:hover:bg-accent hover-hover:hover:text-foreground active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 type SidebarFooterNotificationsProps = {
   userId: string;
@@ -114,7 +114,7 @@ export function SidebarFooterNotifications({
           {unreadCount > 0 ?
             <button
               type="button"
-              className="text-xs text-[#A1A1A1] hover:text-white"
+              className="text-xs text-muted-foreground hover:text-foreground"
               onClick={handleMarkAllRead}
             >
               Mark all read
@@ -141,12 +141,12 @@ export function SidebarFooterNotifications({
                   key={notification.id}
                   className={cn(
                     "cursor-pointer items-start gap-3 rounded-none px-3 py-3",
-                    isUnread && "bg-[#1A1A1A]"
+                    isUnread && "bg-accent"
                   )}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   {notification.image ?
-                    <div className="relative size-10 shrink-0 overflow-hidden rounded-md border border-[#2A2A2A]">
+                    <div className="relative size-10 shrink-0 overflow-hidden rounded-md border border-border">
                       <ImageWithFallback
                         src={notification.image}
                         fallback={DEFAULT_SONG_COVER}
@@ -157,20 +157,20 @@ export function SidebarFooterNotifications({
                         className="size-full object-cover"
                       />
                     </div>
-                  : <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-white">
+                  : <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-foreground">
                       <Bell className="size-4" />
                     </div>}
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    <p className="text-xs font-medium text-[#A1A1A1]">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {notification.title}
                     </p>
-                    <p className="line-clamp-1 text-sm font-semibold leading-snug text-white">
+                    <p className="line-clamp-1 text-sm font-semibold leading-snug text-foreground">
                       {notification.contentTitle}
                     </p>
-                    <p className="line-clamp-1 text-xs text-[#6B7280]">
+                    <p className="line-clamp-1 text-xs text-muted-foreground">
                       {notification.message}
                     </p>
-                    <p className="text-[11px] text-[#6B7280]">
+                    <p className="text-[11px] text-muted-foreground">
                       {formatRelativeTime(notification.createdAt)}
                     </p>
                   </div>

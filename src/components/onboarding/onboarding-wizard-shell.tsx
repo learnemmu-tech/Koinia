@@ -41,7 +41,7 @@ export function OnboardingWizardShell({
         className={cn(
           "mt-8",
           variant === "form" &&
-            "rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-8"
+            "rounded-2xl border border-border bg-card p-6 sm:p-8"
         )}
       >
         {children}

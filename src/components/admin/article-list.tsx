@@ -140,7 +140,7 @@ export function ArticleList({
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
                         article.isPublished
-                          ? "bg-[#1A1A1A] text-[#A1A1A1]"
+                          ? "bg-accent text-muted-foreground"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >

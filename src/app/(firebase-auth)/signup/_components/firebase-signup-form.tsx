@@ -43,7 +43,7 @@ const signUpSchema = z.object({
 type SignUpValues = z.infer<typeof signUpSchema>;
 
 const authInputClass =
-  "h-9 py-1.5 text-sm border-zinc-800 bg-zinc-900 text-white placeholder:text-zinc-500";
+  "h-9 py-1.5 text-sm border-input bg-background text-foreground placeholder:text-muted-foreground";
 
 type FirebaseSignUpFormProps = React.HTMLAttributes<HTMLDivElement> & {
   callbackUrl?: string;
@@ -123,7 +123,7 @@ export function FirebaseSignUpForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col gap-2 text-center md:text-left">
         <h1 className="text-2xl font-bold tracking-tight">Create an account</h1>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           Join the {siteConfig.name} community
         </p>
       </div>
@@ -200,7 +200,7 @@ export function FirebaseSignUpForm({
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 my-auto text-zinc-400 hover:text-white"
+              className="absolute inset-y-0 right-3 my-auto text-muted-foreground hover:text-foreground"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ?
@@ -217,7 +217,7 @@ export function FirebaseSignUpForm({
 
         <Button
           type="submit"
-          className="w-full bg-white font-semibold text-zinc-950 hover:bg-zinc-200"
+          className="w-full font-semibold"
           disabled={isDisabled}
         >
           {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
@@ -227,16 +227,16 @@ export function FirebaseSignUpForm({
 
       <div className="relative text-center text-sm">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-zinc-800" />
+          <span className="w-full border-t border-border" />
         </div>
-        <span className="relative bg-zinc-950 px-2 text-xs uppercase tracking-wider text-zinc-500">
+        <span className="relative bg-background px-2 text-xs uppercase tracking-wider text-muted-foreground">
           Or join with
         </span>
       </div>
 
       <Button
         variant="outline"
-        className="w-full border-zinc-700 bg-transparent text-white hover:bg-zinc-900 hover:text-white"
+        className="w-full"
         onClick={handleGoogleSignUp}
         disabled={isDisabled}
         type="button"
@@ -247,11 +247,11 @@ export function FirebaseSignUpForm({
         Sign up with Google
       </Button>
 
-      <p className="text-center text-sm text-zinc-400">
+      <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
           href={buildAuthHref("/signin", redirectTo)}
-          className="text-white underline underline-offset-4 hover:text-primary"
+          className="text-foreground underline underline-offset-4 hover:text-primary"
         >
           Sign in
         </Link>

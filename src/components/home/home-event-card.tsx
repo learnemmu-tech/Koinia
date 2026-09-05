@@ -36,7 +36,7 @@ export function HomeEventCard({ event }: HomeEventCardProps) {
   return (
     <Link
       href={href}
-      className="group flex h-full min-w-0 w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 transition-all duration-200 hover:-translate-y-1 hover:border-border/80 hover:bg-card/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="app-interactive app-interactive-lift group flex h-full min-w-0 w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
         <ImageWithFallback
@@ -49,10 +49,10 @@ export function HomeEventCard({ event }: HomeEventCardProps) {
         />
         {month && day ?
           <div className="absolute left-3 top-3 z-10 flex min-w-10 flex-col items-center rounded-md bg-background/85 px-1.5 py-1 backdrop-blur-sm">
-            <span className="text-[9px] font-semibold tracking-[0.12em] text-[#6B7280]">
+            <span className="text-[9px] font-semibold tracking-[0.12em] text-muted-foreground">
               {month}
             </span>
-            <span className="font-heading text-sm font-semibold leading-none text-white">
+            <span className="font-heading text-sm font-semibold leading-none text-foreground">
               {day}
             </span>
           </div>

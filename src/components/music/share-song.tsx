@@ -23,7 +23,7 @@ type ShareSongButtonProps = {
 };
 
 const secondaryActionClass =
-  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-white/20 bg-transparent px-3 text-xs font-medium text-white hover:border-white hover:bg-white/10 sm:px-3.5 sm:text-sm";
+  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border bg-transparent px-3 text-xs font-medium text-foreground hover:border-foreground/40 hover:bg-accent sm:px-3.5 sm:text-sm";
 
 export function ShareSongButton({
   songTitle,
@@ -103,7 +103,7 @@ export function ShareSongButton({
           onClick={handleCopyLink}
           className="flex items-center gap-2 cursor-pointer"
         >
-          {copied ? <Check className="size-4 text-white" /> : <Link2 className="size-4" />}
+          {copied ? <Check className="size-4 text-foreground" /> : <Link2 className="size-4" />}
           {copied ? "Copied!" : "Copy link"}
         </DropdownMenuItem>
 
@@ -111,7 +111,7 @@ export function ShareSongButton({
           onClick={handleWhatsApp}
           className="flex items-center gap-2 cursor-pointer"
         >
-          <MessageCircle className="size-4 text-[#A1A1A1]" />
+          <MessageCircle className="size-4 text-muted-foreground" />
           Share on WhatsApp
         </DropdownMenuItem>
 

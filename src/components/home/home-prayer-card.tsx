@@ -19,23 +19,23 @@ export function HomePrayerCard({ request }: HomePrayerCardProps) {
   const excerpt = request.request.replace(/\s+/g, " ").trim();
 
   return (
-    <article className="flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-3.5 transition-colors duration-200 hover:border-border/80 hover:bg-card/60">
+    <article className="app-interactive flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-3.5">
       <ProtectedContentLink
         href={href}
         className="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6B7280]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           {getPrayerCategoryLabel(request.category)}
         </p>
-        <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white">
+        <h3 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-snug text-foreground">
           {request.title}
         </h3>
         {excerpt ?
-          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#A1A1A1]">
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
             {excerpt}
           </p>
         : null}
-        <p className="mt-2 text-xs text-[#6B7280]">{displayName}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{displayName}</p>
       </ProtectedContentLink>
 
       <div

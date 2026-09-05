@@ -44,6 +44,11 @@
     --sidebar-border: 280 35% 88%;
     --sidebar-ring: 282 30% 52%;
 
+    --text-secondary: 280 12% 42%;
+    --border-muted: 280 35% 88%;
+    --card-hover: 280 40% 93%;
+    --card-hover-border: 280 30% 82%;
+
     --radius: 0.5rem;
 
     /* Fluid typography scale */
@@ -98,6 +103,8 @@
 
     --text-secondary: 0 0% 63%;
     --border-muted: 0 0% 16%;
+    --card-hover: 0 0% 10%;
+    --card-hover-border: 0 0% 16%;
   }
 }
 
@@ -194,6 +201,11 @@
   --sidebar-accent-foreground: 0 0% 100%;
   --sidebar-border: 0 0% 12%;
   --sidebar-ring: 0 0% 100%;
+
+  --text-secondary: 0 0% 63%;
+  --border-muted: 0 0% 16%;
+  --card-hover: 0 0% 10%;
+  --card-hover-border: 0 0% 16%;
 }
 
 @layer utilities {
@@ -220,12 +232,44 @@
     border-radius: 9999px;
   }
 
-  .dark .app-card {
-    @apply rounded-[10px] border border-border bg-card transition-all duration-150;
+  .app-card {
+    @apply rounded-[10px] border border-border bg-card text-card-foreground transition-all duration-150 ease-out;
   }
 
-  .dark .app-card:hover {
-    background-color: #1a1a1a;
-    border-color: #2a2a2a;
+  .app-interactive {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .app-interactive:active {
+    background-color: hsl(var(--card-hover));
+    border-color: hsl(var(--card-hover-border));
+  }
+
+  .app-interactive:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  @media (hover: hover) {
+    .app-card:hover,
+    .app-interactive:hover {
+      background-color: hsl(var(--card-hover));
+      border-color: hsl(var(--card-hover-border));
+    }
+
+    .app-interactive-lift:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-card,
+    .app-interactive,
+    .app-interactive-lift {
+      transition: none;
+    }
+
+    .app-interactive-lift:hover {
+      transform: none;
+    }
   }
 }

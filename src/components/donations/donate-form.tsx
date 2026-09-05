@@ -49,9 +49,9 @@ type CheckoutResponse = {
 };
 
 const fieldClassName =
-  "h-12 rounded-[10px] border border-[#2A2A2A] bg-[#1A1A1A] text-base text-white shadow-none transition-colors placeholder:text-[#6B7280] focus-visible:border-[#A1A1A1] focus-visible:ring-white/20";
+  "h-12 rounded-[10px] border border-border bg-background text-base text-foreground shadow-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring";
 
-const labelClassName = "text-sm font-medium text-[#A1A1A1]";
+const labelClassName = "text-sm font-medium text-muted-foreground";
 
 export function DonateForm({ campaign }: DonateFormProps) {
   const [processing, setProcessing] = useState(false);
@@ -221,8 +221,8 @@ export function DonateForm({ campaign }: DonateFormProps) {
                   className={cn(
                     "flex h-[52px] items-center justify-center rounded-[10px] border text-base font-bold transition-all duration-200",
                     isSelected ?
-                      "border-white bg-white text-black"
-                    : "border-[#2A2A2A] bg-[#1A1A1A] text-white hover:border-[#A1A1A1] hover:bg-[#111111]"
+                      "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-accent text-foreground hover:border-border hover:bg-card"
                   )}
                 >
                   {formatDonationAmount(amount, campaign.currency)}
@@ -240,7 +240,7 @@ export function DonateForm({ campaign }: DonateFormProps) {
               <FormLabel className={labelClassName}>Or enter custom amount</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-[#6B7280]">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-muted-foreground">
                     {currencyPrefix}
                   </span>
                   <Input
@@ -313,13 +313,13 @@ export function DonateForm({ campaign }: DonateFormProps) {
               <FormControl>
                 <input
                   type="checkbox"
-                  className="size-4 rounded border border-[#2A2A2A] accent-white"
+                  className="size-4 rounded border border-border accent-white"
                   checked={field.value}
                   disabled={processing}
                   onChange={(event) => field.onChange(event.target.checked)}
                 />
               </FormControl>
-              <FormLabel className="text-sm font-normal text-[#6B7280]">
+              <FormLabel className="text-sm font-normal text-muted-foreground">
                 Donate anonymously
               </FormLabel>
             </FormItem>
@@ -329,7 +329,7 @@ export function DonateForm({ campaign }: DonateFormProps) {
         <button
           type="submit"
           disabled={processing}
-          className="flex h-[52px] w-full items-center justify-center rounded-[10px] bg-white text-base font-bold text-black transition-all duration-200 hover:bg-[#E5E5E5] disabled:cursor-not-allowed disabled:opacity-70"
+          className="flex h-[52px] w-full items-center justify-center rounded-[10px] bg-primary text-base font-bold text-primary-foreground transition-all duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {processing ?
             <>
@@ -339,7 +339,7 @@ export function DonateForm({ campaign }: DonateFormProps) {
           : `Donate ${formatDonationAmount(buttonAmount, campaign.currency)} →`}
         </button>
 
-        <p className="flex items-center justify-center gap-1.5 text-xs text-[#6B7280]">
+        <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
           <Lock className="size-3.5" aria-hidden />
           Secure donation
         </p>

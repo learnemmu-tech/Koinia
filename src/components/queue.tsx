@@ -60,7 +60,7 @@ export function Queue({ triggerClassName }: QueueProps = {}) {
           type="button"
           aria-label="Queue"
           className={cn(
-            "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[#b3b3b3] transition-colors hover:text-white",
+            "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground",
             triggerClassName
           )}
         >

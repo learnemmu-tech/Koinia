@@ -36,7 +36,7 @@ export default async function AdminLayout({
               className="h-8 w-auto object-contain"
             />
             <div className="hidden xl:flex xl:flex-col">
-              <span className="font-heading text-base font-semibold text-white">
+              <span className="font-heading text-base font-semibold text-foreground">
                 {siteConfig.name}
               </span>
               <span className="text-xs text-muted-foreground">Admin Panel</span>

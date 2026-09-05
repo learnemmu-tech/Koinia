@@ -51,7 +51,7 @@ export function WorkspaceTypeSelector({
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               selected
                 ? "border-primary bg-primary/[0.08]"
-                : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
+                : "border-border bg-card hover-hover:hover:border-border hover-hover:hover:bg-accent active:bg-accent"
             )}
           >
             <span

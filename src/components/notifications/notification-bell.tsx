@@ -117,7 +117,7 @@ export function NotificationBell({
         {variant === "sidebar" ?
           <button
             type="button"
-            className="flex h-[34px] w-full items-center gap-2 rounded-md border-l-2 border-transparent px-4 py-1.5 text-sm text-[#A1A1A1] transition-colors duration-150 hover:bg-[#1A1A1A] hover:text-white"
+            className="flex h-[34px] w-full items-center gap-2 rounded-md border-l-2 border-transparent px-4 py-1.5 text-sm text-muted-foreground transition-colors duration-150 hover-hover:hover:bg-accent hover-hover:hover:text-foreground active:bg-accent"
           >
             <span className="relative inline-flex">
               <Bell className="size-4 shrink-0" />

@@ -99,7 +99,7 @@ export function PrayerWallCard({
         </ProtectedContentLink>
       : contentBlock}
 
-      <div className="my-3 h-px bg-white/[0.08]" aria-hidden />
+      <div className="my-3 h-px bg-border" aria-hidden />
 
       <div
         className="mt-auto flex items-center justify-between gap-3"
@@ -138,7 +138,7 @@ export function PrayerWallCardSkeleton() {
         <div className="h-3.5 w-full animate-pulse rounded bg-muted" />
         <div className="h-3.5 w-10/12 animate-pulse rounded bg-muted" />
       </div>
-      <div className="my-3 h-px bg-white/[0.08]" />
+      <div className="my-3 h-px bg-border" />
       <div className="mt-auto flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="size-7 animate-pulse rounded-full bg-muted" />

@@ -60,7 +60,8 @@ const config = {
   			},
   			card: {
   				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
+  				foreground: 'hsl(var(--card-foreground))',
+  				hover: 'hsl(var(--card-hover))'
   			},
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
@@ -143,7 +144,17 @@ const config = {
   		},
   	}
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [
+    tailwindcssAnimate,
+    function hoverMediaVariants({
+      addVariant,
+    }: {
+      addVariant: (name: string, definition: string) => void;
+    }) {
+      addVariant("hover-hover", "@media (hover: hover)");
+      addVariant("hover-none", "@media (hover: none)");
+    },
+  ],
 } satisfies Config;
 
 export default config;

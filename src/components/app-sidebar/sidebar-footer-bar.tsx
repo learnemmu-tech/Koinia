@@ -23,7 +23,7 @@ import { AccountMenuItems } from "./account-menu-items";
 import { SidebarFooterNotifications } from "./sidebar-footer-notifications";
 
 const footerIconClass =
-  "flex size-7 shrink-0 items-center justify-center rounded-md p-1.5 text-[#6B7280] transition-colors hover:bg-[#1A1A1A] hover:text-white";
+  "flex size-7 shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover-hover:hover:bg-accent hover-hover:hover:text-foreground active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function getInitials(authUser: AuthUser, profile: FirestoreUser | null): string {
   if (profile?.firstName && profile?.lastName) {
@@ -78,15 +78,15 @@ export function SidebarFooterBar() {
     return (
       <div
         className={cn(
-          "border-t border-[#1F1F1F] bg-transparent",
+          "border-t border-border bg-transparent",
           isCollapsed ?
             "flex flex-col items-center gap-1 px-1 py-2"
           : "flex h-12 items-center gap-2 px-3 py-2.5"
         )}
       >
-        <div className="size-7 animate-pulse rounded-full bg-[#1A1A1A]" />
+        <div className="size-7 animate-pulse rounded-full bg-accent" />
         {!isCollapsed ?
-          <div className="h-3.5 w-24 animate-pulse rounded bg-[#1A1A1A]" />
+          <div className="h-3.5 w-24 animate-pulse rounded bg-accent" />
         : null}
       </div>
     );
@@ -96,7 +96,7 @@ export function SidebarFooterBar() {
     return (
       <div
         className={cn(
-          "border-t border-[#1F1F1F]",
+          "border-t border-border",
           isCollapsed ?
             "flex flex-col items-center px-1 py-2"
           : "flex h-10 items-center px-2.5"
@@ -105,7 +105,7 @@ export function SidebarFooterBar() {
         <Link
           href="/signin"
           className={cn(
-            "inline-flex items-center rounded-md text-[13px] font-medium text-[#A1A1A1] transition-colors hover:bg-[#1A1A1A] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "inline-flex items-center rounded-md text-[13px] font-medium text-muted-foreground transition-colors hover-hover:hover:bg-accent hover-hover:hover:text-foreground active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             isCollapsed ? "size-9 justify-center" : "h-9 gap-2 px-2.5"
           )}
         >
@@ -127,15 +127,15 @@ export function SidebarFooterBar() {
 
   if (isCollapsed) {
     return (
-      <div className="flex shrink-0 flex-col items-center gap-1 border-t border-[#1F1F1F] bg-transparent px-1 py-2">
+      <div className="flex shrink-0 flex-col items-center gap-1 border-t border-border bg-transparent px-1 py-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               aria-label="Open account menu"
-              className="flex size-7 items-center justify-center rounded-md outline-none hover:bg-[#1A1A1A]"
+              className="flex size-7 items-center justify-center rounded-md outline-none hover:bg-accent"
             >
-              <Avatar className="size-7 shrink-0 rounded-full border border-[#1F1F1F]">
+              <Avatar className="size-7 shrink-0 rounded-full border border-border">
                 {authUser.photoURL ?
                   <AvatarImage
                     src={authUser.photoURL}
@@ -143,7 +143,7 @@ export function SidebarFooterBar() {
                     referrerPolicy="no-referrer"
                   />
                 : null}
-                <AvatarFallback className="rounded-full bg-[#1A1A1A] text-[11px] font-semibold text-white">
+                <AvatarFallback className="rounded-full bg-accent text-[11px] font-semibold text-foreground">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -178,14 +178,14 @@ export function SidebarFooterBar() {
   }
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-[#1F1F1F] bg-transparent px-3 py-2.5">
+    <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-border bg-transparent px-3 py-2.5">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
           >
-            <Avatar className="size-7 shrink-0 rounded-full border border-[#1F1F1F]">
+            <Avatar className="size-7 shrink-0 rounded-full border border-border">
               {authUser.photoURL ?
                 <AvatarImage
                   src={authUser.photoURL}
@@ -193,14 +193,14 @@ export function SidebarFooterBar() {
                   referrerPolicy="no-referrer"
                 />
               : null}
-              <AvatarFallback className="rounded-full bg-[#1A1A1A] text-[11px] font-semibold text-white">
+              <AvatarFallback className="rounded-full bg-accent text-[11px] font-semibold text-foreground">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-white">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-foreground">
               {displayName}
             </span>
-            <ChevronUp className="size-4 shrink-0 text-[#6B7280]" />
+            <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
           </button>
         </DropdownMenuTrigger>
 

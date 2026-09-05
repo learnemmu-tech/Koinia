@@ -30,7 +30,7 @@ function FeatureRow({
     <div className="flex items-center justify-between gap-3 py-2 text-sm">
       <span className="text-muted-foreground">{label}</span>
       {enabled ?
-        <Check className="size-4 shrink-0 text-white" aria-label="Included" />
+        <Check className="size-4 shrink-0 text-foreground" aria-label="Included" />
       : <X className="size-4 shrink-0 text-muted-foreground/50" aria-label="Not included" />}
     </div>
   );

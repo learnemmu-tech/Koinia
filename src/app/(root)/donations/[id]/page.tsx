@@ -46,7 +46,7 @@ export default async function DonationCampaignPage({
   return (
     <article
       aria-label={campaign?.title ?? "Donation campaign"}
-      className="-mx-4 min-h-full bg-[#0A0A0A] sm:-mx-6 md:-mx-8"
+      className="-mx-4 min-h-full bg-background sm:-mx-6 md:-mx-8"
     >
       {campaign ?
         <JsonLd

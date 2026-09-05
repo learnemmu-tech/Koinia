@@ -20,7 +20,7 @@ export function PrayerAnsweredBadge({ className }: PrayerAnsweredBadgeProps) {
   return (
     <Badge
       className={cn(
-        "border-[#2A2A2A] bg-[#1A1A1A] text-[#A1A1A1] hover:bg-[#1A1A1A]",
+        "border-border bg-accent text-muted-foreground hover:bg-accent",
         className
       )}
     >

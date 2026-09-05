@@ -118,7 +118,7 @@ export function PrayButton({
             "h-8 shrink-0 rounded-full px-3.5 text-[13px] font-medium shadow-none",
             "transition-all duration-200 ease-out active:scale-[0.98]",
             hasPrayed ?
-              "border-white bg-white text-black hover:bg-[#E5E5E5]"
+              "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
             : "bg-primary text-primary-foreground hover:bg-primary/90"
           )}
         >
@@ -199,7 +199,7 @@ export function PrayButton({
           : cn(
               "rounded-full",
               hasPrayed &&
-                "border-[#2A2A2A] bg-[#1A1A1A] text-[#A1A1A1]"
+                "border-border bg-accent text-muted-foreground"
             )
         )}
       >

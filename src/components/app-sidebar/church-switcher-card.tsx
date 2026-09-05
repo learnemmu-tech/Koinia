@@ -43,7 +43,7 @@ function WorkspaceAvatar({
 }) {
   if (hasCustomLogo(logoUrl)) {
     return (
-      <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-[#111111]">
+      <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-card">
         <ImageWithFallback
           src={logoUrl!}
           fallback={DEFAULT_CHURCH_LOGO}
@@ -60,7 +60,7 @@ function WorkspaceAvatar({
     <div
       className={cn(
         "flex size-7 shrink-0 items-center justify-center rounded-full",
-        "bg-[#1A1A1A] text-[10px] font-semibold text-[#A1A1A1]"
+        "bg-accent text-[10px] font-semibold text-muted-foreground"
       )}
       aria-hidden
     >
@@ -126,7 +126,7 @@ export function SidebarWorkspaceHeader() {
     <>
       <WorkspaceAvatar name={churchName} logoUrl={logoUrl} />
       {!isCollapsed ?
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-white">
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-sidebar-foreground">
           {churchName}
         </span>
       : null}
@@ -147,7 +147,7 @@ export function SidebarWorkspaceHeader() {
           >
             {identity}
             {!isCollapsed ?
-              <ChevronsUpDown className="size-4 shrink-0 text-[#6B7280]" />
+              <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
             : null}
           </button>
         </DropdownMenuTrigger>
