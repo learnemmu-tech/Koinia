@@ -5,6 +5,7 @@ import {
   Bookmark,
   CalendarDays,
   Church,
+  Clapperboard,
   CreditCard,
   FileText,
   HandHelping,
@@ -108,6 +109,12 @@ export const BROWSE_NAV_ITEMS: AppNavItem[] = [
     href: "/articles",
     icon: FileText,
     match: startsWith("/articles"),
+  },
+  {
+    label: "Shorts",
+    href: "/shorts",
+    icon: Clapperboard,
+    match: startsWith("/shorts"),
   },
   {
     label: "Events",

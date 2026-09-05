@@ -5,7 +5,6 @@ import NextTopLoader from "nextjs-toploader";
 
 import Providers from "@/components/provider";
 import { SiteJsonLd } from "@/components/seo/json-ld";
-import { TailwindIndicator } from "@/components/tailwind-indicator";
 
 type Props = {
   initialActiveChurchId: string | null;
@@ -28,8 +27,6 @@ export function RootClientShell({ initialActiveChurchId, modal, children }: Prop
         {children}
         {modal}
       </Providers>
-
-      <TailwindIndicator />
     </>
   );
 }

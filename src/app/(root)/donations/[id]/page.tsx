@@ -21,7 +21,7 @@ export async function generateMetadata({
   const { scope } = await getPageTenantContext();
   const campaign = await getDonationCampaignByIdCached(scope, id);
 
-  if (!campaign) {
+  if (!campaign || campaign.status !== "active") {
     return { title: "Campaign Not Found" };
   }
 

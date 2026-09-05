@@ -11,22 +11,26 @@ type ProtectedContentLinkProps = {
   href: string;
   className?: string;
   children: React.ReactNode;
+  /** When true, opens the auth dialog instead of navigating for signed-out visitors. */
+  requireAuth?: boolean;
   "aria-label"?: string;
 };
 
 /**
- * Navigates to content when authenticated; opens the auth dialog when not.
+ * Navigates to content when public or authenticated; opens the auth dialog when
+ * `requireAuth` is set and the visitor is signed out.
  */
 export function ProtectedContentLink({
   href,
   className,
   children,
+  requireAuth = false,
   "aria-label": ariaLabel,
 }: ProtectedContentLinkProps) {
   const { user, loading } = useFirebaseAuth();
   const { openDialog } = useContentAuthDialog();
 
-  if (!loading && user) {
+  if (!requireAuth || (!loading && user)) {
     return (
       <Link href={href} className={className} aria-label={ariaLabel}>
         {children}

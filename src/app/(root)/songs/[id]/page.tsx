@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { ContentAuthRequired } from "@/components/auth/content-auth-required";
 import { SongDetailClient } from "@/components/music/song-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { DEFAULT_SONG_COVER } from "@/config/site";
-import { isAuthenticatedServer } from "@/lib/auth-server";
 import { getPageTenantContext } from "@/lib/church-page-data";
 import { getSongByIdCached } from "@/lib/cached-worship-data";
 import {
@@ -33,7 +31,7 @@ export async function generateMetadata({
   const { scope } = await getPageTenantContext();
   const song = await getSongByIdCached(scope, id);
 
-  if (!song) {
+  if (!song || !isSongPublished(song)) {
     return { title: "Song Not Found" };
   }
 
@@ -66,13 +64,6 @@ export async function generateMetadata({
 
 export default async function SongDetailPage({ params }: SongDetailPageProps) {
   const { id } = await params;
-  const callbackPath = `/songs/${encodeURIComponent(id)}`;
-  const isAuthenticated = await isAuthenticatedServer();
-
-  if (!isAuthenticated) {
-    return <ContentAuthRequired callbackPath={callbackPath} />;
-  }
-
   const { scope } = await getPageTenantContext();
   const song = await getSongByIdCached(scope, id);
 

@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ArticleDetailView } from "@/components/articles/article-detail-view";
-import { ContentAuthRequired } from "@/components/auth/content-auth-required";
 import { RecordRecentlyViewed } from "@/components/recently-viewed/record-recently-viewed";
 import { JsonLd } from "@/components/seo/json-ld";
 import { DEFAULT_SONG_COVER } from "@/config/site";
-import { isAuthenticatedServer } from "@/lib/auth-server";
 import {
   getArticleNeighbors,
   getRelatedArticles,
@@ -57,13 +55,6 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
-  const callbackPath = `/articles/${encodeURIComponent(decodedId)}`;
-  const isAuthenticated = await isAuthenticatedServer();
-
-  if (!isAuthenticated) {
-    return <ContentAuthRequired callbackPath={callbackPath} />;
-  }
-
   const { scope } = await getPageTenantContext();
   const [article, allPublished] = await Promise.all([
     getArticleByIdCached(scope, decodedId),

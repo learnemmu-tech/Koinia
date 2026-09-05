@@ -163,6 +163,7 @@ export function PrayerRequestCard({
           {linkToDetail ?
             <ProtectedContentLink
               href={detailHref}
+              requireAuth
               className="block min-w-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
             >
               {contentBlock}

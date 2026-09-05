@@ -11,7 +11,7 @@ type HomeSongsSectionProps = {
 };
 
 export function HomeSongsSection({ songs }: HomeSongsSectionProps) {
-  const visible = songs.slice(0, 6);
+  const visible = songs.slice(0, 5);
 
   return (
     <section id="songs" aria-labelledby="home-songs-heading" className="space-y-3">

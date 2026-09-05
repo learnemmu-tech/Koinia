@@ -5,6 +5,7 @@ import { Pool } from "pg";
 
 import { env } from "@/lib/env";
 
+import { normalizeDatabaseUrl } from "./normalize-database-url";
 import * as schema from "./schema";
 
 const globalForDb = globalThis as unknown as {
@@ -17,7 +18,7 @@ function getPool(): Pool {
   }
 
   const pool = new Pool({
-    connectionString: env.DATABASE_URL,
+    connectionString: normalizeDatabaseUrl(env.DATABASE_URL),
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,

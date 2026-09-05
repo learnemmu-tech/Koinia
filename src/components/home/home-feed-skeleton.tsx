@@ -20,7 +20,11 @@ export function HomeFeedSkeleton() {
       </div>
       <div className="space-y-3">
         <SectionHeaderSkeleton />
-        <HomeCollectionSkeleton count={4} variant="wide" />
+        <HomeCollectionSkeleton count={4} variant="portrait" />
+      </div>
+      <div className="space-y-3">
+        <SectionHeaderSkeleton />
+        <HomeCollectionSkeleton count={3} variant="wide" />
       </div>
     </div>
   );

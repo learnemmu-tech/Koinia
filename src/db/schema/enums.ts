@@ -168,3 +168,20 @@ export const recentlyViewedItemTypeEnum = pgEnum("recently_viewed_item_type", [
   "sermon",
   "article",
 ]);
+
+export const shortCategoryEnum = pgEnum("short_category", [
+  "Worship",
+  "Sermon",
+  "Prayer",
+  "Bible",
+  "Testimony",
+  "Encouragement",
+  "Church Life",
+  "Events",
+  "Other",
+]);
+
+export const shortVisibilityEnum = pgEnum("short_visibility", [
+  "church",
+  "public",
+]);

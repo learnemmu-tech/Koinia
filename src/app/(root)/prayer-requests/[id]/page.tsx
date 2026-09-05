@@ -6,6 +6,7 @@ import { PrayerRequestDetailClient } from "@/components/prayer/prayer-request-de
 import { JsonLd } from "@/components/seo/json-ld";
 import { isAuthenticatedServer } from "@/lib/auth-server";
 import { getPrayerRequestById } from "@/lib/firebase-prayer-request-queries";
+import { isPublicPrayerRequest } from "@/lib/prayer-request-firestore";
 import { buildBreadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
@@ -20,7 +21,7 @@ export async function generateMetadata({
   const { id } = await params;
   const request = await getPrayerRequestById(id);
 
-  if (!request || request.status !== "approved") {
+  if (!request || !isPublicPrayerRequest(request)) {
     return { title: "Prayer Request Not Found" };
   }
 
@@ -46,7 +47,7 @@ export default async function PrayerRequestDetailPage({
 
   const request = await getPrayerRequestById(id);
 
-  if (!request || request.status !== "approved") {
+  if (!request || !isPublicPrayerRequest(request)) {
     notFound();
   }
 

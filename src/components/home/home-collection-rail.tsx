@@ -14,7 +14,7 @@ export function HomeCollectionRail({
   return (
     <div
       className={cn(
-        "-mx-1 flex gap-3 overflow-x-auto px-1 pb-0.5 [scrollbar-width:thin] snap-x snap-mandatory",
+        "-mx-1 flex gap-3 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] snap-x snap-mandatory [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
         className
       )}
     >

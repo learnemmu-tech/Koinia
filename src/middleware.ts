@@ -7,16 +7,7 @@ import { isWorkspaceRoute } from "@/lib/dashboard-routes";
 const AUTH_ONLY_PATHS = ["/signin", "/signup", "/forgot-password", "/sso-callback"];
 const POST_AUTH_CONTINUE_PATH = "/auth/continue";
 
-const PUBLIC_CONTENT_LIST_PATHS = ["/songs", "/sermons", "/articles"];
-
-const PROTECTED_PREFIXES = [
-  "/profile",
-  "/favorites",
-  "/groups",
-  "/profile/dashboard",
-];
-
-const PROTECTED_CONTENT_DETAIL_PREFIXES = ["/songs", "/sermons", "/articles"];
+const PUBLIC_CONTENT_LIST_PATHS = ["/songs", "/sermons", "/articles", "/shorts"];
 
 function isPathMatch(pathname: string, paths: string[]) {
   return paths.some(
@@ -24,17 +15,18 @@ function isPathMatch(pathname: string, paths: string[]) {
   );
 }
 
+const PROTECTED_PREFIXES = [
+  "/profile",
+  "/favorites",
+  "/groups",
+  "/profile/dashboard",
+  "/me",
+  "/settings",
+  "/recently-viewed",
+];
+
 function isProtectedPath(pathname: string) {
   if (PUBLIC_CONTENT_LIST_PATHS.includes(pathname)) return false;
-
-  if (
-    PROTECTED_CONTENT_DETAIL_PREFIXES.some((prefix) =>
-      pathname.startsWith(`${prefix}/`)
-    )
-  ) {
-    return true;
-  }
-
   if (isPathMatch(pathname, PROTECTED_PREFIXES)) return true;
   if (pathname.startsWith("/prayer-requests/")) return true;
   return false;

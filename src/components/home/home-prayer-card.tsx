@@ -22,6 +22,7 @@ export function HomePrayerCard({ request }: HomePrayerCardProps) {
     <article className="app-interactive flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-3.5">
       <ProtectedContentLink
         href={href}
+        requireAuth
         className="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">

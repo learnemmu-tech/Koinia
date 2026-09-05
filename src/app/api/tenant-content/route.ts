@@ -17,26 +17,16 @@ import {
   listSongs,
 } from "@/lib/postgres/features";
 import { getAllChurches, getChurchById } from "@/lib/postgres/tenants";
-import { userCanAccessChurchContent } from "@/lib/postgres/session";
+import {
+  userCanAccessChurchContent,
+  userCanManageChurch,
+} from "@/lib/postgres/session";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
-
-const COLLECTIONS = [
-  "songs",
-  "sermons",
-  "articles",
-  "events",
-  "prayerRequests",
-  "donationCampaigns",
-  "donations",
-  "churches",
-  "users",
-] as const;
-
-type CollectionName = (typeof COLLECTIONS)[number];
-
-function isCollection(value: string): value is CollectionName {
-  return (COLLECTIONS as readonly string[]).includes(value);
-}
+import { filterTenantContentByIds, filterTenantContentItems } from "@/lib/tenant-content-filters";
+import {
+  isTenantContentCollection,
+  type CollectionName,
+} from "@/lib/tenant-content-types";
 
 export async function GET(request: Request) {
   const decoded = await verifyBearerToken(request);
@@ -50,11 +40,13 @@ export async function GET(request: Request) {
   const offset = Math.max(0, Number(searchParams.get("offset") ?? 0) || 0);
   const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 20) || 20));
 
-  if (!isCollection(collection)) {
+  if (!isTenantContentCollection(collection)) {
     return NextResponse.json({ error: "Invalid collection" }, { status: 400 });
   }
 
   const isAdmin = isPlatformSuperAdmin(decoded.email);
+  const viewerClerkId = decoded.uid;
+  const viewerEmail = decoded.email;
 
   try {
     if (collection === "churches") {
@@ -149,6 +141,34 @@ export async function GET(request: Request) {
         byId = visible;
       }
 
+      const canManageByChurch = new Map<string, boolean>();
+      async function canManageChurchContent(churchIdValue: string): Promise<boolean> {
+        if (isAdmin) return true;
+        const cached = canManageByChurch.get(churchIdValue);
+        if (cached != null) return cached;
+        const allowed = await userCanManageChurch(
+          viewerClerkId,
+          viewerEmail,
+          churchIdValue
+        );
+        canManageByChurch.set(churchIdValue, allowed);
+        return allowed;
+      }
+
+      const filtered: typeof byId = [];
+      for (const item of byId) {
+        const itemChurchId = item.churchId?.trim() ?? "";
+        if (!itemChurchId) continue;
+        const canManage = await canManageChurchContent(itemChurchId);
+        const visible = filterTenantContentByIds(
+          collection as CollectionName,
+          [item],
+          canManage
+        );
+        if (visible.length > 0) filtered.push(visible[0]!);
+      }
+      byId = filtered;
+
       return NextResponse.json({
         items: byId.slice(offset, offset + limit),
         hasMore: byId.length > offset + limit,
@@ -173,6 +193,14 @@ export async function GET(request: Request) {
       if (!allowed) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+    }
+
+    const canManage =
+      isAdmin ||
+      (await userCanManageChurch(decoded.uid, decoded.email, churchId));
+
+    if (collection === "donations" && !canManage) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const scope = {
@@ -205,6 +233,8 @@ export async function GET(request: Request) {
         items = await listDonations(scope);
         break;
     }
+
+    items = filterTenantContentItems(collection, items, canManage);
 
     return NextResponse.json({
       items: items.slice(offset, offset + limit),

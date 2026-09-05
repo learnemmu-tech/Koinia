@@ -13,7 +13,7 @@ type HomeSermonsSectionProps = {
 export function HomeSermonsSection({ sermons }: HomeSermonsSectionProps) {
   const visible = [...sermons]
     .sort((a, b) => b.dateCreated - a.dateCreated)
-    .slice(0, 4);
+    .slice(0, 3);
 
   return (
     <section aria-labelledby="home-sermons-heading" className="space-y-3">
@@ -28,11 +28,11 @@ export function HomeSermonsSection({ sermons }: HomeSermonsSectionProps) {
           title="No sermons yet"
           description="Check back soon for new messages."
         />
-      : <HomeCollectionRail className="md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-4">
+      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:overflow-visible md:px-0">
           {visible.map((sermon) => (
             <div
               key={sermon.id}
-              className={homeRailItemClass("w-[16.5rem] md:w-auto")}
+              className={homeRailItemClass("w-[16rem] md:w-auto md:max-w-sm")}
             >
               <FirebaseSermonCard sermon={sermon} />
             </div>

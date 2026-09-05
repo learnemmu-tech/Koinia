@@ -10,6 +10,12 @@ export type { StorageUploadKind };
 const SAFE_ID = /^[a-zA-Z0-9_-]+$/;
 const SAFE_EXT = /^[a-z0-9]{1,8}$/;
 
+/** Shorts uploads must fit Supabase Free (50 MB). */
+const SHORT_VIDEO_BUCKET_FILE_SIZE_LIMIT = 50 * 1024 * 1024;
+
+let cachedClient: SupabaseClient | null = null;
+let shortBucketLimitEnsured = false;
+
 function requiredEnv(name: "SUPABASE_URL" | "SUPABASE_SECRET_KEY"): string {
   const value = process.env[name]?.trim();
   if (!value) {
@@ -21,8 +27,6 @@ function requiredEnv(name: "SUPABASE_URL" | "SUPABASE_SECRET_KEY"): string {
 export function getSupabaseStorageBucket(): string {
   return process.env.SUPABASE_STORAGE_BUCKET?.trim() || "faithconnecthub";
 }
-
-let cachedClient: SupabaseClient | null = null;
 
 function getSupabaseStorageClient(): SupabaseClient {
   if (cachedClient) return cachedClient;
@@ -49,6 +53,108 @@ function assertSafeExt(ext: string): string {
     throw new Error("Invalid file extension.");
   }
   return normalized;
+}
+
+export function buildShortStorageObjectKey(
+  churchId: string,
+  shortId: string,
+  slot: "video" | "thumbnail",
+  ext: string
+): string {
+  const short = assertSafeSegment(shortId, "short id");
+  const fileExt = assertSafeExt(ext);
+  if (slot === "thumbnail") {
+    return `shorts/${short}/cover/${randomUUID()}.${fileExt}`;
+  }
+  const church = assertSafeSegment(churchId, "church id");
+  return `shorts/${church}/${short}/video.${fileExt}`;
+}
+
+async function ensureShortVideoBucketLimit(): Promise<void> {
+  if (shortBucketLimitEnsured) return;
+
+  const bucket = getSupabaseStorageBucket();
+  const baseUrl = requiredEnv("SUPABASE_URL").replace(/\/$/, "");
+  const secret = requiredEnv("SUPABASE_SECRET_KEY");
+
+  const response = await fetch(`${baseUrl}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      apikey: secret,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      file_size_limit: SHORT_VIDEO_BUCKET_FILE_SIZE_LIMIT,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    console.warn(
+      "[supabase-storage] Could not raise bucket file size limit:",
+      response.status,
+      body
+    );
+    return;
+  }
+
+  shortBucketLimitEnsured = true;
+}
+
+export function formatSupabaseUploadSizeError(
+  message: string,
+  fileSizeBytes?: number
+): string {
+  if (!/maximum allowed size|too large|entity too large/i.test(message)) {
+    return message;
+  }
+
+  const sizeMb =
+    fileSizeBytes != null ? `${(fileSizeBytes / (1024 * 1024)).toFixed(1)} MB` : "this size";
+
+  return `Your video (${sizeMb}) exceeds the Supabase Storage file size limit. The bucket default is 50 MB. Compress the video under 50 MB, or in Supabase Dashboard go to Storage → your bucket → Settings and raise "File size limit" to at least 100 MB.`;
+}
+
+export async function uploadShortObject(input: {
+  churchId: string;
+  shortId: string;
+  slot: "video" | "thumbnail";
+  ext: string;
+  body: Buffer | Uint8Array;
+  contentType: string;
+}): Promise<{ objectKey: string; publicUrl: string }> {
+  if (input.slot === "video") {
+    await ensureShortVideoBucketLimit();
+  }
+
+  const objectKey = buildShortStorageObjectKey(
+    input.churchId,
+    input.shortId,
+    input.slot,
+    input.ext
+  );
+  const client = getSupabaseStorageClient();
+  const { error } = await client.storage
+    .from(getSupabaseStorageBucket())
+    .upload(objectKey, input.body, {
+      contentType: input.contentType || "application/octet-stream",
+      upsert: true,
+    });
+
+  if (error) {
+    throw new Error(
+      formatSupabaseUploadSizeError(
+        error.message || "Failed to upload file.",
+        input.body.byteLength
+      )
+    );
+  }
+
+  return {
+    objectKey,
+    publicUrl: getPublicStorageUrl(objectKey),
+  };
 }
 
 export function buildStorageObjectKey(

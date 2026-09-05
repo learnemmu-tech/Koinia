@@ -55,9 +55,11 @@ const config: NextConfig = {
   experimental: {
     ppr: false,
     reactCompiler: isProd ? true : undefined,
+    /** Clerk middleware buffers bodies; Shorts allow up to 100 MB video uploads. */
+    middlewareClientMaxBodySize: "110mb",
     serverActions: {
-      /** Cover 2 MB + audio 20 MB + form metadata */
-      bodySizeLimit: "25mb",
+      /** Cover 2 MB + audio 20 MB + form metadata; Shorts video up to 100 MB */
+      bodySizeLimit: "110mb",
     },
   },
   output: isDocker ? "standalone" : undefined,
