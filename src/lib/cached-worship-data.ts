@@ -54,27 +54,32 @@ export const getPublishedSongsCached = cache(async (scope: TenantScope) => {
 
   const key = tenantCacheKey(scope);
 
-  return unstable_cache(
+  try {
+    return await unstable_cache(
 
-    async (): Promise<FirebaseSong[]> => {
+      async (): Promise<FirebaseSong[]> => {
 
-      const songs = await getPublishedSongs(scope);
+        const songs = await getPublishedSongs(scope);
 
-      return songs.map(toSongListItem);
+        return songs.map(toSongListItem);
 
-    },
+      },
 
-    ["worship-published-songs", key],
+      ["worship-published-songs", key],
 
-    {
+      {
 
-      revalidate: REVALIDATE_SECONDS,
+        revalidate: REVALIDATE_SECONDS,
 
-      tags: ["worship-songs", `tenant-${key}`],
+        tags: ["worship-songs", `tenant-${key}`],
 
-    }
+      }
 
-  )();
+    )();
+  } catch (error) {
+    console.error("[worship] Failed to load published songs:", error);
+    return [];
+  }
 
 });
 
@@ -84,27 +89,32 @@ export const getPublishedSermonsCached = cache(async (scope: TenantScope) => {
 
   const key = tenantCacheKey(scope);
 
-  return unstable_cache(
+  try {
+    return await unstable_cache(
 
-    async (): Promise<FirebaseSermon[]> => {
+      async (): Promise<FirebaseSermon[]> => {
 
-      const sermons = await getPublishedSermons(scope);
+        const sermons = await getPublishedSermons(scope);
 
-      return sermons.map(toSermonListItem);
+        return sermons.map(toSermonListItem);
 
-    },
+      },
 
-    ["worship-published-sermons", key],
+      ["worship-published-sermons", key],
 
-    {
+      {
 
-      revalidate: REVALIDATE_SECONDS,
+        revalidate: REVALIDATE_SECONDS,
 
-      tags: ["worship-sermons", `tenant-${key}`],
+        tags: ["worship-sermons", `tenant-${key}`],
 
-    }
+      }
 
-  )();
+    )();
+  } catch (error) {
+    console.error("[worship] Failed to load published sermons:", error);
+    return [];
+  }
 
 });
 
@@ -114,27 +124,32 @@ export const getPublishedArticlesCached = cache(async (scope: TenantScope) => {
 
   const key = tenantCacheKey(scope);
 
-  return unstable_cache(
+  try {
+    return await unstable_cache(
 
-    async (): Promise<FirebaseArticle[]> => {
+      async (): Promise<FirebaseArticle[]> => {
 
-      const articles = await getPublishedArticles(scope);
+        const articles = await getPublishedArticles(scope);
 
-      return articles.map(toArticleListItem);
+        return articles.map(toArticleListItem);
 
-    },
+      },
 
-    ["worship-published-articles", key],
+      ["worship-published-articles", key],
 
-    {
+      {
 
-      revalidate: REVALIDATE_SECONDS,
+        revalidate: REVALIDATE_SECONDS,
 
-      tags: ["worship-articles", `tenant-${key}`],
+        tags: ["worship-articles", `tenant-${key}`],
 
-    }
+      }
 
-  )();
+    )();
+  } catch (error) {
+    console.error("[worship] Failed to load published articles:", error);
+    return [];
+  }
 
 });
 
@@ -144,19 +159,24 @@ export const getPublishedEventsCached = cache(async (scope: TenantScope) => {
 
   const key = tenantCacheKey(scope);
 
-  return unstable_cache(
+  try {
+    return await unstable_cache(
 
-    async (): Promise<FirebaseEvent[]> => {
+      async (): Promise<FirebaseEvent[]> => {
 
-      return getPublishedEvents(scope);
+        return getPublishedEvents(scope);
 
-    },
+      },
 
-    ["worship-published-events", key],
+      ["worship-published-events", key],
 
-    { revalidate: REVALIDATE_SECONDS, tags: ["events", `tenant-${key}`] }
+      { revalidate: REVALIDATE_SECONDS, tags: ["events", `tenant-${key}`] }
 
-  )();
+    )();
+  } catch (error) {
+    console.error("[worship] Failed to load published events:", error);
+    return [];
+  }
 
 });
 

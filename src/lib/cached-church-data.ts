@@ -28,9 +28,14 @@ export const getActiveChurchesCached = unstable_cache(
 export async function getChurchByIdCached(
   churchId: string
 ): Promise<FirebaseChurch | null> {
-  return unstable_cache(
-    async () => getChurchById(churchId),
-    ["church-by-id", churchId],
-    { revalidate: REVALIDATE_SECONDS, tags: [`church-${churchId}`] }
-  )();
+  try {
+    return await unstable_cache(
+      async () => getChurchById(churchId),
+      ["church-by-id", churchId],
+      { revalidate: REVALIDATE_SECONDS, tags: [`church-${churchId}`] }
+    )();
+  } catch (error) {
+    console.error("[churches] Failed to load church by id:", error);
+    return null;
+  }
 }
