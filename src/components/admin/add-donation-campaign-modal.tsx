@@ -154,7 +154,8 @@ export function AddDonationCampaignModal({
             "cover",
             formData,
             (progress) => setUploadProgress(progress),
-            idToken
+            idToken,
+            { kind: "donation", replaceUrl: initialCampaign.bannerImage }
           );
           await updateDonationCampaign(initialCampaign.id, { bannerImage: url });
         }
@@ -184,7 +185,8 @@ export function AddDonationCampaignModal({
             "cover",
             formData,
             (progress) => setUploadProgress(progress),
-            idToken
+            idToken,
+            { kind: "donation" }
           );
           await updateDonationCampaign(campaignId, { bannerImage: url });
         }

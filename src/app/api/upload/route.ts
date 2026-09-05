@@ -1,25 +1,39 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
-import { getMembershipForUser } from "@/lib/organization/organization-server";
-import { getAppUserByClerkId } from "@/lib/postgres/app-user";
-import { roleMeetsMinimum } from "@/types/membership";
+
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import {
+  getArticleById,
+  getEventById,
+  getSermonById,
+  getSongById,
+} from "@/lib/postgres/content-mutations";
+import { getDonationCampaignById } from "@/lib/postgres/features";
+import { getOrgMembershipRow, userCanManageChurch } from "@/lib/postgres/session";
+import { getChurchById, getOrganizationById } from "@/lib/postgres/tenants";
+import type { StorageUploadKind } from "@/lib/storage-upload-kind";
+import { deleteStoredMediaUrls, uploadPublicObject } from "@/lib/supabase-storage";
+import { roleMeetsMinimum } from "@/types/membership";
 
-/**
- * Upload handler for local file storage
- * POST /api/upload?type=cover|audio&songId=<id>
- * 
- * Stores files in:
- * - Images: /public/uploads/images/<songId>.<ext>
- * - Audio: /public/uploads/audio/<songId>.<ext>
- */
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+const MAX_AUDIO_SIZE = 20 * 1024 * 1024;
 
-const UPLOAD_DIR = join(process.cwd(), "public", "uploads");
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB
-const MAX_AUDIO_SIZE = 20 * 1024 * 1024; // 20 MB
+const UPLOAD_KINDS: StorageUploadKind[] = [
+  "onboarding",
+  "organization-logo",
+  "church-logo",
+  "church-cover",
+  "song",
+  "sermon",
+  "article",
+  "event",
+  "donation",
+];
+
+function isUploadKind(value: string | null): value is StorageUploadKind {
+  return Boolean(value && UPLOAD_KINDS.includes(value as StorageUploadKind));
+}
 
 function getFileExtension(mimeType: string, fileName: string): string {
   const types: Record<string, string> = {
@@ -28,6 +42,7 @@ function getFileExtension(mimeType: string, fileName: string): string {
     "image/png": "png",
     "image/webp": "webp",
     "image/gif": "gif",
+    "image/avif": "avif",
     "audio/mpeg": "mp3",
     "audio/mp3": "mp3",
     "audio/wav": "wav",
@@ -40,131 +55,165 @@ function getFileExtension(mimeType: string, fileName: string): string {
   };
 
   const extFromType = types[mimeType];
-  if (extFromType) {
-    return extFromType;
-  }
+  if (extFromType) return extFromType;
 
   const extFromName = fileName.split(".").pop()?.toLowerCase();
-  if (extFromName) {
-    return extFromName;
-  }
+  if (extFromName) return extFromName;
 
   return "bin";
 }
 
-async function verifyUploadAuth(request: NextRequest) {
-  const decoded = await verifyBearerToken(request);
-  if (!decoded) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+function resolveKind(
+  kindParam: string | null,
+  type: "cover" | "audio",
+  scope: string | null
+): StorageUploadKind {
+  if (isUploadKind(kindParam)) return kindParam;
+  if (scope === "onboarding") return "onboarding";
+  if (type === "audio") return "song";
+  return "song";
+}
+
+async function authorizeUpload(
+  uid: string,
+  email: string | undefined,
+  kind: StorageUploadKind,
+  entityId: string
+): Promise<true | NextResponse> {
+  if (kind === "onboarding") {
+    if (entityId !== uid) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return true;
   }
 
-  const { searchParams } = new URL(request.url);
-  const scope = searchParams.get("scope");
-
-  if (scope === "onboarding") {
-    return { uid: decoded.uid };
+  if (kind === "organization-logo") {
+    const org = await getOrganizationById(entityId);
+    if (!org) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const appUser = await getAppUserByClerkId(uid);
+    if (!appUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const orgRow = await getOrgMembershipRow(appUser.id, org.id);
+    if (
+      !orgRow ||
+      orgRow.status !== "active" ||
+      !roleMeetsMinimum(orgRow.role as "owner" | "org_admin", "org_admin")
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return true;
   }
 
-  const appUser = await getAppUserByClerkId(decoded.uid);
-  const organizationId = appUser?.organizationId?.trim() ?? "";
+  let churchId: string | null = null;
 
-  if (!organizationId) {
+  if (kind === "church-logo" || kind === "church-cover") {
+    const church = await getChurchById(entityId);
+    churchId = church?.id ?? null;
+  } else if (kind === "song") {
+    churchId = (await getSongById(entityId))?.churchId ?? null;
+  } else if (kind === "sermon") {
+    churchId = (await getSermonById(entityId))?.churchId ?? null;
+  } else if (kind === "article") {
+    churchId = (await getArticleById(entityId))?.churchId ?? null;
+  } else if (kind === "event") {
+    churchId = (await getEventById(entityId))?.churchId ?? null;
+  } else if (kind === "donation") {
+    churchId = (await getDonationCampaignById(entityId))?.churchId ?? null;
+  }
+
+  if (!churchId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const membership = await getMembershipForUser(organizationId, decoded.uid);
-  if (
-    !membership ||
-    membership.status !== "active" ||
-    !roleMeetsMinimum(membership.role, "church_admin")
-  ) {
+  const allowed = await userCanManageChurch(uid, email, churchId);
+  if (!allowed) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return { uid: decoded.uid };
+  return true;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await verifyUploadAuth(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
+    const decoded = await verifyBearerToken(request);
+    if (!decoded) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const typeParam = searchParams.get("type"); // "cover" or "audio"
-    const songId = searchParams.get("songId");
+    const typeParam = searchParams.get("type");
+    const entityId = searchParams.get("songId")?.trim() ?? "";
+    const scope = searchParams.get("scope");
+    const replaceUrl = searchParams.get("replaceUrl");
 
-    // Type validation with proper type narrowing
     let type: "cover" | "audio";
     if (typeParam === "cover" || typeParam === "audio") {
       type = typeParam;
     } else {
-      console.error("[Upload] Invalid type:", typeParam);
       return NextResponse.json(
         { error: "Invalid file type. Must be 'cover' or 'audio'" },
         { status: 400 }
       );
     }
 
-    if (!songId) {
-      console.error("[Upload] Missing songId");
-      return NextResponse.json(
-        { error: "songId is required" },
-        { status: 400 }
-      );
+    if (!entityId) {
+      return NextResponse.json({ error: "songId is required" }, { status: 400 });
     }
 
-    // Validate songId format (alphanumeric and hyphens only)
-    if (!/^[a-zA-Z0-9\-_]+$/.test(songId)) {
-      console.error("[Upload] Invalid songId format:", songId);
-      return NextResponse.json(
-        { error: "Invalid songId format" },
-        { status: 400 }
-      );
+    if (!/^[a-zA-Z0-9\-_]+$/.test(entityId)) {
+      return NextResponse.json({ error: "Invalid songId format" }, { status: 400 });
+    }
+
+    const kind = resolveKind(searchParams.get("kind"), type, scope);
+    const authorized = await authorizeUpload(
+      decoded.uid,
+      decoded.email,
+      kind,
+      entityId
+    );
+    if (authorized instanceof NextResponse) {
+      return authorized;
     }
 
     const formData = await request.formData();
-    const file = formData.get("file") as File;
-
-    if (!file) {
-      console.error("[Upload] No file provided");
-      return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
+    const file = formData.get("file");
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
-    // File type validation
-    const fileName = file.name || `${songId}`;
+
+    const fileName = file.name || entityId;
     const ext = getFileExtension(file.type, fileName);
 
     if (type === "cover") {
-      const isValidImage = file.type.startsWith("image/") || ext.match(/^(jpg|jpeg|png|webp|gif|avif)$/);
+      const isValidImage =
+        file.type.startsWith("image/") ||
+        Boolean(ext.match(/^(jpg|jpeg|png|webp|gif|avif)$/));
       if (!isValidImage) {
-        console.error(`[Upload] Invalid image type: ${file.type} / ${fileName}`);
         return NextResponse.json(
           { error: "Cover must be an image file" },
           { status: 400 }
         );
       }
       if (file.size > MAX_IMAGE_SIZE) {
-        console.error(`[Upload] Image too large: ${file.size} > ${MAX_IMAGE_SIZE}`);
         return NextResponse.json(
           { error: "Cover image must be 2 MB or smaller" },
           { status: 400 }
         );
       }
-    } else if (type === "audio") {
-      const isValidAudio = file.type.startsWith("audio/") || ext.match(/^(mp3|wav|m4a|ogg|webm|aac)$/);
+    } else {
+      const isValidAudio =
+        file.type.startsWith("audio/") ||
+        Boolean(ext.match(/^(mp3|wav|m4a|ogg|webm|aac)$/));
       if (!isValidAudio) {
-        console.error(`[Upload] Invalid audio type: ${file.type} / ${fileName}`);
         return NextResponse.json(
           { error: "Audio must be an audio file" },
           { status: 400 }
         );
       }
       if (file.size > MAX_AUDIO_SIZE) {
-        console.error(`[Upload] Audio too large: ${file.size} > ${MAX_AUDIO_SIZE}`);
         return NextResponse.json(
           { error: "Audio file must be 20 MB or smaller" },
           { status: 400 }
@@ -172,44 +221,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // File type validation
-    const typeDir = join(UPLOAD_DIR, type);
-    try {
-      if (!existsSync(typeDir)) {
-        await mkdir(typeDir, { recursive: true });
-      }
-    } catch (dirError) {
-      console.error("[Upload] Failed to create directory:", dirError);
-      throw dirError;
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploaded = await uploadPublicObject({
+      kind,
+      entityId,
+      ext,
+      body: buffer,
+      contentType: file.type,
+    });
+
+    if (replaceUrl) {
+      await deleteStoredMediaUrls(replaceUrl);
     }
 
-    const fileNameWithExt = `${songId}.${ext}`;
-    const filePath = join(typeDir, fileNameWithExt);
-
-    // Read file buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Write file
-    try {
-      await writeFile(filePath, buffer);
-    } catch (writeError) {
-      console.error("[Upload] Failed to write file:", writeError);
-      throw writeError;
-    }
-
-    // Return relative URL that will work in browser
-    const url = `/uploads/${type}/${fileNameWithExt}`;
     return NextResponse.json({
       success: true,
-      url,
-      fileName: fileNameWithExt,
+      url: uploaded.publicUrl,
+      objectKey: uploaded.objectKey,
+      fileName: uploaded.objectKey.split("/").pop(),
       size: buffer.length,
     });
   } catch (error) {
     console.error("[Upload] Error:", error);
     return NextResponse.json(
-      { error: "Upload failed", details: error instanceof Error ? error.message : String(error) },
+      {
+        error: "Upload failed",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

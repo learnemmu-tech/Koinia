@@ -229,7 +229,8 @@ export function AddSermonModal({
             "cover",
             fd,
             (p) => setUploadProgress(p),
-            idToken
+            idToken,
+            { kind: "sermon", replaceUrl: initialSermon.coverImage }
           );
           coverImageUrl = url;
           await updateSermon(initialSermon.id, { coverImage: url });
@@ -265,7 +266,8 @@ export function AddSermonModal({
             "cover",
             fd,
             (p) => setUploadProgress(p),
-            idToken
+            idToken,
+            { kind: "sermon" }
           );
           coverImageUrl = url;
           await updateSermon(sermonId, { coverImage: url });

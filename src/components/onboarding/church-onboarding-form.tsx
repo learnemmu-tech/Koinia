@@ -315,7 +315,9 @@ export function ChurchOnboardingForm() {
 
             undefined,
 
-            token
+            token,
+
+            { kind: "church-logo" }
 
           );
 
