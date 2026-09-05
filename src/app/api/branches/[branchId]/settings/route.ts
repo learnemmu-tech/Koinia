@@ -1,18 +1,19 @@
 import { randomBytes } from "crypto";
+import { eq } from "drizzle-orm";
 
 import { NextResponse } from "next/server";
 
+import { db } from "@/db";
+import { churches } from "@/db/schema";
 import { slugifyChurchSlug } from "@/lib/church-scope";
 import { normalizeEnrollmentMode } from "@/lib/enrollment";
-import {
-  BRANCHES_COLLECTION,
-  normalizeBranchFromFirestore,
-} from "@/lib/organization/branch-firestore";
 import { updateBranch } from "@/lib/organization/organization-server";
 import { getMembershipForUser } from "@/lib/organization/organization-server";
-import { getAdminDb } from "@/lib/firebase-admin";
+import { getChurchRowById } from "@/lib/postgres/tenants";
+import { virtualBranchFromChurch } from "@/lib/postgres/mappers";
 import { ENROLLMENT_MODES } from "@/types/enrollment";
 import { roleMeetsMinimum } from "@/types/membership";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 type RouteContext = { params: Promise<{ branchId: string }> };
 
@@ -37,51 +38,28 @@ async function assertChurchAdmin(
   }
 }
 
-async function loadBranch(branchId: string) {
-  const adminDb = getAdminDb();
-  if (!adminDb) throw new Error("Admin database unavailable");
-
-  const snap = await adminDb.collection(BRANCHES_COLLECTION).doc(branchId).get();
-  if (!snap.exists) return null;
-
-  return normalizeBranchFromFirestore(
-    snap.id,
-    snap.data() as Record<string, unknown>
-  );
-}
-
-async function generateUniqueSlug(baseName: string): Promise<string> {
-  const adminDb = getAdminDb();
-  if (!adminDb) throw new Error("Admin database unavailable");
-
-  const base = slugifyChurchSlug(baseName);
+async function generateUniqueJoinSlug(baseName: string): Promise<string> {
+  const base = slugifyChurchSlug(baseName) || "church";
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const suffix = randomBytes(3).toString("hex");
     const candidate = `${base}-${suffix}`;
-    const existing = await adminDb
-      .collection(BRANCHES_COLLECTION)
-      .where("slug", "==", candidate)
-      .limit(1)
-      .get();
-    if (existing.empty) return candidate;
+    const [existing] = await db
+      .select({ id: churches.id })
+      .from(churches)
+      .where(eq(churches.joinSlug, candidate))
+      .limit(1);
+    if (!existing) return candidate;
   }
-
   throw new Error("Unable to generate a unique join link. Please try again.");
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
     const { branchId } = await context.params;
     const body = (await request.json()) as PatchBody;
 
@@ -95,11 +73,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     await assertChurchAdmin(organizationId, decoded.uid);
 
-    const branch = await loadBranch(branchId);
-    if (!branch || branch.organizationId !== organizationId) {
+    const church = await getChurchRowById(branchId);
+    if (!church || church.organizationId !== organizationId) {
       return NextResponse.json({ error: "Branch not found" }, { status: 404 });
     }
 
+    const branch = virtualBranchFromChurch(church);
     const currentSettings = branch.settings ?? {};
     const nextSettings = { ...currentSettings };
 
@@ -125,20 +104,21 @@ export async function PATCH(request: Request, context: RouteContext) {
     } = { settings: nextSettings };
 
     if (body.regenerateSlug) {
-      const oldSlug = branch.slug.trim().toLowerCase();
-      updateInput.slug = await generateUniqueSlug(branch.name);
+      const oldSlug = church.joinSlug.trim().toLowerCase();
+      updateInput.slug = await generateUniqueJoinSlug(church.name);
       updateInput.retiredJoinSlugs = [
-        ...(branch.retiredJoinSlugs ?? []),
+        ...(church.retiredJoinSlugs ?? []),
         oldSlug,
       ];
     }
 
     await updateBranch(branchId, updateInput);
 
-    const updated = await loadBranch(branchId);
+    const updated = await getChurchRowById(branchId);
+    const mapped = updated ? virtualBranchFromChurch(updated) : branch;
     return NextResponse.json({
-      slug: updated?.slug ?? branch.slug,
-      settings: updated?.settings ?? nextSettings,
+      slug: mapped.slug,
+      settings: mapped.settings ?? nextSettings,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Update failed";

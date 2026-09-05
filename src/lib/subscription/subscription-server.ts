@@ -1,92 +1,45 @@
 import "server-only";
 
-import { getAdminDb } from "@/lib/firebase-admin";
-import {
-  getChurchIdsForOrganization,
-  resolveTenantScopeForChurch,
-} from "@/lib/organization/resolve-tenant-scope";
+import { eq } from "drizzle-orm";
+
+import { db } from "@/db";
+import { subscriptions } from "@/db/schema";
+import { resolveTenantScopeForChurch } from "@/lib/organization/resolve-tenant-scope";
+import { getChurchIdsForOrganization } from "@/lib/postgres/tenants";
+import { mapSubscription } from "@/lib/postgres/mappers";
+import { ensureSubscriptionDocument as ensurePgSubscription } from "@/lib/postgres/tenants";
 import type { ChurchSubscription, SubscriptionSnapshot } from "@/types/subscription";
 
 import { resolveFeatureFlagsFromSubscription } from "./features";
-import {
-  buildUsageChecks,
-  getPlanLimits,
-} from "./limits";
+import { buildUsageChecks, getPlanLimits } from "./limits";
 import { getPlan } from "./plans";
-import {
-  buildDefaultSubscription,
-  buildSubscriptionCreatePayload,
-  normalizeSubscriptionFromFirestore,
-  SUBSCRIPTIONS_COLLECTION,
-} from "./subscription-firestore";
+import { buildDefaultSubscription } from "./subscription-firestore";
 import { computeOrganizationUsage } from "./usage-server";
 
 export async function getSubscriptionByOrganizationId(
   organizationId: string
 ): Promise<ChurchSubscription> {
-  const adminDb = getAdminDb();
   const orgId = organizationId.trim();
+  if (!orgId) return buildDefaultSubscription("default");
 
-  if (!adminDb || !orgId) {
-    return buildDefaultSubscription(orgId || "default");
-  }
+  const [row] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.organizationId, orgId))
+    .limit(1);
 
-  try {
-    const snap = await adminDb
-      .collection(SUBSCRIPTIONS_COLLECTION)
-      .doc(orgId)
-      .get();
-
-    if (!snap.exists) {
-      return buildDefaultSubscription(orgId);
-    }
-
-    return normalizeSubscriptionFromFirestore(
-      snap.id,
-      snap.data() as Record<string, unknown>
-    );
-  } catch (error) {
-    console.error("[subscription] org read failed:", error);
-    return buildDefaultSubscription(orgId);
-  }
+  if (!row) return buildDefaultSubscription(orgId);
+  return mapSubscription(row);
 }
 
-/**
- * Legacy resolver — maps church to parent organization subscription.
- * Falls back to church-scoped subscription doc for unmigrated installs.
- */
 export async function getSubscriptionByChurchId(
   churchId: string
 ): Promise<ChurchSubscription> {
   const scope = await resolveTenantScopeForChurch(churchId);
-
   if (scope.organizationId) {
     return getSubscriptionByOrganizationId(scope.organizationId);
   }
-
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    return buildDefaultSubscription(churchId);
-  }
-
-  try {
-    const snap = await adminDb
-      .collection(SUBSCRIPTIONS_COLLECTION)
-      .doc(churchId)
-      .get();
-
-    if (!snap.exists) {
-      return buildDefaultSubscription(churchId);
-    }
-
-    return normalizeSubscriptionFromFirestore(
-      snap.id,
-      snap.data() as Record<string, unknown>
-    );
-  } catch (error) {
-    console.error("[subscription] legacy church read failed:", error);
-    return buildDefaultSubscription(churchId);
-  }
+  return buildDefaultSubscription(churchId);
 }
 
 export async function getSubscriptionSnapshot(
@@ -120,27 +73,9 @@ export async function getSubscriptionSnapshotForChurch(
 export async function ensureSubscriptionDocument(
   organizationId: string
 ): Promise<ChurchSubscription> {
-  const adminDb = getAdminDb();
-  const orgId = organizationId.trim();
-
-  if (!adminDb || !orgId) {
-    return buildDefaultSubscription(orgId || "default");
-  }
-
-  const ref = adminDb.collection(SUBSCRIPTIONS_COLLECTION).doc(orgId);
-  const snap = await ref.get();
-
-  if (snap.exists) {
-    return normalizeSubscriptionFromFirestore(
-      snap.id,
-      snap.data() as Record<string, unknown>
-    );
-  }
-
-  const payload = buildSubscriptionCreatePayload(orgId);
-  await ref.set(payload);
-
-  return normalizeSubscriptionFromFirestore(orgId, payload);
+  const row = await ensurePgSubscription(organizationId);
+  if (!row) return buildDefaultSubscription(organizationId || "default");
+  return mapSubscription(row);
 }
 
 export { getChurchIdsForOrganization };

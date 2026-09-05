@@ -2,17 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { doc, getDoc } from "firebase/firestore";
 import { CheckCircle2, Loader2, Ticket } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
-import { db } from "@/lib/firebase";
-import {
-  buildEventRegistrationId,
-  EVENT_REGISTRATIONS_COLLECTION,
-} from "@/lib/event-registration-firestore";
+import { hasRegisteredForEvent } from "@/lib/event-registration-actions";
 
 type RegisterForEventButtonProps = {
   eventId: string;
@@ -39,12 +34,8 @@ export function RegisterForEventButton({
 
     async function loadExistingRegistration() {
       try {
-        const registrationId = buildEventRegistrationId(eventId, user!.uid);
-        const snap = await getDoc(
-          doc(db, EVENT_REGISTRATIONS_COLLECTION, registrationId)
-        );
-
-        if (!cancelled && snap.exists()) {
+        const exists = await hasRegisteredForEvent(eventId, user!.uid);
+        if (!cancelled && exists) {
           setRegistered(true);
         }
       } catch {

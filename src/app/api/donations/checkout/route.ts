@@ -15,6 +15,9 @@ function getBaseUrl(request: Request): string {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const protocol = request.headers.get("x-forwarded-proto") ?? "http";
   if (host) return `${protocol}://${host}`;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_APP_URL is not configured.");
+  }
   return "http://localhost:3000";
 }
 

@@ -6,6 +6,7 @@ import {
 } from "@/lib/organization/invitation-server";
 import { getMembershipForUser } from "@/lib/organization/organization-server";
 import type { MembershipRole } from "@/types/membership";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 const INVITE_ROLES: MembershipRole[] = [
   "org_admin",
@@ -18,12 +19,8 @@ const INVITE_ROLES: MembershipRole[] = [
 ];
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -38,9 +35,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
-
     const membership = await getMembershipForUser(organizationId, decoded.uid);
     if (!membership || membership.status !== "active") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -58,19 +52,17 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
+  const authHeader = request.headers.get("authorization");
+  const token = authHeader?.startsWith("Bearer ") ?
+    authHeader.slice(7)
+  : "";
 
+  try {
     const body = (await request.json()) as {
       organizationId?: string;
       churchId?: string;
@@ -114,11 +106,22 @@ export async function POST(request: Request) {
       invitedBy: decoded.uid,
     });
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-      process.env.VERCEL_URL ?
-        `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000";
+    const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    const vercelUrl = process.env.VERCEL_URL?.trim();
+    const baseUrl = configuredAppUrl
+      ? configuredAppUrl.replace(/\/$/, "")
+      : vercelUrl
+        ? `https://${vercelUrl.replace(/^https?:\/\//, "")}`
+        : process.env.NODE_ENV === "production"
+          ? null
+          : "http://localhost:3000";
+
+    if (!baseUrl) {
+      return NextResponse.json(
+        { error: "NEXT_PUBLIC_APP_URL is not configured." },
+        { status: 500 }
+      );
+    }
 
     const inviteLink = `${baseUrl}/invite/${invitation.token}`;
 

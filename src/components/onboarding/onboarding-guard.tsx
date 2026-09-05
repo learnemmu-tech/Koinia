@@ -3,11 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import {
-  isOnboardingPath,
-  WAITING_APPROVAL_PATH,
-} from "@/lib/auth/auth-paths";
-import { isWorkspaceRoute } from "@/lib/dashboard-routes";
+import { isOnboardingPath, WAITING_APPROVAL_PATH } from "@/lib/auth/auth-paths";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useWorkspaceAccess } from "@/hooks/use-workspace-access";
 import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
@@ -16,6 +12,8 @@ const EXEMPT_PATH_PREFIXES = [
   "/signin",
   "/signup",
   "/forgot-password",
+  "/sso-callback",
+  "/auth/continue",
   "/join/",
   "/invite/",
   "/access-denied",
@@ -37,11 +35,9 @@ function isExemptPath(pathname: string): boolean {
 export function OnboardingGuard() {
   const router = useRouter();
   const pathname = usePathname();
-  const { authUser, profileReady } = useFirebaseAuth();
+  const { authUser, profile, profileReady } = useFirebaseAuth();
   const {
-    isOnboardingComplete,
     isMembershipPending,
-    needsChurchOnboarding,
   } = useWorkspaceAccess();
   const routedRef = useRef<string | null>(null);
 
@@ -62,21 +58,19 @@ export function OnboardingGuard() {
     }
 
     if (isOnboardingPath(pathname)) {
-      if (isOnboardingComplete) {
-        const showingSuccess =
-          typeof window !== "undefined" &&
-          sessionStorage.getItem("onboarding_show_success") === "1";
-        if (!showingSuccess) {
-          routedRef.current = pathname;
-          router.replace(WORKSPACE_BASE);
-        }
+      if (profile?.needsChurchOnboarding === false) {
+        routedRef.current = pathname;
+        router.replace(WORKSPACE_BASE);
       }
       return;
     }
 
     if (isExemptPath(pathname)) return;
 
-    if (needsChurchOnboarding && isWorkspaceRoute(pathname)) {
+    const onboardingIncomplete =
+      !profile || profile.needsChurchOnboarding === true;
+
+    if (onboardingIncomplete) {
       routedRef.current = pathname;
       router.replace("/onboarding");
     }
@@ -84,10 +78,9 @@ export function OnboardingGuard() {
     authUser,
     profileReady,
     pathname,
-    isOnboardingComplete,
     isMembershipPending,
-    needsChurchOnboarding,
     router,
+    profile,
   ]);
 
   return null;

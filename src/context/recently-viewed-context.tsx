@@ -12,7 +12,7 @@ import {
   clearRecentlyViewedHistory,
   recordRecentlyViewed,
 } from "@/lib/recently-viewed-mutations";
-import { subscribeToUserRecentlyViewed } from "@/lib/recently-viewed-queries";
+import { fetchUserRecentlyViewed } from "@/lib/recently-viewed-queries";
 
 type RecentlyViewedContextValue = {
   recentlyViewed: FirebaseRecentlyViewed[];
@@ -38,17 +38,27 @@ export function RecentlyViewedProvider({ children }: React.PropsWithChildren) {
       return;
     }
 
+    let cancelled = false;
     setLoading(true);
-    const unsubscribe = subscribeToUserRecentlyViewed(
-      user.uid,
-      (items) => {
-        setRecentlyViewed(items);
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
+    const uid = user.uid;
 
-    return unsubscribe;
+    async function load() {
+      try {
+        const items = await fetchUserRecentlyViewed(uid);
+        if (!cancelled) {
+          setRecentlyViewed(items);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.uid]);
 
   const recordView = React.useCallback(
@@ -59,6 +69,8 @@ export function RecentlyViewedProvider({ children }: React.PropsWithChildren) {
       if (!trimmedId) return;
 
       await recordRecentlyViewed(user.uid, itemType, trimmedId);
+      const items = await fetchUserRecentlyViewed(user.uid);
+      setRecentlyViewed(items);
     },
     [user?.uid]
   );
@@ -66,6 +78,7 @@ export function RecentlyViewedProvider({ children }: React.PropsWithChildren) {
   const clearHistory = React.useCallback(async () => {
     if (!user?.uid) return;
     await clearRecentlyViewedHistory(user.uid);
+    setRecentlyViewed([]);
   }, [user?.uid]);
 
   const value = React.useMemo(

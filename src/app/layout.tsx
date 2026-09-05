@@ -7,6 +7,8 @@ import Script from "next/script";
 import type { Metadata, Viewport } from "next";
 import type { ThemeConfig } from "@/types";
 
+import { ClerkProvider } from "@clerk/nextjs";
+
 import { RootClientShell } from "@/components/root-client-shell";
 import { siteConfig } from "@/config/site";
 import { env } from "@/lib/env";
@@ -49,9 +51,17 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
             : ({ "--radius": `${radius}rem` } as React.CSSProperties)
           }
         >
-          <RootClientShell initialActiveChurchId={initialActiveChurchId} modal={modal}>
-            {children}
-          </RootClientShell>
+          <ClerkProvider
+            signInUrl="/signin"
+            signUpUrl="/signup"
+            afterSignOutUrl="/"
+            signInFallbackRedirectUrl="/auth/continue"
+            signUpFallbackRedirectUrl="/auth/continue"
+          >
+            <RootClientShell initialActiveChurchId={initialActiveChurchId} modal={modal}>
+              {children}
+            </RootClientShell>
+          </ClerkProvider>
         </body>
 
         {/* Umami Analytics */}

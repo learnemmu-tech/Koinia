@@ -1,18 +1,9 @@
 import "server-only";
 
-import {
-  CHURCHES_COLLECTION,
-  normalizeChurchFromFirestore,
-} from "@/lib/church-firestore";
-import { getAdminDb } from "@/lib/firebase-admin";
+import type { TenantContentFields, TenantScope } from "./tenant-scope";
+import { buildTenantContentFields } from "./tenant-scope";
+import { getChurchRowById, getChurchIdsForOrganization } from "@/lib/postgres/tenants";
 
-import {
-  buildTenantContentFields,
-  type TenantContentFields,
-  type TenantScope,
-} from "./tenant-scope";
-
-/** Resolve organization + church (+ optional branch) for server writes. */
 export async function resolveTenantScopeForChurch(
   churchId: string,
   options?: { branchId?: string; organizationIdFallback?: string }
@@ -20,31 +11,17 @@ export async function resolveTenantScopeForChurch(
   const trimmedChurchId = churchId.trim();
   let organizationId = options?.organizationIdFallback?.trim() || "";
 
-  const adminDb = getAdminDb();
-  let branchId = options?.branchId?.trim() || "";
-
-  if (adminDb && trimmedChurchId) {
-    const snap = await adminDb
-      .collection(CHURCHES_COLLECTION)
-      .doc(trimmedChurchId)
-      .get();
-
-    if (snap.exists) {
-      const church = normalizeChurchFromFirestore(
-        snap.id,
-        snap.data() as Record<string, unknown>
-      );
-      organizationId = church.organizationId?.trim() || organizationId;
-      if (!branchId) {
-        branchId = church.defaultBranchId?.trim() || "";
-      }
+  if (trimmedChurchId) {
+    const church = await getChurchRowById(trimmedChurchId);
+    if (church) {
+      organizationId = church.organizationId;
     }
   }
 
   return {
     organizationId,
     churchId: trimmedChurchId,
-    branchId: branchId || undefined,
+    branchId: options?.branchId?.trim() || trimmedChurchId || undefined,
   };
 }
 
@@ -62,16 +39,4 @@ export async function mergeTenantFieldsIntoPayload<
   };
 }
 
-export async function getChurchIdsForOrganization(
-  organizationId: string
-): Promise<string[]> {
-  const adminDb = getAdminDb();
-  if (!adminDb || !organizationId.trim()) return [];
-
-  const snap = await adminDb
-    .collection(CHURCHES_COLLECTION)
-    .where("organizationId", "==", organizationId)
-    .get();
-
-  return snap.docs.map((doc) => doc.id);
-}
+export { getChurchIdsForOrganization };

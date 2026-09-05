@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 
 type NotificationBellProps = {
   userId: string;
+  variant?: "icon" | "sidebar";
 };
 
 function NotificationTypeIcon({
@@ -57,7 +58,10 @@ function NotificationTypeIcon({
   }
 }
 
-export function NotificationBell({ userId }: NotificationBellProps) {
+export function NotificationBell({
+  userId,
+  variant = "icon",
+}: NotificationBellProps) {
   const router = useRouter();
   const [notifications, setNotifications] = useState<FirebaseNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
@@ -110,24 +114,45 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-9 shrink-0"
-          aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
-        >
-          <span className="relative inline-flex">
-            <Bell className="size-4" />
+        {variant === "sidebar" ?
+          <button
+            type="button"
+            className="flex h-[34px] w-full items-center gap-2 rounded-md border-l-2 border-transparent px-4 py-1.5 text-sm text-[#A1A1A1] transition-colors duration-150 hover:bg-[#1A1A1A] hover:text-white"
+          >
+            <span className="relative inline-flex">
+              <Bell className="size-4 shrink-0" />
+              {unreadCount > 0 ?
+                <span className="absolute -right-1.5 -top-1.5 flex size-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-500 text-[9px] font-semibold leading-none text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              : null}
+            </span>
+            <span className="truncate">Notifications</span>
             {unreadCount > 0 ?
-              <Badge
-                className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-background px-1 text-[10px] font-semibold leading-none tabular-nums"
-              >
-                {unreadCount > 99 ? "99+" : unreadCount > 9 ? "9+" : unreadCount}
-              </Badge>
+              <span className="ml-auto flex size-[18px] shrink-0 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold leading-none text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
             : null}
-          </span>
-        </Button>
+          </button>
+        : <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9 shrink-0"
+            aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+          >
+            <span className="relative inline-flex">
+              <Bell className="size-4" />
+              {unreadCount > 0 ?
+                <Badge
+                  className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-background px-1 text-[10px] font-semibold leading-none tabular-nums"
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount > 9 ? "9+" : unreadCount}
+                </Badge>
+              : null}
+            </span>
+          </Button>
+        }
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-80 p-0">

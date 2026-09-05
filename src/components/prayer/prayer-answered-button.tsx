@@ -20,7 +20,7 @@ export function PrayerAnsweredBadge({ className }: PrayerAnsweredBadgeProps) {
   return (
     <Badge
       className={cn(
-        "border-green-500/30 bg-green-500/10 text-green-700 hover:bg-green-500/10 dark:text-green-400",
+        "border-[#2A2A2A] bg-[#1A1A1A] text-[#A1A1A1] hover:bg-[#1A1A1A]",
         className
       )}
     >
@@ -61,7 +61,7 @@ export function PrayerAnsweredButton({
 
     setSubmitting(true);
     try {
-      await markPrayerRequestAnswered(request.id, authUser.uid);
+      await markPrayerRequestAnswered(request.id);
       toast.success("Praise God! Your prayer has been marked as answered.");
       onAnswered?.();
     } catch (error) {

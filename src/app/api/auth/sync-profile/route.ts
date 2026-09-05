@@ -1,245 +1,125 @@
-import { FieldValue } from "firebase-admin/firestore";
-
-import { getAuth } from "firebase-admin/auth";
-
 import { NextResponse } from "next/server";
 
-
+import { clerkClient } from "@clerk/nextjs/server";
 
 import { triggerWelcomeEmails } from "@/lib/email/triggers";
-
-import { getAdminApp, getAdminDb } from "@/lib/firebase-admin";
-
-import { DEFAULT_EMAIL_PREFERENCES } from "@/lib/email/preferences";
-
-import {
-  getChurchesByOrganization,
-  getOrganizationById,
-  getOrganizationsForUser,
-} from "@/lib/organization/organization-server";
-import { getWorkspaceType } from "@/lib/organization/workspace-type";
-
-
+import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { getAppUserByClerkId, mapAppUserToProfile } from "@/lib/postgres/app-user";
+import { upsertAppUserFromClerk } from "@/lib/postgres/upsert-app-user";
+import { timed } from "@/lib/perf";
 
 type SyncProfileBody = {
-
   firstName?: string;
-
   lastName?: string;
-
 };
 
+export async function GET(request: Request) {
+  const verified = await verifyBearerToken(request);
+  if (!verified) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
+  const appUser = await getAppUserByClerkId(verified.uid);
+  if (!appUser) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(mapAppUserToProfile(appUser));
+}
 
 export async function POST(request: Request) {
+  const verified = await verifyBearerToken(request);
 
-  const adminApp = getAdminApp();
-
-  const adminDb = getAdminDb();
-
-
-
-  if (!adminApp || !adminDb) {
-
-    return NextResponse.json(
-
-      { error: "Firebase Admin is not configured on the server." },
-
-      { status: 503 }
-
-    );
-
-  }
-
-
-
-  const authHeader = request.headers.get("Authorization");
-
-  if (!authHeader?.startsWith("Bearer ")) {
-
+  if (!verified) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   }
 
-
-
-  const idToken = authHeader.slice("Bearer ".length);
-
-
-
-  let uid: string;
-
-  let email: string | undefined;
-
+  const uid = verified.uid;
+  let email = verified.email;
   let displayName: string | undefined;
-
-
-
-  try {
-
-    const decoded = await getAuth(adminApp).verifyIdToken(idToken);
-
-    uid = decoded.uid;
-
-    email = decoded.email;
-
-    displayName = decoded.name;
-
-  } catch {
-
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-
-  }
-
-
+  let firstNameFromClerk = "";
+  let lastNameFromClerk = "";
+  let emailVerified = false;
 
   let body: SyncProfileBody = {};
 
   try {
-
     body = (await request.json()) as SyncProfileBody;
-
   } catch {
-
     body = {};
-
   }
 
+  const existing = await timed("sync-profile.existing-user", () =>
+    getAppUserByClerkId(uid)
+  );
 
+  const needsClerkRefresh =
+    !existing ||
+    Boolean(body.firstName?.trim()) ||
+    Boolean(body.lastName?.trim()) ||
+    !existing.email;
 
-  const userRef = adminDb.collection("users").doc(uid);
+  if (needsClerkRefresh) {
+    try {
+      const client = await clerkClient();
+      const clerkUser = await timed("sync-profile.clerk-getUser", () =>
+        client.users.getUser(uid)
+      );
+      email = clerkUser.primaryEmailAddress?.emailAddress ?? email;
+      firstNameFromClerk = clerkUser.firstName ?? "";
+      lastNameFromClerk = clerkUser.lastName ?? "";
+      displayName = [firstNameFromClerk, lastNameFromClerk]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      emailVerified =
+        clerkUser.primaryEmailAddress?.verification?.status === "verified";
+    } catch {
+      // Identity from the token is sufficient if Clerk user fetch fails.
+    }
+  }
 
-  const existing = await userRef.get();
+  if (existing && !needsClerkRefresh) {
+    return NextResponse.json(mapAppUserToProfile(existing));
+  }
 
+  const nameParts = (displayName ?? "").split(" ");
+  const firstName =
+    body.firstName?.trim() || firstNameFromClerk || existing?.firstName || nameParts[0] || "";
+  const lastName =
+    body.lastName?.trim() ||
+    lastNameFromClerk ||
+    existing?.lastName ||
+    nameParts.slice(1).join(" ") ||
+    "";
 
-
-  if (!existing.exists) {
-
-    const nameParts = (displayName ?? "").split(" ");
-
-    const firstName = body.firstName?.trim() || nameParts[0] || "";
-
-    const lastName =
-
-      body.lastName?.trim() || nameParts.slice(1).join(" ") || "";
-
-
-
-    await userRef.set({
-
-      firstName,
-
-      lastName,
-
-      email: email ?? "",
-
-      role: "user" as const,
-
-      emailPreferences: DEFAULT_EMAIL_PREFERENCES,
-
-      needsChurchOnboarding: true,
-
-      createdAt: FieldValue.serverTimestamp(),
-
-    });
-
-
-
-    if (email?.trim()) {
-
-      triggerWelcomeEmails({
-
-        email: email.trim(),
-
+  let syncResult;
+  try {
+    syncResult = await timed("sync-profile.upsert", () =>
+      upsertAppUserFromClerk({
+        clerkId: uid,
+        email: email ?? existing?.email ?? "",
         firstName,
-
         lastName,
+        emailVerified,
+      })
+    );
+  } catch (error) {
+    console.error("[api/auth/sync-profile] PostgreSQL user sync failed", error);
+    return NextResponse.json(
+      { error: "Failed to save user profile." },
+      { status: 500 }
+    );
+  }
 
-        userId: uid,
-
-      });
-
-    }
-
-
-
-    return NextResponse.json({
-
+  if (syncResult.created && email?.trim()) {
+    triggerWelcomeEmails({
+      email: email.trim(),
       firstName,
-
       lastName,
-
-      email: email ?? "",
-
-      role: "user",
-
-      needsChurchOnboarding: true,
-
-      createdAt: null,
-
+      userId: uid,
     });
-
   }
 
-
-
-  const data = existing.data()!;
-
-
-
-  const orgs = await getOrganizationsForUser(uid);
-
-  const organizationId = orgs[0]?.id ?? null;
-
-
-
-  let needsChurchOnboarding = data.needsChurchOnboarding === true;
-
-  if (organizationId) {
-    const organization = await getOrganizationById(organizationId);
-    const workspaceType = getWorkspaceType(organization);
-
-    if (workspaceType === "multi_church_org") {
-      needsChurchOnboarding = data.needsChurchOnboarding === true;
-    } else if (data.needsChurchOnboarding === false) {
-      needsChurchOnboarding = false;
-    } else {
-      const churches = await getChurchesByOrganization(organizationId);
-      needsChurchOnboarding = churches.length === 0;
-    }
-  } else if (!data.churchId) {
-
-    needsChurchOnboarding = true;
-
-  }
-
-
-
-  return NextResponse.json({
-
-    firstName: String(data.firstName ?? ""),
-
-    lastName: String(data.lastName ?? ""),
-
-    email: String(data.email ?? ""),
-
-    role: data.role ?? "user",
-
-    organizationId,
-
-    needsChurchOnboarding,
-
-    churchId: data.churchId ?? null,
-
-    activeBranchId: data.activeBranchId ?? null,
-
-    churchRole: data.churchRole ?? null,
-
-    managedChurchIds: data.managedChurchIds ?? [],
-
-    createdAt: data.createdAt ?? null,
-
-  });
-
+  return NextResponse.json(syncResult.profile);
 }
-

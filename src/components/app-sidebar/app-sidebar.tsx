@@ -1,18 +1,18 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { Suspense } from "react";
+import { usePathname } from "next/navigation";
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
-  SidebarRail,
 } from "@/components/ui/sidebar";
-import { siteConfig } from "@/config/site";
-import { cn } from "@/lib/utils";
+import { isMembershipStatusPath } from "@/lib/auth/auth-paths";
 
+import { SidebarWorkspaceHeader } from "./church-switcher-card";
+import { SidebarFooterBar } from "./sidebar-footer-bar";
 import { SidebarNavigation } from "./sidebar-navigation";
 
 function SidebarNavFallback() {
@@ -20,38 +20,30 @@ function SidebarNavFallback() {
 }
 
 export function AppSidebar() {
+  const pathname = usePathname();
+
+  if (isMembershipStatusPath(pathname)) {
+    return null;
+  }
+
   return (
     <Sidebar
-      collapsible="offcanvas"
-      className={cn(
-        "border-r border-sidebar-border/60 bg-sidebar/95",
-        "[--sidebar-width:15rem]"
-      )}
+      collapsible="icon"
+      className="border-r border-sidebar-border bg-sidebar"
     >
-      <SidebarHeader className="border-b border-sidebar-border/40 px-3 py-3">
-        <Link href="/" className="flex items-center gap-2.5 px-1">
-          <Image
-            src={siteConfig.icon}
-            alt=""
-            width={32}
-            height={32}
-            className="size-8 rounded-lg"
-          />
-          <div className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-semibold text-sidebar-foreground">
-              {siteConfig.name}
-            </p>
-          </div>
-        </Link>
+      <SidebarHeader className="shrink-0 border-b border-sidebar-border px-2 py-2.5 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-2">
+        <SidebarWorkspaceHeader />
       </SidebarHeader>
 
-      <SidebarContent className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden px-1 pt-2">
+      <SidebarContent className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-1 py-1 group-data-[collapsible=icon]:px-0.5">
         <Suspense fallback={<SidebarNavFallback />}>
           <SidebarNavigation />
         </Suspense>
       </SidebarContent>
 
-      <SidebarRail />
+      <SidebarFooter className="shrink-0 p-0">
+        <SidebarFooterBar />
+      </SidebarFooter>
     </Sidebar>
   );
 }

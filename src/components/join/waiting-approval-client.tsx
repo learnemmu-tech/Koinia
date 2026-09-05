@@ -3,22 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock3, Loader2 } from "lucide-react";
-import { doc, onSnapshot } from "firebase/firestore";
 
 import { AuthLoading } from "@/components/auth/auth-loading";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { ACCESS_DENIED_PATH } from "@/lib/auth/auth-paths";
-import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
-import { db } from "@/lib/firebase";
 import { firebaseAuth } from "@/lib/firebase-auth-service";
-import {
-  BRANCH_MEMBERSHIPS_COLLECTION,
-  normalizeBranchMembershipFromFirestore,
-  resolveBranchMembershipDocumentId,
-} from "@/lib/organization/branch-membership-firestore";
 
 type PendingJoinStatus = {
   churchName: string;
@@ -29,21 +22,29 @@ type PendingJoinStatus = {
 
 const REDIRECT_SECONDS = 3;
 const WELCOME_SESSION_KEY = "fc_pending_welcome";
+const MEMBER_HOME = "/";
 
 export function WaitingApprovalClient() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { authUser, loading: authLoading, refreshProfile } = useFirebaseAuth();
   const [pending, setPending] = useState<PendingJoinStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [isApproved, setIsApproved] = useState(false);
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
   const redirectStartedRef = useRef(false);
+  const navigatedRef = useRef(false);
 
   const handleApproved = useCallback(
     (churchName: string) => {
       if (redirectStartedRef.current) return;
       redirectStartedRef.current = true;
 
+      setPending((current) =>
+        current
+          ? { ...current, churchName, status: "active" }
+          : { churchName, slug: "", branchId: "", status: "active" }
+      );
       setIsApproved(true);
       setCountdown(REDIRECT_SECONDS);
 
@@ -51,9 +52,15 @@ export function WaitingApprovalClient() {
         sessionStorage.setItem(WELCOME_SESSION_KEY, churchName);
       }
 
-      void refreshProfile();
+      void (async () => {
+        await refreshProfile();
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["organization"] }),
+          queryClient.invalidateQueries({ queryKey: ["membership-routing"] }),
+        ]);
+      })();
     },
-    [refreshProfile]
+    [queryClient, refreshProfile]
   );
 
   useEffect(() => {
@@ -90,7 +97,7 @@ export function WaitingApprovalClient() {
 
         const profile = await refreshProfile();
         if (profile?.activeBranchId?.trim() && !profile.pendingBranchId?.trim()) {
-          router.replace(WORKSPACE_BASE);
+          router.replace(MEMBER_HOME);
           return;
         }
 
@@ -109,42 +116,49 @@ export function WaitingApprovalClient() {
     const user = firebaseAuth.currentUser;
     if (!user || !pending?.branchId || isApproved) return;
 
-    const membershipId = resolveBranchMembershipDocumentId(
-      pending.branchId,
-      user.uid
-    );
-    const membershipRef = doc(db, BRANCH_MEMBERSHIPS_COLLECTION, membershipId);
-
-    const unsubscribe = onSnapshot(membershipRef, (snapshot) => {
-      if (!snapshot.exists()) return;
-
-      const membership = normalizeBranchMembershipFromFirestore(
-        snapshot.id,
-        snapshot.data() as Record<string, unknown>
-      );
-
-      if (membership.status === "active") {
-        handleApproved(pending.churchName);
-        return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/join/pending", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { pending: PendingJoinStatus | null };
+        if (data.pending?.status === "active") {
+          handleApproved(data.pending.churchName);
+          return;
+        }
+        if (!data.pending) {
+          const profile = await refreshProfile();
+          if (profile?.activeBranchId?.trim() && !profile.pendingBranchId?.trim()) {
+            handleApproved(pending.churchName);
+            return;
+          }
+          router.replace(ACCESS_DENIED_PATH);
+        }
+      } catch {
+        // Keep polling.
       }
+    };
 
-      if (membership.status === "rejected") {
-        router.replace(ACCESS_DENIED_PATH);
-      }
-    });
+    void tick();
+    const interval = window.setInterval(() => {
+      void tick();
+    }, 4000);
 
-    return () => unsubscribe();
-  }, [pending, isApproved, handleApproved, router]);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [pending, isApproved, handleApproved, refreshProfile, router]);
 
   useEffect(() => {
     if (!isApproved) return;
 
-    setCountdown(REDIRECT_SECONDS);
     const interval = window.setInterval(() => {
       setCountdown((value) => {
         if (value <= 1) {
-          window.clearInterval(interval);
-          router.replace(WORKSPACE_BASE);
           return 0;
         }
         return value - 1;
@@ -152,7 +166,13 @@ export function WaitingApprovalClient() {
     }, 1000);
 
     return () => window.clearInterval(interval);
-  }, [isApproved, router]);
+  }, [isApproved]);
+
+  useEffect(() => {
+    if (!isApproved || countdown > 0 || navigatedRef.current) return;
+    navigatedRef.current = true;
+    router.replace(MEMBER_HOME);
+  }, [isApproved, countdown, router]);
 
   if (authLoading || loading) return <AuthLoading />;
   if (!authUser) return <AuthLoading />;
@@ -163,7 +183,7 @@ export function WaitingApprovalClient() {
     return (
       <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-12 text-center">
         <div className="animate-in zoom-in-50 fade-in duration-500">
-          <CheckCircle2 className="size-20 text-green-500" aria-hidden />
+          <CheckCircle2 className="size-20 text-white" aria-hidden />
         </div>
         <h1 className="mt-6 font-heading text-2xl font-bold">
           You have been approved!

@@ -41,7 +41,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
-import { createArticle, updateArticle } from "@/lib/firebase-article-queries";
+import { createArticle, updateArticle } from "@/lib/content-mutations-client";
 import { isValidYouTubeUrl } from "@/lib/media-url-validation";
 import { notifyIfNewlyPublished } from "@/lib/notify-if-published";
 import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";

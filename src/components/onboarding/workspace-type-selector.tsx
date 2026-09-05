@@ -35,7 +35,7 @@ export function WorkspaceTypeSelector({
   onChange,
 }: WorkspaceTypeSelectorProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:items-stretch sm:gap-5">
+    <div className="grid gap-4">
       {WORKSPACE_OPTIONS.map((option) => {
         const Icon = option.icon;
         const selected = value === option.value;
@@ -47,34 +47,40 @@ export function WorkspaceTypeSelector({
             onClick={() => onChange(option.value)}
             aria-pressed={selected}
             className={cn(
-              "relative flex w-full max-w-[280px] cursor-pointer flex-col items-center rounded-2xl border p-6 text-center transition-all duration-200 ease-out",
+              "relative flex w-full flex-col items-start gap-4 rounded-2xl border p-6 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-              selected ?
-                "border-2 border-primary bg-primary/[0.08]"
-              : "border border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
+              selected
+                ? "border-primary bg-primary/[0.08]"
+                : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
             )}
           >
-            {selected ?
-              <span className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Check className="size-3.5" aria-hidden />
-              </span>
-            : null}
-
+            <span
+              className={cn(
+                "absolute right-5 top-5 flex size-5 items-center justify-center rounded-full border",
+                selected
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-white/20 text-transparent"
+              )}
+              aria-hidden
+            >
+              <Check className="size-3" />
+            </span>
             <div
               className={cn(
                 "flex size-12 items-center justify-center rounded-xl",
-                selected ?
-                  "bg-primary/15 text-primary"
-                : "bg-primary/10 text-primary/80"
+                selected ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary/80"
               )}
             >
               <Icon className="size-6" aria-hidden />
             </div>
-
-            <p className="mt-4 text-lg font-bold text-foreground">{option.title}</p>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-              {option.description}
-            </p>
+            <span className="pr-8">
+              <span className="block text-lg font-semibold text-foreground">
+                {option.title}
+              </span>
+              <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                {option.description}
+              </span>
+            </span>
           </button>
         );
       })}

@@ -34,6 +34,7 @@ export function useMembershipRouting(callbackUrl = "/") {
     enabled: Boolean(authUser),
     staleTime: QUERY_STALE_TIME,
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   return {

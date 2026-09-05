@@ -1,83 +1,48 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  startAfter,
-  where,
-  type DocumentData,
-  type QueryConstraint,
-  type QueryDocumentSnapshot,
-} from "firebase/firestore";
 
 import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 
+import { fetchTenantContentPage } from "@/lib/api-client";
 import { useContentTenantScope } from "@/hooks/use-workspace-tenant-scope";
-import { filterRecordsByChurch, getLegacyDefaultChurchId } from "@/lib/church-scope";
-import { db } from "@/lib/firebase";
+import { isPublicPrayerRequest } from "@/lib/prayer-request-firestore";
 import {
   DEFAULT_LIST_LIMIT,
   QUERY_GC_TIME,
   QUERY_STALE_TIME,
 } from "@/lib/react-query-config";
-import {
-  isPublicPrayerRequest,
-  normalizePrayerRequestFromFirestore,
-  PRAYER_REQUESTS_COLLECTION,
-} from "@/lib/prayer-request-firestore";
 
 export function useApprovedPrayerRequests(
   initialData: FirebasePrayerRequest[] = [],
   maxItems?: number
 ) {
   const scope = useContentTenantScope();
-  const churchId =
-    scope.churchId?.trim() || getLegacyDefaultChurchId() || "";
+  const churchId = scope.churchId?.trim() ?? "";
+  const pageSize = maxItems ?? DEFAULT_LIST_LIMIT;
 
   const result = useInfiniteQuery({
     queryKey: ["approved-prayers", churchId, maxItems],
     enabled: Boolean(churchId),
-    initialPageParam: undefined as
-      | QueryDocumentSnapshot<DocumentData>
-      | undefined,
+    initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
-      const pageSize = maxItems ?? DEFAULT_LIST_LIMIT;
-      const constraints: QueryConstraint[] = [
-        where("churchId", "==", churchId),
-        where("status", "==", "approved"),
-        orderBy("createdAt", "desc"),
-      ];
-      if (pageParam) constraints.push(startAfter(pageParam));
-      constraints.push(limit(pageSize));
-
-      const snapshot = await getDocs(
-        query(collection(db, PRAYER_REQUESTS_COLLECTION), ...constraints)
+      const page = await fetchTenantContentPage<FirebasePrayerRequest>({
+        collection: "prayerRequests",
+        churchId,
+        organizationId: scope.organizationId,
+        offset: pageParam,
+        limit: pageSize,
+      });
+      const items = page.items.filter(
+        (request) => request.status === "approved" && isPublicPrayerRequest(request)
       );
-
-      const items = filterRecordsByChurch(
-        snapshot.docs
-          .map((docSnap) =>
-            normalizePrayerRequestFromFirestore(
-              docSnap.id,
-              docSnap.data() as Record<string, unknown>
-            )
-          )
-          .filter(isPublicPrayerRequest),
-        churchId
-      );
-      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
       return {
         items,
-        lastDoc,
-        hasMore: maxItems ? false : snapshot.docs.length === pageSize,
+        hasMore: maxItems ? false : page.hasMore,
       };
     },
-    getNextPageParam: (lastPage) =>
-      maxItems ? undefined : lastPage.hasMore ? lastPage.lastDoc : undefined,
+    getNextPageParam: (lastPage, pages) =>
+      maxItems ? undefined : lastPage.hasMore ? pages.length * pageSize : undefined,
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
   });

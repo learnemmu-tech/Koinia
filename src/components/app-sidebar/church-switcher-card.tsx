@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Building2, ChevronsUpDown } from "lucide-react";
 
 import { ImageWithFallback } from "@/components/image-with-fallback";
@@ -12,22 +13,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useActiveBranchOptional } from "@/context/active-branch-context";
 import { useOrganizationOptional } from "@/context/organization-context";
 import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
-import {
-  isIndependentChurchWorkspace,
-  isMultiChurchOrgWorkspace,
-} from "@/lib/organization/workspace-type";
-import type { FirebaseOrganization } from "@/types/organization";
+import { isMultiChurchOrgWorkspace } from "@/lib/organization/workspace-type";
 import { cn } from "@/lib/utils";
-
-function workspaceTypeLabel(organization: FirebaseOrganization | null): string {
-  if (!organization) return "Church Workspace";
-  if (isMultiChurchOrgWorkspace(organization)) return "Multi-Church Organization";
-  if (isIndependentChurchWorkspace(organization)) return "Independent Church";
-  return "Church Workspace";
-}
+import { useSidebar } from "@/components/ui/sidebar";
 
 function getInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -51,7 +43,7 @@ function WorkspaceAvatar({
 }) {
   if (hasCustomLogo(logoUrl)) {
     return (
-      <div className="relative size-8 shrink-0 overflow-hidden rounded-full bg-background">
+      <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-[#111111]">
         <ImageWithFallback
           src={logoUrl!}
           fallback={DEFAULT_CHURCH_LOGO}
@@ -67,8 +59,8 @@ function WorkspaceAvatar({
   return (
     <div
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-full",
-        "bg-primary/15 text-[11px] font-semibold text-sidebar-foreground"
+        "flex size-7 shrink-0 items-center justify-center rounded-full",
+        "bg-[#1A1A1A] text-[10px] font-semibold text-[#A1A1A1]"
       )}
       aria-hidden
     >
@@ -77,20 +69,18 @@ function WorkspaceAvatar({
   );
 }
 
-export function ChurchSwitcherCard() {
+export function SidebarWorkspaceHeader() {
   const organizationCtx = useOrganizationOptional();
   const branchContext = useActiveBranchOptional();
+  const { profile } = useFirebaseAuth();
+  const { state, isMobile } = useSidebar();
+  const isCollapsed = state === "collapsed" && !isMobile;
 
   if (organizationCtx?.loading && !organizationCtx.organization) {
     return (
-      <div className="m-2 rounded-lg bg-white/5 p-2.5">
-        <div className="flex items-center gap-3">
-          <Skeleton className="size-8 shrink-0 rounded-full" />
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <Skeleton className="h-3.5 w-24" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-        </div>
+      <div className="flex min-w-0 items-center gap-2">
+        <Skeleton className="size-7 shrink-0 rounded-full" />
+        <Skeleton className="h-3.5 w-28" />
       </div>
     );
   }
@@ -107,77 +97,87 @@ export function ChurchSwitcherCard() {
     branches.find((b) => b.isDefault) ??
     branches[0] ??
     null;
-  const church = churches[0];
+  const preferredChurchId =
+    profile?.churchId?.trim() ||
+    profile?.activeBranchId?.trim() ||
+    profile?.pendingBranchId?.trim() ||
+    "";
+  const church =
+    churches.find((item) => item.id === preferredChurchId) ??
+    churches.find((item) => item.id === activeBranch?.id) ??
+    churches[0];
   const churchName =
-    isMultiOrg ?
-      organization.name?.trim() ||
-      activeBranch?.name?.trim() ||
-      church?.name?.trim() ||
-      "Your organization"
-    : activeBranch?.name?.trim() ||
-      church?.name?.trim() ||
-      organization.name?.trim() ||
-      "Your church";
-  const logoUrl =
-    isMultiOrg ?
-      organization.logo?.trim() ||
-      church?.logoUrl?.trim()
-    : church?.logoUrl?.trim() ||
-      organization.logo?.trim();
-  const subtitle = workspaceTypeLabel(organization);
+    isMultiOrg
+      ? organization.name?.trim() ||
+        activeBranch?.name?.trim() ||
+        church?.name?.trim() ||
+        "Your organization"
+      : activeBranch?.name?.trim() ||
+        church?.name?.trim() ||
+        organization.name?.trim() ||
+        "Your church";
+  const logoUrl = isMultiOrg
+    ? organization.logo?.trim() || church?.logoUrl?.trim()
+    : church?.logoUrl?.trim() || organization.logo?.trim();
   const showBranchSwitcher =
     branchContext?.showBranchSwitcher && branches.length > 1;
 
-  const cardBody = (
+  const identity = (
     <>
       <WorkspaceAvatar name={churchName} logoUrl={logoUrl} />
-      <div className="min-w-0 flex-1 text-left">
-        <p className="truncate text-sm font-semibold leading-tight text-sidebar-foreground">
+      {!isCollapsed ?
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-white">
           {churchName}
-        </p>
-        <p className="truncate text-[11px] leading-tight text-sidebar-foreground/50">
-          {subtitle}
-        </p>
-      </div>
-      {showBranchSwitcher ?
-        <ChevronsUpDown className="size-4 shrink-0 text-sidebar-foreground/40" />
+        </span>
       : null}
     </>
   );
 
   if (showBranchSwitcher) {
     return (
-      <div className="m-2 rounded-lg bg-white/5 p-2.5">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="flex w-full items-center gap-3 text-left focus-visible:outline-none"
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            title={isCollapsed ? churchName : undefined}
+            className={cn(
+              "flex min-w-0 w-full items-center gap-2 text-left focus-visible:outline-none",
+              isCollapsed && "justify-center"
+            )}
+          >
+            {identity}
+            {!isCollapsed ?
+              <ChevronsUpDown className="size-4 shrink-0 text-[#6B7280]" />
+            : null}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuLabel>Switch church</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {branches.map((branch) => (
+            <DropdownMenuItem
+              key={branch.id}
+              onClick={() => branchContext?.setActiveBranchId(branch.id)}
             >
-              {cardBody}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Switch church</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {branches.map((branch) => (
-              <DropdownMenuItem
-                key={branch.id}
-                onClick={() => branchContext?.setActiveBranchId(branch.id)}
-              >
-                <Building2 className="mr-2 size-4 opacity-60" />
-                <span className="truncate">{branch.name}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+              <Building2 className="mr-2 size-4 opacity-60" />
+              <span className="truncate">{branch.name}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 
   return (
-    <div className="m-2 flex items-center gap-3 rounded-lg bg-white/5 p-2.5">
-      {cardBody}
-    </div>
+    <Link
+      href="/"
+      title={isCollapsed ? churchName : undefined}
+      className={cn(
+        "flex min-w-0 w-full items-center gap-2",
+        isCollapsed && "justify-center"
+      )}
+    >
+      {identity}
+    </Link>
   );
 }

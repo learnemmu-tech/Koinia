@@ -6,12 +6,9 @@ import {
   triggerPrayerSubmittedEmails,
 } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
-import { getAdminDb } from "@/lib/firebase-admin";
-import {
-  getPrayerRequestDisplayName,
-  normalizePrayerRequestFromFirestore,
-  PRAYER_REQUESTS_COLLECTION,
-} from "@/lib/prayer-request-firestore";
+import { getPrayerRequestDisplayName } from "@/lib/prayer-request-firestore";
+import { getPrayerRequestById } from "@/lib/firebase-prayer-request-queries";
+import { getChurchById } from "@/lib/church-queries";
 
 const bodySchema = z.object({
   prayerId: z.string().trim().min(1),
@@ -32,26 +29,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    return NextResponse.json({ success: true });
-  }
-
   try {
-    const snap = await adminDb
-      .collection(PRAYER_REQUESTS_COLLECTION)
-      .doc(body.prayerId)
-      .get();
-
-    if (!snap.exists) {
+    const prayer = await getPrayerRequestById(body.prayerId);
+    if (!prayer) {
       return NextResponse.json({ error: "Prayer request not found." }, { status: 404 });
     }
-
-    const prayer = normalizePrayerRequestFromFirestore(
-      snap.id,
-      snap.data() as Record<string, unknown>
-    );
-    const prayerData = snap.data() as Record<string, unknown>;
 
     if (prayer.userId !== authUser.uid) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -62,13 +44,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    const church = await getChurchById(prayer.churchId);
     const memberName = getPrayerRequestDisplayName(prayer);
 
     await triggerPrayerRequestSubmittedNotifications({
       prayerId: prayer.id,
       churchId: prayer.churchId,
-      organizationId: String(prayerData.organizationId ?? "").trim() || undefined,
-      branchId: String(prayerData.branchId ?? "").trim() || undefined,
+      organizationId: church?.organizationId,
+      branchId: prayer.churchId,
       submitterUserId: authUser.uid,
       memberName,
       prayerTitle: body.prayerTitle || prayer.title,

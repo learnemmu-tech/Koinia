@@ -56,7 +56,7 @@ export default function Providers({
     <ThemeProvider
       attribute="class"
       enableSystem
-      defaultTheme="system"
+      defaultTheme="dark"
       storageKey="cfp-theme"
       disableTransitionOnChange
       themes={["light", "dark", "system"]}

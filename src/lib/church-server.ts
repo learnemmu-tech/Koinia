@@ -12,6 +12,7 @@ import {
 } from "./branch-cookies";
 import { getLegacyDefaultChurchId } from "./church-scope";
 import { getActiveChurches, getChurchById } from "./church-queries";
+import { isPostgresUuid } from "@/lib/postgres/uuid";
 
 export async function getActiveChurchIdFromCookies(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -29,7 +30,7 @@ export async function getActiveBranchIdFromCookies(): Promise<string | null> {
 
 export async function resolveActiveChurchId(): Promise<string> {
   const fromCookie = await getActiveChurchIdFromCookies();
-  if (fromCookie) {
+  if (fromCookie && isPostgresUuid(fromCookie)) {
     try {
       const church = await getChurchById(fromCookie);
       if (church?.isActive) return church.id;
@@ -42,11 +43,11 @@ export async function resolveActiveChurchId(): Promise<string> {
     const activeChurches = await getActiveChurches();
     if (activeChurches[0]) return activeChurches[0].id;
   } catch {
-    // Fall through to legacy default when Firestore is unavailable.
+    // Fall through when the church list cannot be loaded.
   }
 
   const legacyId = getLegacyDefaultChurchId();
-  if (legacyId) return legacyId;
+  if (legacyId && isPostgresUuid(legacyId)) return legacyId;
 
   return "";
 }

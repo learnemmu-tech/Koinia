@@ -7,13 +7,8 @@ import type { FirebaseRecentlyViewed } from "@/types/firebase-recently-viewed";
 import type { FirebaseSermon } from "@/types/firebase-sermon";
 import type { FirebaseSong } from "@/types/firebase-song";
 
-import { normalizeArticleFromFirestore } from "@/lib/article-firestore";
-import { getFirestoreDocsByIds } from "@/lib/firestore-batch-get";
-import { normalizeSermonFromFirestore } from "@/lib/sermon-firestore";
-import {
-  filterPublishedSongs,
-  normalizeSongFromFirestore,
-} from "@/lib/song-firestore";
+import { fetchTenantContentPage } from "@/lib/api-client";
+import { filterPublishedSongs } from "@/lib/song-firestore";
 
 export type ResolvedRecentlyViewedItem =
   | {
@@ -81,11 +76,32 @@ export function useResolvedRecentlyViewedItems(
           .filter((entry) => entry.itemType === "article")
           .map((entry) => entry.itemId);
 
-        const [songs, sermons, articles] = await Promise.all([
-          getFirestoreDocsByIds("songs", songIds, normalizeSongFromFirestore),
-          getFirestoreDocsByIds("sermons", sermonIds, normalizeSermonFromFirestore),
-          getFirestoreDocsByIds("articles", articleIds, normalizeArticleFromFirestore),
+        const [songsPage, sermonsPage, articlesPage] = await Promise.all([
+          songIds.length
+            ? fetchTenantContentPage<FirebaseSong>({
+                collection: "songs",
+                ids: songIds,
+                limit: 50,
+              })
+            : Promise.resolve({ items: [] as FirebaseSong[] }),
+          sermonIds.length
+            ? fetchTenantContentPage<FirebaseSermon>({
+                collection: "sermons",
+                ids: sermonIds,
+                limit: 50,
+              })
+            : Promise.resolve({ items: [] as FirebaseSermon[] }),
+          articleIds.length
+            ? fetchTenantContentPage<FirebaseArticle>({
+                collection: "articles",
+                ids: articleIds,
+                limit: 50,
+              })
+            : Promise.resolve({ items: [] as FirebaseArticle[] }),
         ]);
+        const songs = songsPage.items;
+        const sermons = sermonsPage.items;
+        const articles = articlesPage.items;
 
         if (cancelled) return;
 

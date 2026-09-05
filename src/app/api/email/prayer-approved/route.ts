@@ -8,11 +8,8 @@ import {
 } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { isPlatformSuperAdmin } from "@/lib/church-access";
-import { getAdminDb } from "@/lib/firebase-admin";
-import {
-  normalizePrayerRequestFromFirestore,
-  PRAYER_REQUESTS_COLLECTION,
-} from "@/lib/prayer-request-firestore";
+import { getPrayerRequestById } from "@/lib/firebase-prayer-request-queries";
+import { getChurchById } from "@/lib/church-queries";
 
 const bodySchema = z.object({
   prayerId: z.string().trim().min(1),
@@ -24,11 +21,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    return NextResponse.json({ success: true });
-  }
-
   let body: z.infer<typeof bodySchema>;
   try {
     body = bodySchema.parse(await request.json());
@@ -37,21 +29,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const snap = await adminDb
-      .collection(PRAYER_REQUESTS_COLLECTION)
-      .doc(body.prayerId)
-      .get();
-
-    if (!snap.exists) {
+    const prayer = await getPrayerRequestById(body.prayerId);
+    if (!prayer) {
       return NextResponse.json({ error: "Prayer request not found." }, { status: 404 });
     }
 
-    const prayer = normalizePrayerRequestFromFirestore(
-      snap.id,
-      snap.data() as Record<string, unknown>
-    );
-    const prayerData = snap.data() as Record<string, unknown>;
-    const organizationId = String(prayerData.organizationId ?? "").trim() || undefined;
+    const church = await getChurchById(prayer.churchId);
+    const organizationId = church?.organizationId;
 
     const canModerate =
       isPlatformSuperAdmin(authUser.email) ||

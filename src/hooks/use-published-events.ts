@@ -2,39 +2,20 @@
 
 import { useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  startAfter,
-  where,
-  type DocumentData,
-  type QueryConstraint,
-  type QueryDocumentSnapshot,
-} from "firebase/firestore";
 
 import type { FirebaseEvent } from "@/types/firebase-event";
 
-import {
-  useContentTenantScope,
-  useTenantMatchOptions,
-} from "@/hooks/use-workspace-tenant-scope";
-import { db } from "@/lib/firebase";
-import { filterRecordsByTenant } from "@/lib/organization/tenant-scope";
+import { fetchTenantContentPage } from "@/lib/api-client";
+import { useContentTenantScope } from "@/hooks/use-workspace-tenant-scope";
 import {
   DEFAULT_LIST_LIMIT,
   QUERY_GC_TIME,
   QUERY_STALE_TIME,
 } from "@/lib/react-query-config";
 import {
-  EVENTS_COLLECTION,
   filterPublishedEvents,
-  normalizeEventFromFirestore,
   splitEventsBySchedule,
 } from "@/lib/event-firestore";
-import { buildWorkspaceChurchTenantQuery } from "@/lib/tenant-query-builder";
 
 type UsePublishedEventsOptions = {
   maxItems?: number;
@@ -47,7 +28,6 @@ export function usePublishedEvents(
 ) {
   const { maxItems, upcomingOnly = false } = options ?? {};
   const scope = useContentTenantScope();
-  const matchOptions = useTenantMatchOptions();
   const pageSize = maxItems ?? DEFAULT_LIST_LIMIT;
 
   const result = useInfiniteQuery({
@@ -59,55 +39,32 @@ export function usePublishedEvents(
       pageSize,
     ],
     enabled: !scope.blocked,
-    initialPageParam: undefined as
-      | QueryDocumentSnapshot<DocumentData>
-      | undefined,
+    initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
-      const col = collection(db, EVENTS_COLLECTION);
-      const constraints: QueryConstraint[] = [
-        where("status", "==", "published"),
-        orderBy("eventDate", "asc"),
-      ];
-      if (pageParam) constraints.push(startAfter(pageParam));
-      constraints.push(limit(pageSize));
-
-      const listQuery = buildWorkspaceChurchTenantQuery(col, scope, ...constraints);
-      if (!listQuery) {
-        return { items: [] as FirebaseEvent[], lastDoc: undefined, hasMore: false };
-      }
-
-      const snapshot = await getDocs(listQuery);
-      let items = filterRecordsByTenant(
-        snapshot.docs.map((docSnap) =>
-          normalizeEventFromFirestore(
-            docSnap.id,
-            docSnap.data() as Record<string, unknown>
-          )
-        ),
-        scope,
-        matchOptions
-      );
-      items = filterPublishedEvents(items);
+      const page = await fetchTenantContentPage<FirebaseEvent>({
+        collection: "events",
+        churchId: scope.churchId,
+        organizationId: scope.organizationId,
+        offset: pageParam,
+        limit: pageSize,
+      });
+      let items = filterPublishedEvents(page.items);
       if (upcomingOnly) {
         items = splitEventsBySchedule(items).upcoming;
       }
-
-      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
       return {
         items,
-        lastDoc,
-        hasMore: maxItems ? false : snapshot.docs.length === pageSize,
+        hasMore: maxItems ? false : page.hasMore,
       };
     },
-    getNextPageParam: (lastPage) =>
-      maxItems ? undefined : lastPage.hasMore ? lastPage.lastDoc : undefined,
+    getNextPageParam: (lastPage, pages) =>
+      maxItems ? undefined : lastPage.hasMore ? pages.length * pageSize : undefined,
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
   });
 
   const events = result.data?.pages.flatMap((page) => page.items) ?? initialData;
   const loading = scope.isLoading || (result.isLoading && !scope.blocked);
-
   const grouped = useMemo(() => splitEventsBySchedule(events), [events]);
 
   return {

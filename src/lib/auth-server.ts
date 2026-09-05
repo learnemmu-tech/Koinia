@@ -1,8 +1,6 @@
-import { cookies } from "next/headers";
-
-import { AUTH_COOKIE_NAME } from "@/lib/auth-cookies";
+import { auth } from "@clerk/nextjs/server";
 
 export async function isAuthenticatedServer(): Promise<boolean> {
-  const cookieStore = await cookies();
-  return cookieStore.has(AUTH_COOKIE_NAME);
+  const { userId } = await auth();
+  return Boolean(userId);
 }

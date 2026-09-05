@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { acceptInvitation } from "@/lib/organization/invitation-server";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
-
     const body = (await request.json()) as { token?: string };
     const inviteToken = body.token?.trim();
 

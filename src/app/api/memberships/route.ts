@@ -5,16 +5,13 @@ import {
   listOrganizationMemberships,
 } from "@/lib/organization/branch-membership-server";
 import { getMembershipForUser } from "@/lib/organization/organization-server";
-import { getAdminDb } from "@/lib/firebase-admin";
+import { getPublicUserDirectory } from "@/lib/postgres/memberships";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { roleMeetsMinimum } from "@/types/membership";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,9 +26,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
-
     const membership = await getMembershipForUser(organizationId, decoded.uid);
     if (
       !membership ||
@@ -46,30 +40,13 @@ export async function GET(request: Request) {
       listBranchMembershipsForOrganization(organizationId),
     ]);
 
-    const adminDb = getAdminDb();
-    const usersById: Record<string, { email: string; firstName: string; lastName: string }> = {};
-
-    if (adminDb) {
-      const userIds = [
-        ...new Set([
-          ...organizationMemberships.map((m) => m.userId),
-          ...branchMemberships.map((m) => m.userId),
-        ]),
-      ];
-
-      await Promise.all(
-        userIds.map(async (userId) => {
-          const snap = await adminDb.collection("users").doc(userId).get();
-          if (!snap.exists) return;
-          const data = snap.data() as Record<string, unknown>;
-          usersById[userId] = {
-            email: String(data.email ?? ""),
-            firstName: String(data.firstName ?? ""),
-            lastName: String(data.lastName ?? ""),
-          };
-        })
-      );
-    }
+    const userIds = [
+      ...new Set([
+        ...organizationMemberships.map((m) => m.userId),
+        ...branchMemberships.map((m) => m.userId),
+      ]),
+    ];
+    const usersById = await getPublicUserDirectory(userIds);
 
     return NextResponse.json({
       organizationMemberships,

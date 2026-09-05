@@ -1,4 +1,3 @@
-import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -6,8 +5,11 @@ import {
   DEFAULT_EMAIL_PREFERENCES,
   normalizeEmailPreferences,
 } from "@/lib/email/preferences";
+import {
+  getUserEmailPreferences,
+  saveUserEmailPreferences,
+} from "@/lib/email/user-preferences-server";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
-import { getAdminDb } from "@/lib/firebase-admin";
 
 const preferencesSchema = z.object({
   song: z.boolean(),
@@ -24,20 +26,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    return NextResponse.json({ preferences: DEFAULT_EMAIL_PREFERENCES });
-  }
-
   try {
-    const snap = await adminDb.collection("users").doc(authUser.uid).get();
-    if (!snap.exists) {
-      return NextResponse.json({ preferences: DEFAULT_EMAIL_PREFERENCES });
-    }
-
-    const data = snap.data() as Record<string, unknown>;
+    const preferences = await getUserEmailPreferences(authUser.uid);
     return NextResponse.json({
-      preferences: normalizeEmailPreferences(data.emailPreferences),
+      preferences: normalizeEmailPreferences(preferences),
     });
   } catch (error) {
     console.error("[api/user/email-preferences GET]", error);
@@ -58,27 +50,8 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid preferences." }, { status: 400 });
   }
 
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    return NextResponse.json(
-      { error: "Server is not configured." },
-      { status: 503 }
-    );
-  }
-
   try {
-    const userRef = adminDb.collection("users").doc(authUser.uid);
-    const existing = await userRef.get();
-
-    if (!existing.exists) {
-      return NextResponse.json({ error: "User not found." }, { status: 404 });
-    }
-
-    await userRef.update({
-      emailPreferences: body,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
+    await saveUserEmailPreferences(authUser.uid, body);
     return NextResponse.json({ success: true, preferences: body });
   } catch (error) {
     console.error("[api/user/email-preferences PATCH]", error);

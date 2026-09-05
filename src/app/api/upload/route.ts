@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
-import { uploadSongFileServer } from "@/lib/firebase-storage-upload";
-import { getAdminDb, getAdminStorageBucketName, isAdminConfigured } from "@/lib/firebase-admin";
 import { getMembershipForUser } from "@/lib/organization/organization-server";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { roleMeetsMinimum } from "@/types/membership";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 /**
  * Upload handler for local file storage
@@ -53,33 +53,20 @@ function getFileExtension(mimeType: string, fileName: string): string {
 }
 
 async function verifyUploadAuth(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
   const scope = searchParams.get("scope");
 
-  const { getAuth } = await import("firebase-admin/auth");
-  const decoded = await getAuth().verifyIdToken(token);
-
   if (scope === "onboarding") {
     return { uid: decoded.uid };
   }
 
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    return NextResponse.json(
-      { error: "Server configuration error" },
-      { status: 503 }
-    );
-  }
-
-  const userSnap = await adminDb.collection("users").doc(decoded.uid).get();
-  const organizationId = String(userSnap.data()?.organizationId ?? "").trim();
+  const appUser = await getAppUserByClerkId(decoded.uid);
+  const organizationId = appUser?.organizationId?.trim() ?? "";
 
   if (!organizationId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -185,23 +172,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If Firebase Admin is configured, prefer Storage upload.
-    if (isAdminConfigured()) {
-      try {
-        const bucketName = getAdminStorageBucketName();
-        const url = await uploadSongFileServer(songId, type, formData);
-        return NextResponse.json({
-          success: true,
-          url,
-          fileName,
-          size: file.size,
-        });
-      } catch (storageError) {
-        console.warn("[Upload] Firebase Storage upload failed, falling back to local upload:", storageError);
-      }
-    }
-
-    // Create directory if it doesn't exist
+    // File type validation
     const typeDir = join(UPLOAD_DIR, type);
     try {
       if (!existsSync(typeDir)) {

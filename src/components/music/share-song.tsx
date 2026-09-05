@@ -103,7 +103,7 @@ export function ShareSongButton({
           onClick={handleCopyLink}
           className="flex items-center gap-2 cursor-pointer"
         >
-          {copied ? <Check className="size-4 text-green-500" /> : <Link2 className="size-4" />}
+          {copied ? <Check className="size-4 text-white" /> : <Link2 className="size-4" />}
           {copied ? "Copied!" : "Copy link"}
         </DropdownMenuItem>
 
@@ -111,7 +111,7 @@ export function ShareSongButton({
           onClick={handleWhatsApp}
           className="flex items-center gap-2 cursor-pointer"
         >
-          <MessageCircle className="size-4 text-green-600" />
+          <MessageCircle className="size-4 text-[#A1A1A1]" />
           Share on WhatsApp
         </DropdownMenuItem>
 

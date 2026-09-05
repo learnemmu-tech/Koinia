@@ -41,7 +41,7 @@ import {
   createEventFormSchema,
   type EventFormValues,
 } from "@/lib/event-form-validation";
-import { createEvent, updateEvent } from "@/lib/event-mutations";
+import { createEvent, updateEvent } from "@/lib/content-mutations-client";
 import { notifyIfEventPublished } from "@/lib/notify-if-published";
 import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";
 import { uploadSongFileLocal } from "@/lib/local-upload";

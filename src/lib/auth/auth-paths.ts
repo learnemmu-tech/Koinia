@@ -1,6 +1,7 @@
 /** Auth and membership flow paths — no imports to avoid circular deps. */
 
 export const CREATE_WORKSPACE_PATH = "/onboarding";
+export const POST_AUTH_CONTINUE_PATH = "/auth/continue";
 export const WAITING_APPROVAL_PATH = "/waiting-approval";
 export const ACCESS_DENIED_PATH = "/access-denied";
 export const MEMBERSHIP_REMOVED_PATH = "/membership-removed";
@@ -84,5 +85,14 @@ export function isWaitingApprovalPath(pathname: string): boolean {
   return (
     pathname === WAITING_APPROVAL_PATH ||
     pathname.startsWith(`${WAITING_APPROVAL_PATH}/`)
+  );
+}
+
+export function isMembershipStatusPath(pathname: string): boolean {
+  return (
+    isWaitingApprovalPath(pathname) ||
+    pathname === ACCESS_DENIED_PATH ||
+    pathname === MEMBERSHIP_REMOVED_PATH ||
+    pathname === ACCOUNT_SUSPENDED_PATH
   );
 }

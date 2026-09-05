@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 
-import {
-  type FirstChurchOnboardingInput,
-  provisionWorkspaceForUser,
-} from "@/lib/organization/onboarding-server";
+import { provisionWorkspaceInPostgres } from "@/lib/postgres/provision-workspace";
+import type { FirstChurchOnboardingInput } from "@/lib/organization/onboarding-server";
 import type { WorkspaceType } from "@/types/organization";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 type OnboardingWorkspaceBody = FirstChurchOnboardingInput & {
   logoUrl?: string;
@@ -15,22 +14,14 @@ function isWorkspaceType(value: string): value is WorkspaceType {
 }
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
     const userId = decoded.uid;
-
     const body = (await request.json()) as OnboardingWorkspaceBody;
-    console.log("[api/onboarding/church] received body:", JSON.stringify(body));
 
     const name = body.name?.trim();
     const country = body.country?.trim();
@@ -60,7 +51,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await provisionWorkspaceForUser(userId, {
+    const payload: FirstChurchOnboardingInput = {
       name,
       logoUrl: body.logoUrl?.trim() || undefined,
       country,
@@ -71,16 +62,25 @@ export async function POST(request: Request) {
       website: body.website?.trim() || undefined,
       address: body.address?.trim() || undefined,
       workspaceType,
-    });
+    };
 
-    return NextResponse.json(result);
+    try {
+      const result = await provisionWorkspaceInPostgres(userId, payload);
+      return NextResponse.json(result);
+    } catch (error) {
+      console.error(
+        "[api/onboarding/church] PostgreSQL workspace provision failed",
+        error
+      );
+      return NextResponse.json(
+        { error: "Failed to create workspace." },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error("[api/onboarding/church]", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to create workspace",
-      },
+      { error: "Failed to create workspace." },
       { status: 500 }
     );
   }

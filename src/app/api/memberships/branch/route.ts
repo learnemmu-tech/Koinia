@@ -4,17 +4,14 @@ import {
   listActiveBranchMemberships,
   listPendingBranchMemberships,
 } from "@/lib/organization/branch-membership-server";
-import { getMembershipForUser } from "@/lib/organization/organization-server";
-import { getAdminDb } from "@/lib/firebase-admin";
-import { roleMeetsMinimum } from "@/types/membership";
+import { getPublicUserDirectory } from "@/lib/postgres/memberships";
+import { getChurchById } from "@/lib/postgres/tenants";
+import { userCanReviewChurchMemberships } from "@/lib/postgres/session";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -30,15 +27,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
+    const allowed = await userCanReviewChurchMemberships(
+      decoded.uid,
+      decoded.email,
+      branchId
+    );
+    if (!allowed) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
-    const membership = await getMembershipForUser(organizationId, decoded.uid);
-    if (
-      !membership ||
-      membership.status !== "active" ||
-      !roleMeetsMinimum(membership.role, "church_admin")
-    ) {
+    const church = await getChurchById(branchId);
+    if (!church || church.organizationId !== organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -47,33 +46,9 @@ export async function GET(request: Request) {
       listActiveBranchMemberships(organizationId, branchId),
     ]);
 
-    const adminDb = getAdminDb();
-    const usersById: Record<
-      string,
-      {
-        email: string;
-        firstName: string;
-        lastName: string;
-        photoURL?: string;
-      }
-    > = {};
-
-    if (adminDb) {
-      const userIds = [...new Set([...pending, ...active].map((m) => m.userId))];
-      await Promise.all(
-        userIds.map(async (userId) => {
-          const snap = await adminDb.collection("users").doc(userId).get();
-          if (!snap.exists) return;
-          const data = snap.data() as Record<string, unknown>;
-          usersById[userId] = {
-            email: String(data.email ?? ""),
-            firstName: String(data.firstName ?? ""),
-            lastName: String(data.lastName ?? ""),
-            photoURL: String(data.photoURL ?? "").trim() || undefined,
-          };
-        })
-      );
-    }
+    const usersById = await getPublicUserDirectory(
+      [...pending, ...active].map((item) => item.userId)
+    );
 
     return NextResponse.json({ pending, active, usersById });
   } catch (error) {

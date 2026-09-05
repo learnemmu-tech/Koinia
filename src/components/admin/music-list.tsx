@@ -194,7 +194,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { deleteSong } from "@/lib/firebase-queries";
+import { deleteSong } from "@/lib/content-mutations-client";
 
 type MusicListProps = {
   songs: FirebaseSong[];
@@ -343,7 +343,7 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
                       </span>
                     )}
                     {hasLyrics && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-600 dark:text-green-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#1A1A1A] px-2 py-0.5 text-[10px] font-medium text-[#A1A1A1]">
                         <FileText className="h-2.5 w-2.5" />
                         Lyrics
                       </span>

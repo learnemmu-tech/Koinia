@@ -79,18 +79,16 @@ export async function notifyIfNewlyPublished(input: {
   const isNewPublish = input.isPublished && !input.wasPublished;
   if (!isNewPublish) return;
 
-  try {
-    await createPublishNotification({
-      type: input.type,
-      contentId: input.contentId,
-      contentTitle: input.contentTitle,
-      image: input.image,
-      churchId: input.churchId,
-      organizationId: input.organizationId,
-    });
-  } catch (error) {
+  void createPublishNotification({
+    type: input.type,
+    contentId: input.contentId,
+    contentTitle: input.contentTitle,
+    image: input.image,
+    churchId: input.churchId,
+    organizationId: input.organizationId,
+  }).catch((error) => {
     console.error("[notifyIfNewlyPublished] notification dispatch failed:", error);
-  }
+  });
 
   dispatchContentPublishedEmail(input.type, input.contentId, input.idToken);
 }
@@ -109,18 +107,16 @@ export async function notifyIfEventPublished(input: {
     input.status === "published" && input.wasStatus !== "published";
   if (!isNewPublish) return;
 
-  try {
-    await createPublishNotification({
-      type: "event",
-      contentId: input.contentId,
-      contentTitle: input.contentTitle,
-      image: input.image,
-      churchId: input.churchId,
-      organizationId: input.organizationId,
-    });
-  } catch (error) {
+  void createPublishNotification({
+    type: "event",
+    contentId: input.contentId,
+    contentTitle: input.contentTitle,
+    image: input.image,
+    churchId: input.churchId,
+    organizationId: input.organizationId,
+  }).catch((error) => {
     console.error("[notifyIfEventPublished] notification dispatch failed:", error);
-  }
+  });
 
   dispatchEventPublishedEmail(input.contentId, input.idToken);
 }

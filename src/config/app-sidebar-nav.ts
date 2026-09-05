@@ -27,7 +27,7 @@ export type AppNavItem = {
   icon: LucideIcon;
   match: (pathname: string) => boolean;
   /** Optional badge count (admin sidebar). */
-  badgeKey?: "pendingPrayers" | "pendingContent";
+  badgeKey?: "pendingPrayers" | "pendingMembers" | "pendingContent";
   superAdminOnly?: boolean;
   authOnly?: boolean;
 };
@@ -78,6 +78,7 @@ export const MANAGE_NAV_ITEMS: AppNavItem[] = [
     match: (pathname) =>
       pathname.startsWith(`${ADMIN_BASE}/members`) ||
       pathname.startsWith(`${ADMIN_BASE}/users`),
+    badgeKey: "pendingMembers",
   },
   {
     label: "Analytics",
@@ -171,6 +172,7 @@ export const MULTI_ORG_MANAGE_NAV_ITEMS: AppNavItem[] = [
     match: (pathname) =>
       pathname.startsWith(`${ADMIN_BASE}/members`) ||
       pathname.startsWith(`${ADMIN_BASE}/users`),
+    badgeKey: "pendingMembers",
   },
   {
     label: "Analytics",
@@ -227,7 +229,10 @@ export function getAdminSidebarSections(
   churches: FirebaseChurch[] = []
 ): SidebarNavSection[] {
   if (isMultiChurchOrgWorkspace(organization)) {
-    return getMultiOrgAdminSidebarSections(organization, churches);
+    return [
+      ...getMultiOrgAdminSidebarSections(organization, churches),
+      { items: MULTI_ORG_SETTINGS_NAV_ITEMS },
+    ];
   }
 
   const manageItems = [...MANAGE_NAV_ITEMS];
@@ -236,6 +241,7 @@ export function getAdminSidebarSections(
     { items: [HOME_NAV_ITEM] },
     { label: "Manage", items: manageItems },
     { label: "Browse", items: BROWSE_NAV_ITEMS },
+    { items: ADMIN_FOOTER_NAV_ITEMS },
   ];
 }
 

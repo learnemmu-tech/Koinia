@@ -3,18 +3,16 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { siteConfig } from "@/config/site";
+import { redirectIfOnboardingComplete } from "@/lib/auth/require-onboarding-complete-server";
 
 
 
-export default function OnboardingLayout({
-
+export default async function OnboardingLayout({
   children,
-
 }: {
-
   children: React.ReactNode;
-
 }) {
+  await redirectIfOnboardingComplete();
 
   return (
 

@@ -1,44 +1,45 @@
 import { NextResponse } from "next/server";
 
 import { resolveIsAdmin } from "@/lib/admin-access";
-import { canManageChurch } from "@/lib/church-access";
-import { getAdminDb } from "@/lib/firebase-admin";
-import { resolveChurchIdForWrite } from "@/lib/church-scope";
 import { getOrganizationsForUser } from "@/lib/organization/organization-server";
 import { resolveTenantScopeForChurch } from "@/lib/organization/resolve-tenant-scope";
+import {
+  getAppUserByClerkId,
+} from "@/lib/postgres/app-user";
+import { postgresUuidOrEmpty } from "@/lib/postgres/uuid";
+import {
+  getOrgMembershipRow,
+  listChurchMembershipsForUser,
+  userCanAccessChurchContent,
+} from "@/lib/postgres/session";
 import {
   ensureSubscriptionDocument,
   getSubscriptionSnapshot,
   getSubscriptionSnapshotForChurch,
 } from "@/lib/subscription/subscription-server";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { timed } from "@/lib/perf";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const organizationIdParam = searchParams.get("organizationId")?.trim();
-  const churchIdParam = resolveChurchIdForWrite(searchParams.get("churchId"));
+  const churchIdParam = postgresUuidOrEmpty(searchParams.get("churchId"));
 
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const adminDb = getAdminDb();
-
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
+    const appUser = await getAppUserByClerkId(decoded.uid);
+    if (!appUser) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     let organizationId = organizationIdParam;
 
-    if (!organizationId && adminDb) {
-      const userSnap = await adminDb.collection("users").doc(decoded.uid).get();
-      const userData = userSnap.exists ? userSnap.data() : null;
-      organizationId = String(userData?.organizationId ?? "").trim();
-
+    if (!organizationId) {
+      organizationId = appUser.organizationId ?? "";
       if (!organizationId) {
         const orgs = await getOrganizationsForUser(decoded.uid);
         organizationId = orgs[0]?.id;
@@ -54,33 +55,43 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    if (adminDb) {
-      const userSnap = await adminDb.collection("users").doc(decoded.uid).get();
-      const userData = userSnap.exists ? userSnap.data() : null;
+    const isAdmin =
+      resolveIsAdmin(decoded.email) || appUser.platformRole === "admin";
 
-      const isAdmin =
-        resolveIsAdmin(decoded.email) || userData?.role === "admin";
-      const canManage = canManageChurch(
-        {
-          email: decoded.email,
-          churchId: userData?.churchId as string | undefined,
-          churchRole: userData?.churchRole as "member" | "admin" | undefined,
-          managedChurchIds: userData?.managedChurchIds as string[] | undefined,
-        },
-        churchIdParam
-      );
-      const isMemberOfOrg =
-        String(userData?.organizationId ?? "").trim() === organizationId;
-
-      if (!isAdmin && !canManage && !isMemberOfOrg) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!isAdmin) {
+      if (churchIdParam) {
+        const canAccess = await userCanAccessChurchContent(
+          decoded.uid,
+          decoded.email,
+          churchIdParam
+        );
+        if (!canAccess) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+      } else {
+        const orgRow = await getOrgMembershipRow(appUser.id, organizationId);
+        const churchRows = await listChurchMembershipsForUser(appUser.id);
+        const isMemberOfOrg =
+          orgRow?.status === "active" ||
+          appUser.organizationId === organizationId ||
+          churchRows.some(
+            (row) =>
+              row.organizationId === organizationId && row.status === "active"
+          );
+        if (!isMemberOfOrg) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
       }
     }
 
-    await ensureSubscriptionDocument(organizationId);
-    const snapshot = churchIdParam && !organizationIdParam
-      ? await getSubscriptionSnapshotForChurch(churchIdParam)
-      : await getSubscriptionSnapshot(organizationId);
+    await timed("subscription.ensure", () =>
+      ensureSubscriptionDocument(organizationId)
+    );
+    const snapshot = await timed("subscription.snapshot", () =>
+      churchIdParam && !organizationIdParam
+        ? getSubscriptionSnapshotForChurch(churchIdParam)
+        : getSubscriptionSnapshot(organizationId)
+    );
 
     return NextResponse.json(snapshot);
   } catch (error) {

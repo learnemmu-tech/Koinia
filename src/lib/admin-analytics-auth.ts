@@ -1,13 +1,12 @@
-import { getAuth } from "firebase-admin/auth";
-
 import {
-  getManagedChurchIdForUser,
-  isPlatformSuperAdmin,
-  type ChurchAccessUser,
-} from "@/lib/church-access";
-import { getAdminApp, getAdminDb } from "@/lib/firebase-admin";
-import type { ChurchRole } from "@/types/firebase-church";
-import type { UserRole } from "@/lib/firebase-auth-service";
+  getManagedChurchIds,
+  listChurchMembershipsForUser,
+  getOrgMembershipRow,
+} from "@/lib/postgres/session";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { roleMeetsMinimum, type MembershipRole } from "@/types/membership";
 
 export type VerifiedAdminContext = {
   uid: string;
@@ -15,14 +14,6 @@ export type VerifiedAdminContext = {
   isSuperAdmin: boolean;
   churchScope: string | null;
   organizationScope: string | null;
-};
-
-type UserProfileRecord = {
-  churchId?: string;
-  organizationId?: string;
-  churchRole?: ChurchRole;
-  managedChurchIds?: string[];
-  role?: UserRole;
 };
 
 export async function verifyAdminAnalyticsRequest(
@@ -33,64 +24,82 @@ export async function verifyAdminAnalyticsRequest(
   | { ok: true; admin: VerifiedAdminContext }
   | { ok: false; status: number; error: string }
 > {
-  const adminApp = getAdminApp();
-  const adminDb = getAdminDb();
-
-  if (!adminApp || !adminDb) {
-    return {
-      ok: false,
-      status: 503,
-      error: "Firebase Admin is not configured on the server.",
-    };
-  }
-
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  const verified = await verifyBearerToken(request);
+  if (!verified) {
     return { ok: false, status: 401, error: "Unauthorized" };
   }
 
-  const idToken = authHeader.slice("Bearer ".length);
-
-  let uid: string;
-  let email: string | undefined;
-
-  try {
-    const decoded = await getAuth(adminApp).verifyIdToken(idToken);
-    uid = decoded.uid;
-    email = decoded.email;
-  } catch {
-    return { ok: false, status: 401, error: "Invalid token" };
-  }
+  const uid = verified.uid;
+  const email = verified.email;
 
   if (!email) {
     return { ok: false, status: 403, error: "Admin access required" };
   }
 
-  const profileSnap = await adminDb.collection("users").doc(uid).get();
-  const profile = (profileSnap.data() ?? {}) as UserProfileRecord;
-
-  const accessUser: ChurchAccessUser = {
-    email,
-    churchId: profile.churchId,
-    churchRole: profile.churchRole,
-    managedChurchIds: profile.managedChurchIds,
-  };
-
-  const superAdmin =
-    isPlatformSuperAdmin(email) || profile.role === "admin";
-
-  if (!superAdmin && !getManagedChurchIdForUser(accessUser)) {
+  const appUser = await getAppUserByClerkId(uid);
+  if (!appUser) {
     return { ok: false, status: 403, error: "Admin access required" };
   }
 
-  const managedChurchId = getManagedChurchIdForUser(accessUser);
-  const organizationId = String(profile.organizationId ?? "").trim();
-  const churchScope = superAdmin
-    ? requestedChurchId?.trim() || null
-    : managedChurchId;
-  const organizationScope =
-    requestedOrganizationId?.trim() ||
-    (!churchScope && organizationId ? organizationId : null);
+  const superAdmin =
+    isPlatformSuperAdmin(email) || appUser.platformRole === "admin";
+
+  const churchRows = await listChurchMembershipsForUser(appUser.id);
+  const managedFromMemberships = churchRows
+    .filter(
+      (row) =>
+        row.status === "active" &&
+        roleMeetsMinimum(row.role as MembershipRole, "church_admin")
+    )
+    .map((row) => row.churchId);
+
+  const managedFromOrg = appUser.organizationId
+    ? await getManagedChurchIds(appUser.id, appUser.organizationId)
+    : [];
+
+  const managedChurchIds = [
+    ...new Set([...managedFromMemberships, ...managedFromOrg]),
+  ];
+  const managedChurchId = managedChurchIds[0] ?? null;
+
+  const orgRow = appUser.organizationId
+    ? await getOrgMembershipRow(appUser.id, appUser.organizationId)
+    : null;
+  const organizationId =
+    orgRow?.status === "active" ? appUser.organizationId : null;
+
+  if (!superAdmin && !managedChurchId && !organizationId) {
+    return { ok: false, status: 403, error: "Admin access required" };
+  }
+
+  const requestedChurch = requestedChurchId?.trim() || null;
+  const requestedOrg = requestedOrganizationId?.trim() || null;
+
+  let churchScope: string | null = null;
+  let organizationScope: string | null = null;
+
+  if (superAdmin) {
+    churchScope = requestedChurch;
+    organizationScope = requestedOrg || (!churchScope ? organizationId : null);
+  } else {
+    if (requestedChurch) {
+      if (!managedChurchIds.includes(requestedChurch)) {
+        return { ok: false, status: 403, error: "Forbidden" };
+      }
+      churchScope = requestedChurch;
+    } else {
+      churchScope = managedChurchId;
+    }
+
+    if (requestedOrg) {
+      if (!organizationId || requestedOrg !== organizationId) {
+        return { ok: false, status: 403, error: "Forbidden" };
+      }
+      organizationScope = requestedOrg;
+    } else if (!churchScope && organizationId) {
+      organizationScope = organizationId;
+    }
+  }
 
   if (!superAdmin && !churchScope && !organizationScope) {
     return {

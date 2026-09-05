@@ -6,7 +6,8 @@ import type { UpdateOrganizationInput } from "@/types/organization";
 
 import { updateChurch } from "@/lib/church-mutations";
 import { resolveIsAdmin } from "@/lib/admin-access";
-import { getAdminDb } from "@/lib/firebase-admin";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { getManagedChurchIds } from "@/lib/postgres/session";
 
 import {
   canManageChurchInOrganization,
@@ -29,31 +30,18 @@ async function getAccessUser(
   email: string | null | undefined,
   organizationId: string
 ): Promise<OrganizationAccessUser> {
-  const adminDb = getAdminDb();
-  let churchId: string | undefined;
-  let churchRole: "member" | "admin" | undefined;
-  let managedChurchIds: string[] | undefined;
-
-  if (adminDb) {
-    const userSnap = await adminDb.collection("users").doc(userId).get();
-    if (userSnap.exists) {
-      const data = userSnap.data() as Record<string, unknown>;
-      churchId = data.churchId ? String(data.churchId) : undefined;
-      churchRole = data.churchRole as "member" | "admin" | undefined;
-      managedChurchIds = Array.isArray(data.managedChurchIds) ?
-          data.managedChurchIds.map(String)
-        : undefined;
-    }
-  }
-
+  const appUser = await getAppUserByClerkId(userId);
   const membership = await getMembershipForUser(organizationId, userId);
+  const managedChurchIds = appUser
+    ? await getManagedChurchIds(appUser.id, organizationId)
+    : [];
 
   return {
     email,
     userId,
     membership,
-    churchId,
-    churchRole,
+    churchId: appUser?.activeChurchId ?? undefined,
+    churchRole: managedChurchIds.length > 0 ? "admin" : "member",
     managedChurchIds,
   };
 }

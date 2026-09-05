@@ -28,10 +28,11 @@ function MembersContent() {
     churches.find((item) => item.id === churchId) ?? churches[0] ?? null;
   const churchName =
     activeBranch?.name ?? church?.name ?? organization?.name ?? "your church";
+  const resolvedChurchId = activeBranch?.id ?? church?.id ?? churchId;
 
   if (
     isMultiChurchOrgWorkspace(organization) &&
-    (!churchId || !activeBranch)
+    (!churchId || !resolvedChurchId)
   ) {
     return (
       <div className={adminSectionClass}>
@@ -55,12 +56,12 @@ function MembersContent() {
         <DashboardBranchSwitcher />
       </AdminPageHeader>
 
-      {!organization || !activeBranch ?
+      {!organization || !resolvedChurchId ?
         <p className="text-sm text-muted-foreground">
           Select a church workspace to manage members.
         </p>
       : <ChurchMembersPanel
-          branchId={activeBranch.id}
+          branchId={resolvedChurchId}
           churchName={churchName}
         />
       }

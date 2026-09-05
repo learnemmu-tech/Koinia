@@ -1,11 +1,11 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { AUTH_COOKIE_NAME as AUTH_COOKIE } from "@/lib/auth-cookies";
 import { isOnboardingPath } from "@/lib/auth/auth-paths";
 import { isWorkspaceRoute } from "@/lib/dashboard-routes";
 
-const AUTH_ONLY_PATHS = ["/signin", "/signup", "/forgot-password"];
+const AUTH_ONLY_PATHS = ["/signin", "/signup", "/forgot-password", "/sso-callback"];
+const POST_AUTH_CONTINUE_PATH = "/auth/continue";
 
 const PUBLIC_CONTENT_LIST_PATHS = ["/songs", "/sermons", "/articles"];
 
@@ -47,13 +47,22 @@ function buildSignInUrl(req: NextRequest, callbackPath: string) {
 }
 
 /**
- * Middleware performs auth-only checks. Onboarding completion and workspace access
- * are enforced client-side from Firestore via OnboardingGuard and RequireWorkspaceAccess.
- * Cookie hints may accelerate redirects but are never authoritative.
+ * Middleware performs auth-only checks. Onboarding completion is enforced from
+ * PostgreSQL (`users.needs_church_onboarding`) via /auth/continue, OnboardingGuard,
+ * and dashboard/onboarding layouts. Clerk session is identity only.
  */
-export async function middleware(req: NextRequest) {
+export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
-  const isAuthenticated = req.cookies.has(AUTH_COOKIE);
+
+  // API handlers authenticate with the Clerk Bearer token. Calling auth() here
+  // can handshake-redirect the request to Clerk's origin, which makes browser
+  // fetch() throw TypeError: Failed to fetch.
+  if (pathname.startsWith("/api/") || pathname.startsWith("/trpc/")) {
+    return NextResponse.next();
+  }
+
+  const { userId } = await auth();
+  const isAuthenticated = Boolean(userId);
 
   if (isOnboardingPath(pathname)) {
     if (!isAuthenticated) {
@@ -62,7 +71,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (AUTH_ONLY_PATHS.some((path) => pathname === path)) {
+  if (pathname === POST_AUTH_CONTINUE_PATH || pathname.startsWith(`${POST_AUTH_CONTINUE_PATH}/`)) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(buildSignInUrl(req, pathname));
+    }
+    return NextResponse.next();
+  }
+
+  if (AUTH_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
     return NextResponse.next();
   }
 
@@ -85,10 +101,11 @@ export async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon|icon\\.png|apple-icon|images|robots.txt|manifest\\.webmanifest).*)",
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
 };
