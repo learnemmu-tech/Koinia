@@ -1,5 +1,6 @@
 import type { FirebaseEvent } from "@/types/firebase-event";
 
+import { HomeCollectionRail, homeRailItemClass } from "./home-collection-rail";
 import { HomeEmptyState } from "./home-empty-state";
 import { HomeEventCard } from "./home-event-card";
 import { HomeSectionHeader } from "./home-section-header";
@@ -12,7 +13,7 @@ export function HomeEventsSection({ events }: HomeEventsSectionProps) {
   const visible = events.slice(0, 3);
 
   return (
-    <section aria-labelledby="home-events-heading" className="space-y-5">
+    <section aria-labelledby="home-events-heading" className="space-y-3">
       <HomeSectionHeader
         id="home-events-heading"
         title="Upcoming Events"
@@ -24,11 +25,16 @@ export function HomeEventsSection({ events }: HomeEventsSectionProps) {
           title="No upcoming events"
           description="Check back soon for new gatherings."
         />
-      : <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:overflow-visible md:px-0">
           {visible.map((event) => (
-            <HomeEventCard key={event.id} event={event} />
+            <div
+              key={event.id}
+              className={homeRailItemClass("w-[16rem] md:w-auto md:max-w-sm")}
+            >
+              <HomeEventCard event={event} />
+            </div>
           ))}
-        </div>
+        </HomeCollectionRail>
       }
     </section>
   );
