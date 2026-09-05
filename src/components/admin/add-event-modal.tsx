@@ -171,7 +171,8 @@ export function AddEventModal({
             "cover",
             formData,
             (progress) => setUploadProgress(progress),
-            idToken
+            idToken,
+            { kind: "event", replaceUrl: initialEvent.bannerImage }
           );
           await updateEvent(initialEvent.id, { bannerImage: url });
           bannerImageUrl = url;
@@ -201,7 +202,8 @@ export function AddEventModal({
             "cover",
             formData,
             (progress) => setUploadProgress(progress),
-            idToken
+            idToken,
+            { kind: "event" }
           );
           await updateEvent(eventId, { bannerImage: url });
           bannerImageUrl = url;

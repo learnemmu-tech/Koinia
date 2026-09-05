@@ -224,7 +224,8 @@ export function AddArticleModal({
             "cover",
             fd,
             (p) => setUploadProgress(p),
-            idToken
+            idToken,
+            { kind: "article", replaceUrl: initialArticle.coverImage }
           );
           coverImageUrl = url;
           await updateArticle(initialArticle.id, { coverImage: url });
@@ -260,7 +261,8 @@ export function AddArticleModal({
             "cover",
             fd,
             (p) => setUploadProgress(p),
-            idToken
+            idToken,
+            { kind: "article" }
           );
           coverImageUrl = url;
           await updateArticle(articleId, { coverImage: url });

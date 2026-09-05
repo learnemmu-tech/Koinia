@@ -6,6 +6,16 @@ import "./src/lib/env";
 const isProd = process.env.NODE_ENV === "production";
 const isDocker = process.env.IS_DOCKER === "true";
 
+function supabaseImageHostname(): string | null {
+  const raw = process.env.SUPABASE_URL?.trim();
+  if (!raw) return null;
+  try {
+    return new URL(raw).hostname;
+  } catch {
+    return null;
+  }
+}
+
 const config: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["pg"],
@@ -31,6 +41,14 @@ const config: NextConfig = {
         protocol: "https",
         hostname: "img.clerk.com",
       },
+      ...(supabaseImageHostname()
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: supabaseImageHostname()!,
+            },
+          ]
+        : []),
     ],
     unoptimized: !isDocker,
   },

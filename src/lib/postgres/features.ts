@@ -37,6 +37,7 @@ import {
 import { getClerkIdByUserId, getClerkIdsByUserIds } from "@/lib/postgres/session";
 import { getChurchRowById } from "@/lib/postgres/tenants";
 import { isPostgresUuid, postgresUuidOrEmpty } from "@/lib/postgres/uuid";
+import { deleteStoredMediaUrls } from "@/lib/supabase-storage";
 import type { CreateArticleInput, FirebaseArticle, UpdateArticleInput } from "@/types/firebase-article";
 import type {
   CreateDonationCampaignInput,
@@ -210,6 +211,8 @@ export async function updateSong(songId: string, updates: UpdateSongInput): Prom
 }
 
 export async function deleteSong(songId: string): Promise<void> {
+  const existing = await getSongById(songId);
+  await deleteStoredMediaUrls(existing?.imageUrl, existing?.audioUrl);
   await db.delete(songs).where(eq(songs.id, songId));
 }
 
@@ -300,6 +303,8 @@ export async function updateSermon(sermonId: string, updates: UpdateSermonInput)
 }
 
 export async function deleteSermon(sermonId: string): Promise<void> {
+  const existing = await getSermonById(sermonId);
+  await deleteStoredMediaUrls(existing?.coverImage, existing?.audioUrl);
   await db.delete(sermons).where(eq(sermons.id, sermonId));
 }
 
@@ -383,6 +388,8 @@ export async function updateArticle(articleId: string, updates: UpdateArticleInp
 }
 
 export async function deleteArticle(articleId: string): Promise<void> {
+  const existing = await getArticleById(articleId);
+  await deleteStoredMediaUrls(existing?.coverImage);
   await db.delete(articles).where(eq(articles.id, articleId));
 }
 
@@ -446,6 +453,8 @@ export async function updateEvent(eventId: string, updates: UpdateEventInput): P
 }
 
 export async function deleteEvent(eventId: string): Promise<void> {
+  const existing = await getEventById(eventId);
+  await deleteStoredMediaUrls(existing?.bannerImage);
   await db.delete(events).where(eq(events.id, eventId));
 }
 
@@ -667,6 +676,8 @@ export async function updateDonationCampaign(
 }
 
 export async function deleteDonationCampaign(campaignId: string): Promise<void> {
+  const existing = await getDonationCampaignById(campaignId);
+  await deleteStoredMediaUrls(existing?.bannerImage);
   await db.delete(donationCampaigns).where(eq(donationCampaigns.id, campaignId));
 }
 
