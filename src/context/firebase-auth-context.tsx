@@ -170,8 +170,8 @@ export function FirebaseAuthProvider({
             account.provider === "google" ? "google.com" : account.provider,
         })),
       ],
-        getIdToken: async () => {
-          const token = await getToken();
+        getIdToken: async (forceRefresh) => {
+          const token = await getToken({ skipCache: Boolean(forceRefresh) });
           if (!token) throw new Error("Not authenticated.");
           return token;
         },

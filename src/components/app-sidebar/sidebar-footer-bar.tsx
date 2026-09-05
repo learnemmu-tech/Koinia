@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronUp } from "lucide-react";
+import { ArrowRight, ChevronUp, User } from "lucide-react";
 
 import type { AuthUser } from "@/context/firebase-auth-context";
 import type { FirestoreUser } from "@/lib/firebase-auth-service";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,13 +94,30 @@ export function SidebarFooterBar() {
 
   if (!authUser) {
     return (
-      <div className="flex h-12 items-center border-t border-[#1F1F1F] px-3 py-2.5">
-        <Button
-          asChild
-          className="h-8 w-full rounded-md bg-white text-sm text-black hover:bg-[#E5E5E5]"
+      <div
+        className={cn(
+          "border-t border-[#1F1F1F]",
+          isCollapsed ?
+            "flex flex-col items-center px-1 py-2"
+          : "flex h-10 items-center px-2.5"
+        )}
+      >
+        <Link
+          href="/signin"
+          className={cn(
+            "inline-flex items-center rounded-md text-[13px] font-medium text-[#A1A1A1] transition-colors hover:bg-[#1A1A1A] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            isCollapsed ? "size-9 justify-center" : "h-9 gap-2 px-2.5"
+          )}
         >
-          <Link href="/signin">Sign in</Link>
-        </Button>
+          <User className="size-4 shrink-0" aria-hidden />
+          {isCollapsed ?
+            <span className="sr-only">Sign in</span>
+          : <>
+              Sign in
+              <ArrowRight className="size-3.5" aria-hidden />
+            </>
+          }
+        </Link>
       </div>
     );
   }

@@ -171,8 +171,10 @@ export function sessionUserFromClerk(
     photoURL: user.imageUrl ?? null,
     emailVerified: primary?.verification?.status === "verified",
     providerData,
-    getIdToken: async () => {
-      const token = await clerk.session?.getToken();
+    getIdToken: async (forceRefresh) => {
+      const token = await clerk.session?.getToken({
+        skipCache: Boolean(forceRefresh),
+      });
       if (!token) {
         throw new Error("Not authenticated.");
       }
@@ -228,17 +230,25 @@ function isRetryableFetchError(error: unknown): boolean {
   );
 }
 
+function isRetryableProfileStatus(status: number) {
+  return status === 404 || status === 408 || status === 429 || status >= 500;
+}
+
+async function delay(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function syncProfileViaApi(
   user: SessionUser,
   options?: { firstName?: string; lastName?: string }
 ): Promise<FirestoreUser> {
-  const token = await user.getIdToken();
-  if (!token) {
-    throw new Error("Not authenticated.");
-  }
+  const request = async (forceRefresh: boolean): Promise<Response> => {
+    const token = await user.getIdToken(forceRefresh);
+    if (!token) {
+      throw new Error("Not authenticated.");
+    }
 
-  const request = (): Promise<Response> =>
-    fetch("/api/auth/sync-profile", {
+    return fetch("/api/auth/sync-profile", {
       method: "POST",
       credentials: "same-origin",
       cache: "no-store",
@@ -247,29 +257,46 @@ async function syncProfileViaApi(
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
+        email: user.email,
         firstName: options?.firstName,
         lastName: options?.lastName,
       }),
     });
+  };
 
-  let response: Response;
-  try {
-    response = await request();
-  } catch (error) {
-    if (!isRetryableFetchError(error)) throw error;
-    await new Promise((resolve) => setTimeout(resolve, 300));
+  let response: Response | undefined;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
-      response = await request();
-    } catch {
-      throw new Error("Failed to save user profile. Please try again.");
+      response = await request(attempt > 0);
+      if (response.ok) break;
+      if (!isRetryableProfileStatus(response.status) || attempt === 3) {
+        break;
+      }
+    } catch (error) {
+      if (!isRetryableFetchError(error) || attempt === 3) {
+        throw error instanceof Error
+          ? error
+          : new Error("Failed to save user profile. Please try again.");
+      }
+      lastError = error instanceof Error ? error : null;
     }
+
+    await delay(400 * (attempt + 1));
+  }
+
+  if (!response) {
+    throw lastError ?? new Error("Failed to save user profile. Please try again.");
   }
 
   if (!response.ok) {
     const error = (await response.json().catch(() => null)) as {
       error?: string;
     } | null;
-    throw new Error(error?.error ?? "Failed to save user profile.");
+    throw new Error(
+      error?.error ?? `Failed to save user profile (${response.status}).`
+    );
   }
 
   return response.json() as Promise<FirestoreUser>;

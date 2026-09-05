@@ -9,6 +9,7 @@ import { upsertAppUserFromClerk } from "@/lib/postgres/upsert-app-user";
 import { timed } from "@/lib/perf";
 
 type SyncProfileBody = {
+  email?: string;
   firstName?: string;
   lastName?: string;
 };
@@ -83,6 +84,9 @@ export async function POST(request: Request) {
     return NextResponse.json(mapAppUserToProfile(existing));
   }
 
+  const bodyEmail = body.email?.trim().toLowerCase() || undefined;
+  email = email || bodyEmail || existing?.email;
+
   const nameParts = (displayName ?? "").split(" ");
   const firstName =
     body.firstName?.trim() || firstNameFromClerk || existing?.firstName || nameParts[0] || "";
@@ -93,12 +97,22 @@ export async function POST(request: Request) {
     nameParts.slice(1).join(" ") ||
     "";
 
+  if (!email) {
+    if (existing) {
+      return NextResponse.json(mapAppUserToProfile(existing));
+    }
+    return NextResponse.json(
+      { error: "Unable to sync profile because no email was available." },
+      { status: 400 }
+    );
+  }
+
   let syncResult;
   try {
     syncResult = await timed("sync-profile.upsert", () =>
       upsertAppUserFromClerk({
         clerkId: uid,
-        email: email ?? existing?.email ?? "",
+        email,
         firstName,
         lastName,
         emailVerified,
@@ -106,10 +120,14 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("[api/auth/sync-profile] PostgreSQL user sync failed", error);
-    return NextResponse.json(
-      { error: "Failed to save user profile." },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error &&
+      (error.message.startsWith("Missing") ||
+        error.message.startsWith("Failed to create") ||
+        error.message.startsWith("Failed to update"))
+        ? error.message
+        : "Failed to save user profile.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   if (syncResult.created && email?.trim()) {

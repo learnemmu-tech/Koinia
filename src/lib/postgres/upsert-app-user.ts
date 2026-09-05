@@ -24,7 +24,7 @@ export type AppUserSyncResult = {
   profile: ReturnType<typeof mapAppUserToProfile>;
 };
 
-function isRetryableConnectionError(error: unknown): boolean {
+function collectErrorCodes(error: unknown): Set<string> {
   const codes = new Set<string>();
   let current: unknown = error;
   for (let i = 0; i < 4 && current && typeof current === "object"; i += 1) {
@@ -32,6 +32,11 @@ function isRetryableConnectionError(error: unknown): boolean {
     if (typeof record.code === "string") codes.add(record.code);
     current = record.cause;
   }
+  return codes;
+}
+
+function isRetryableConnectionError(error: unknown): boolean {
+  const codes = collectErrorCodes(error);
   return (
     codes.has("ECONNRESET") ||
     codes.has("ETIMEDOUT") ||
@@ -39,6 +44,10 @@ function isRetryableConnectionError(error: unknown): boolean {
     codes.has("57P01") ||
     codes.has("57P03")
   );
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return collectErrorCodes(error).has("23505");
 }
 
 async function withConnectionRetry<T>(operation: () => Promise<T>): Promise<T> {
@@ -59,8 +68,28 @@ async function loadByClerkId(clerkId: string): Promise<AppUserRow | undefined> {
   return row;
 }
 
+async function loadByEmail(email: string): Promise<AppUserRow | undefined> {
+  const [row] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  return row;
+}
+
+function toResult(row: AppUserRow, created: boolean): AppUserSyncResult {
+  return {
+    id: row.id,
+    clerkId: row.clerkId,
+    created,
+    profile: mapAppUserToProfile(row),
+  };
+}
+
 /**
  * Idempotent identity sync: one PostgreSQL `users` row per Clerk user id.
+ * If the email already exists (legacy row / recreated Clerk user), attach
+ * the current `clerk_id` instead of inserting a second row.
  * Organization, church, membership, and role fields are not written here.
  */
 export async function upsertAppUserFromClerk(
@@ -80,12 +109,14 @@ export async function upsertAppUserFromClerk(
   const verifiedAt = input.emailVerified ? now : null;
 
   return withConnectionRetry(async () => {
-    const existing = await loadByClerkId(clerkId);
+    const existing =
+      (await loadByClerkId(clerkId)) ?? (await loadByEmail(email));
 
     if (existing) {
       const [updated] = await db
         .update(users)
         .set({
+          clerkId,
           email,
           firstName: input.firstName,
           lastName: input.lastName,
@@ -95,17 +126,8 @@ export async function upsertAppUserFromClerk(
         .where(eq(users.id, existing.id))
         .returning();
 
-      const row = updated ?? (await loadByClerkId(clerkId));
-      if (!row) {
-        throw new Error("Failed to update application user.");
-      }
-
-      return {
-        id: row.id,
-        clerkId: row.clerkId,
-        created: false,
-        profile: mapAppUserToProfile(row),
-      };
+      const row = updated ?? (await loadByClerkId(clerkId)) ?? existing;
+      return toResult(row, false);
     }
 
     try {
@@ -125,21 +147,27 @@ export async function upsertAppUserFromClerk(
         throw new Error("Failed to create application user.");
       }
 
-      return {
-        id: inserted.id,
-        clerkId: inserted.clerkId,
-        created: true,
-        profile: mapAppUserToProfile(inserted),
-      };
+      return toResult(inserted, true);
     } catch (error) {
-      const concurrent = await loadByClerkId(clerkId);
+      const concurrent =
+        (await loadByClerkId(clerkId)) ??
+        (isUniqueViolation(error) ? await loadByEmail(email) : undefined);
+
       if (concurrent) {
-        return {
-          id: concurrent.id,
-          clerkId: concurrent.clerkId,
-          created: false,
-          profile: mapAppUserToProfile(concurrent),
-        };
+        const [updated] = await db
+          .update(users)
+          .set({
+            clerkId,
+            email,
+            firstName: input.firstName,
+            lastName: input.lastName,
+            emailVerifiedAt: verifiedAt ?? concurrent.emailVerifiedAt,
+            updatedAt: now,
+          })
+          .where(eq(users.id, concurrent.id))
+          .returning();
+
+        return toResult(updated ?? concurrent, false);
       }
 
       throw error;

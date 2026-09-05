@@ -47,6 +47,21 @@ export async function getAppUserByClerkId(
   return row ?? null;
 }
 
+export async function getAppUserByEmail(
+  email: string
+): Promise<AppUserRow | null> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return null;
+
+  const [row] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, normalized))
+    .limit(1);
+
+  return row ?? null;
+}
+
 /** Marks church onboarding complete on the PostgreSQL user. Does not write orgs/churches. */
 export async function markAppUserOnboardingComplete(
   clerkId: string
