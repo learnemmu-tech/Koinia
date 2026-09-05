@@ -4,7 +4,8 @@ import { z } from "zod";
 import { resolveIsAdmin } from "@/lib/admin-access";
 import { triggerEventAnnouncementEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
-import { getAdminDb } from "@/lib/firebase-admin";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { verifyChurchContentPublisher } from "@/lib/auth/verify-church-content-publisher";
 
 const bodySchema = z.object({
   eventId: z.string().trim().min(1),
@@ -16,17 +17,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    return NextResponse.json({ success: true });
-  }
-
-  const userSnap = await adminDb.collection("users").doc(authUser.uid).get();
-  const userData = userSnap.exists ? userSnap.data() : null;
+  const appUser = await getAppUserByClerkId(authUser.uid);
   const isAdmin =
-    resolveIsAdmin(authUser.email) || userData?.role === "admin";
+    resolveIsAdmin(authUser.email) || appUser?.platformRole === "admin";
+  const canPublish = await verifyChurchContentPublisher(
+    authUser.uid,
+    authUser.email
+  );
 
-  if (!isAdmin) {
+  if (!isAdmin && !canPublish) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

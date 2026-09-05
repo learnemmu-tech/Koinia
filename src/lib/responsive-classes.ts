@@ -2,11 +2,11 @@ import { cn } from "@/lib/utils";
 
 /** Outer shell — used in (root) layout main content wrapper */
 export const pageShellClass =
-  "mx-auto flex w-full min-w-0 max-w-7xl flex-1 flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-4 md:px-6 md:py-6 lg:gap-6";
+  "mx-auto flex w-full min-w-0 max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 md:px-8";
 
 /** Standard list/hub pages (songs, sermons, events, etc.) */
 export const pageContentClass =
-  "mx-auto w-full min-w-0 max-w-6xl space-y-6 pb-10 pt-2 sm:space-y-8";
+  "mx-auto w-full min-w-0 max-w-6xl space-y-6 pb-8 pt-8 sm:space-y-8 md:px-0";
 
 /** Detail pages (song, event, sermon) */
 export const pageDetailClass = "mx-auto w-full min-w-0 max-w-4xl pb-10";

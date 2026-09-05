@@ -1,30 +1,15 @@
-import {
-  collection,
-  doc,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-  type Unsubscribe,
-} from "firebase/firestore";
-
 import type {
   FirebaseNotification,
   NotificationContentType,
 } from "@/types/firebase-notification";
 
 import { firebaseAuth } from "@/lib/firebase-auth-service";
-import { db } from "@/lib/firebase";
+import {
+  fetchUserNotifications,
+  markAllNotificationsReadAction,
+  markNotificationReadAction,
+} from "@/lib/notification-actions";
 
-const NOTIFICATIONS_COLLECTION = "notifications";
-
-/**
- * Central per-type presets. Adding a new channel (e.g. email) later only needs
- * to read these same values, so content stays consistent across channels.
- */
 export const NOTIFICATION_PRESETS: Record<
   NotificationContentType,
   { title: string; message: string; pathPrefix: string }
@@ -66,42 +51,6 @@ export const NOTIFICATION_PRESETS: Record<
   },
 };
 
-function toMillis(value: unknown): number {
-  if (
-    value &&
-    typeof value === "object" &&
-    typeof (value as { toMillis(): number }).toMillis === "function"
-  ) {
-    return (value as { toMillis(): number }).toMillis();
-  }
-  if (typeof value === "number") return value;
-  return Date.now();
-}
-
-function normalizeNotification(
-  id: string,
-  data: Record<string, unknown>
-): FirebaseNotification {
-  const type = (data.type as NotificationContentType) ?? "song";
-  const preset = NOTIFICATION_PRESETS[type] ?? NOTIFICATION_PRESETS.song;
-
-  return {
-    id,
-    type,
-    userId: String(data.userId ?? ""),
-    churchId: String(data.churchId ?? ""),
-    title: String(data.title ?? preset.title),
-    message: String(data.message ?? preset.message),
-    // Fall back to legacy `title` field for notifications created before
-    // `contentTitle` existed.
-    contentTitle: String(data.contentTitle ?? data.title ?? ""),
-    image: String(data.image ?? "") || undefined,
-    contentId: String(data.contentId ?? ""),
-    read: data.read === true,
-    createdAt: toMillis(data.createdAt),
-  };
-}
-
 async function createPublishNotificationViaApi(input: {
   type: NotificationContentType;
   contentId: string;
@@ -136,10 +85,6 @@ async function createPublishNotificationViaApi(input: {
   return data.notificationId ?? null;
 }
 
-/**
- * Creates in-app notification documents for newly published content.
- * Uses Admin SDK via API so church admins are not blocked by branchMembership rules.
- */
 export async function createPublishNotification(input: {
   type: NotificationContentType;
   contentId: string;
@@ -150,24 +95,13 @@ export async function createPublishNotification(input: {
   branchId?: string | null;
 }): Promise<string | null> {
   if (!input.contentId.trim() || !input.contentTitle.trim()) {
-    console.warn("[notifications] skipped — missing contentId or contentTitle", input);
     return null;
   }
-
-  const churchId = input.churchId?.trim();
-  if (!churchId) {
-    console.warn("[notifications] skipped — churchId is required", input);
+  if (!input.churchId?.trim()) {
     return null;
   }
-
   try {
-    const notificationId = await createPublishNotificationViaApi(input);
-    if (notificationId) {
-      console.info(
-        `[notifications] created notification(s) (${input.type}: ${input.contentTitle.trim()})`
-      );
-    }
-    return notificationId;
+    return await createPublishNotificationViaApi(input);
   } catch (error) {
     console.error("[notifications] failed to create notification", error, input);
     throw error;
@@ -195,48 +129,40 @@ export function subscribeToNotifications(
   userId: string,
   onChange: (notifications: FirebaseNotification[]) => void,
   onError?: (error: Error) => void
-): Unsubscribe {
-  const notificationsQuery = query(
-    collection(db, NOTIFICATIONS_COLLECTION),
-    where("userId", "==", userId),
-    orderBy("createdAt", "desc"),
-    limit(30)
-  );
+): () => void {
+  let cancelled = false;
 
-  return onSnapshot(
-    notificationsQuery,
-    (snapshot) => {
-      onChange(
-        snapshot.docs.map((docSnap) =>
-          normalizeNotification(docSnap.id, docSnap.data() as Record<string, unknown>)
-        )
-      );
-    },
-    (error) => {
-      console.error("[subscribeToNotifications]", error);
-      onError?.(error);
+  const tick = async () => {
+    try {
+      const items = await fetchUserNotifications(userId);
+      if (!cancelled) onChange(items);
+    } catch (error) {
+      if (!cancelled) onError?.(error instanceof Error ? error : new Error("Failed to load notifications"));
     }
-  );
+  };
+
+  void tick();
+  const interval = setInterval(() => {
+    void tick();
+  }, 60_000);
+
+  return () => {
+    cancelled = true;
+    clearInterval(interval);
+  };
 }
 
 export function subscribeToReadNotificationIds(
   userId: string,
   onChange: (readIds: Set<string>) => void,
   onError?: (error: Error) => void
-): Unsubscribe {
-  const readsQuery = query(
-    collection(db, "users", userId, "notificationReads")
-  );
-
-  return onSnapshot(
-    readsQuery,
-    (snapshot) => {
-      onChange(new Set(snapshot.docs.map((docSnap) => docSnap.id)));
+): () => void {
+  return subscribeToNotifications(
+    userId,
+    (items) => {
+      onChange(new Set(items.filter((item) => item.read).map((item) => item.id)));
     },
-    (error) => {
-      console.error("[subscribeToReadNotificationIds]", error);
-      onError?.(error);
-    }
+    onError
   );
 }
 
@@ -244,24 +170,12 @@ export async function markNotificationRead(
   userId: string,
   notificationId: string
 ): Promise<void> {
-  try {
-    await setDoc(
-      doc(db, "users", userId, "notificationReads", notificationId),
-      { readAt: serverTimestamp() },
-      { merge: true }
-    );
-  } catch (error) {
-    console.error("[notifications] failed to mark read", error);
-  }
+  await markNotificationReadAction(userId, notificationId);
 }
 
 export async function markAllNotificationsRead(
   userId: string,
   notificationIds: string[]
 ): Promise<void> {
-  await Promise.all(
-    notificationIds.map((notificationId) =>
-      markNotificationRead(userId, notificationId)
-    )
-  );
+  await markAllNotificationsReadAction(userId, notificationIds);
 }

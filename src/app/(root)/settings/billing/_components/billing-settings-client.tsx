@@ -7,12 +7,11 @@ import { BillingOverview } from "@/components/subscription/billing-overview";
 import { PlanBadge } from "@/components/subscription/plan-badge";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useSubscriptionQuery } from "@/hooks/use-subscription-query";
-import { resolveChurchIdForWrite } from "@/lib/church-scope";
 
 export function BillingSettingsClient() {
   const { profile } = useFirebaseAuth();
-  const churchId = resolveChurchIdForWrite(profile?.churchId);
-  const { data, isLoading, error, refetch } = useSubscriptionQuery(churchId);
+  const organizationId = profile?.organizationId?.trim() || null;
+  const { data, isLoading, error, refetch } = useSubscriptionQuery(organizationId);
 
   return (
     <div className="space-y-4">

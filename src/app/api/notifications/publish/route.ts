@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { verifyChurchContentPublisher } from "@/lib/auth/verify-church-content-publisher";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { createPublishNotificationServer } from "@/lib/firebase-notification-server";
+import { userCanManageChurch } from "@/lib/postgres/session";
 
 const bodySchema = z.object({
   type: z.enum([
@@ -29,19 +29,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const canPublish = await verifyChurchContentPublisher(
-    authUser.uid,
-    authUser.email
-  );
-  if (!canPublish) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   let body: z.infer<typeof bodySchema>;
   try {
     body = bodySchema.parse(await request.json());
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  const canPublish = await userCanManageChurch(
+    authUser.uid,
+    authUser.email,
+    body.churchId
+  );
+  if (!canPublish) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {

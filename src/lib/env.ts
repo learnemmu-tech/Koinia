@@ -9,14 +9,25 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
 
-    FIREBASE_SERVICE_ACCOUNT_KEY: z.string().optional(),
+    DATABASE_URL: z.string().min(1),
+
+    CLERK_SECRET_KEY: z.string().min(1),
 
     UMAMI_WEBSITE_ID: z.string().optional(),
   },
 
-  client: {},
+  client: {
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL: z.string().optional(),
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().optional(),
+  },
 
-  experimental__runtimeEnv: {},
+  experimental__runtimeEnv: {
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL,
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL,
+  },
 
   emptyStringAsUndefined: true,
 });

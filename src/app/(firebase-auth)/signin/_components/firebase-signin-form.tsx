@@ -76,7 +76,9 @@ export function FirebaseSignInForm({
   async function handleGoogleSignIn() {
     setIsGoogleLoading(true);
     try {
-      const googleResult = await signInWithGoogle();
+      const googleResult = await signInWithGoogle({
+        redirectUrlComplete: redirectTo,
+      });
       if ("redirected" in googleResult) return;
 
       const { profile } = googleResult;

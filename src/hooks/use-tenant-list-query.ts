@@ -1,33 +1,19 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  startAfter,
-  type DocumentData,
-  type QueryConstraint,
-  type QueryDocumentSnapshot,
-} from "firebase/firestore";
 
 import {
   DEFAULT_LIST_LIMIT,
   QUERY_GC_TIME,
   QUERY_STALE_TIME,
 } from "@/lib/react-query-config";
-import { db } from "@/lib/firebase";
-import {
-  filterRecordsByTenant,
-  type TenantMatchOptions,
-  type TenantScope,
-} from "@/lib/organization/tenant-scope";
-import {
-  buildChurchScopedQuery,
-  buildWorkspaceChurchTenantQuery,
-} from "@/lib/tenant-query-builder";
+import { fetchTenantContentPage } from "@/lib/api-client";
+
+type TenantRecord = {
+  organizationId?: string;
+  churchId?: string;
+  branchId?: string | null;
+};
 
 import {
   useTenantMatchOptions,
@@ -37,14 +23,8 @@ import { useIsPlatformSuperAdmin } from "./use-admin-church-id";
 
 type ListPage<T> = {
   items: T[];
-  lastDoc?: QueryDocumentSnapshot<DocumentData>;
+  offset: number;
   hasMore: boolean;
-};
-
-type TenantRecord = {
-  organizationId?: string;
-  churchId?: string;
-  branchId?: string | null;
 };
 
 export type TenantListQueryOptions<T extends TenantRecord> = {
@@ -53,76 +33,13 @@ export type TenantListQueryOptions<T extends TenantRecord> = {
   orderField: string;
   orderDirection?: "asc" | "desc";
   pageSize?: number;
-  normalize: (id: string, data: Record<string, unknown>) => T;
-  extraConstraints?: QueryConstraint[];
-  /** Query by churchId only (prayer requests). */
+  normalize?: (id: string, data: Record<string, unknown>) => T;
+  extraConstraints?: unknown[];
   churchScopeOnly?: boolean;
-  /** Skip tenant guard — e.g. super-admin churches list. */
   skipTenantGuard?: boolean;
   filterItems?: (items: T[]) => T[];
   initialData?: T[];
 };
-
-function applyTenantFilter<T extends TenantRecord>(
-  records: T[],
-  scope: TenantScope,
-  matchOptions: TenantMatchOptions
-): T[] {
-  return filterRecordsByTenant(records, scope, matchOptions);
-}
-
-async function fetchTenantListPage<T extends TenantRecord>(input: {
-  collectionName: string;
-  scope: TenantScope;
-  matchOptions: TenantMatchOptions;
-  orderField: string;
-  orderDirection: "asc" | "desc";
-  pageSize: number;
-  normalize: (id: string, data: Record<string, unknown>) => T;
-  extraConstraints: QueryConstraint[];
-  churchScopeOnly: boolean;
-  pageParam?: QueryDocumentSnapshot<DocumentData>;
-  filterItems?: (items: T[]) => T[];
-}): Promise<ListPage<T>> {
-  const col = collection(db, input.collectionName);
-  const ordering: QueryConstraint[] = [
-    ...input.extraConstraints,
-    orderBy(input.orderField, input.orderDirection),
-  ];
-
-  if (input.pageParam) {
-    ordering.push(startAfter(input.pageParam));
-  }
-  ordering.push(limit(input.pageSize));
-
-  const baseQuery = input.churchScopeOnly
-    ? buildChurchScopedQuery(col, input.scope.churchId, ...ordering)
-    : buildWorkspaceChurchTenantQuery(col, input.scope, ...ordering);
-
-  if (!baseQuery) {
-    return { items: [], hasMore: false };
-  }
-
-  const snapshot = await getDocs(baseQuery);
-  let items = snapshot.docs.map((docSnap) =>
-    input.normalize(docSnap.id, docSnap.data() as Record<string, unknown>)
-  );
-
-  if (!input.churchScopeOnly) {
-    items = applyTenantFilter(items, input.scope, input.matchOptions);
-  }
-
-  if (input.filterItems) {
-    items = input.filterItems(items);
-  }
-
-  const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-  return {
-    items,
-    lastDoc,
-    hasMore: snapshot.docs.length === input.pageSize,
-  };
-}
 
 export function useTenantListQuery<T extends TenantRecord>(
   options: TenantListQueryOptions<T>
@@ -147,31 +64,31 @@ export function useTenantListQuery<T extends TenantRecord>(
       scope.organizationId,
       scope.branchId,
       pageSize,
-      options.extraConstraints?.length ?? 0,
     ],
     enabled,
-    initialPageParam: undefined as
-      | QueryDocumentSnapshot<DocumentData>
-      | undefined,
-    queryFn: ({ pageParam }) =>
-      fetchTenantListPage({
-        collectionName: options.collectionName,
-        scope,
-        matchOptions,
-        orderField: options.orderField,
-        orderDirection: options.orderDirection ?? "desc",
-        pageSize,
-        normalize: options.normalize,
-        extraConstraints: options.extraConstraints ?? [],
-        churchScopeOnly: options.churchScopeOnly ?? false,
-        pageParam,
-        filterItems: options.filterItems,
-      }),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const page = await fetchTenantContentPage<T>({
+        collection: options.collectionName,
+        churchId: scope.churchId,
+        organizationId: scope.organizationId,
+        offset: pageParam,
+        limit: pageSize,
+      });
+      const items = options.filterItems ? options.filterItems(page.items) : page.items;
+      return {
+        items,
+        offset: pageParam,
+        hasMore: page.hasMore,
+      } satisfies ListPage<T>;
+    },
     getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.lastDoc : undefined,
+      lastPage.hasMore ? lastPage.offset + pageSize : undefined,
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
   });
+
+  void matchOptions;
 
   const data =
     result.data?.pages.flatMap((page) => page.items) ??

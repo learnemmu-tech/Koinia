@@ -7,17 +7,18 @@ import {
   rejectBranchMembership,
   removeBranchMembership,
 } from "@/lib/organization/branch-membership-server";
-import { getMembershipForUser } from "@/lib/organization/organization-server";
-import { roleMeetsMinimum } from "@/types/membership";
-import { getAdminDb } from "@/lib/firebase-admin";
+import {
+  getChurchMembershipRowById,
+  getPublicUserDirectory,
+} from "@/lib/postgres/memberships";
+import { getChurchById } from "@/lib/postgres/tenants";
+import { userCanReviewChurchMemberships } from "@/lib/postgres/session";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { timed } from "@/lib/perf";
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -33,39 +34,24 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
-
-    const membership = await getMembershipForUser(organizationId, decoded.uid);
-    if (
-      !membership ||
-      membership.status !== "active" ||
-      !roleMeetsMinimum(membership.role, "church_admin")
-    ) {
+    const allowed = await timed("pending.auth", () =>
+      userCanReviewChurchMemberships(decoded.uid, decoded.email, branchId)
+    );
+    if (!allowed) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const pending = await listPendingBranchMemberships(organizationId, branchId);
-    const adminDb = getAdminDb();
-    const usersById: Record<
-      string,
-      { email: string; firstName: string; lastName: string }
-    > = {};
-
-    if (adminDb) {
-      await Promise.all(
-        pending.map(async (item) => {
-          const snap = await adminDb.collection("users").doc(item.userId).get();
-          if (!snap.exists) return;
-          const data = snap.data() as Record<string, unknown>;
-          usersById[item.userId] = {
-            email: String(data.email ?? ""),
-            firstName: String(data.firstName ?? ""),
-            lastName: String(data.lastName ?? ""),
-          };
-        })
-      );
+    const church = await getChurchById(branchId);
+    if (!church || church.organizationId !== organizationId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const pending = await timed("pending.list", () =>
+      listPendingBranchMemberships(organizationId, branchId)
+    );
+    const usersById = await timed("pending.directory", () =>
+      getPublicUserDirectory(pending.map((item) => item.userId))
+    );
 
     return NextResponse.json({ pending, usersById });
   } catch (error) {
@@ -85,39 +71,43 @@ type ReviewBody = {
 };
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const decoded = await verifyBearerToken(request);
+  if (!decoded) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
     const body = (await request.json()) as ReviewBody;
 
     const organizationId = body.organizationId?.trim();
     const membershipId = body.membershipId?.trim();
-    const membershipIds = Array.isArray(body.membershipIds) ?
-        body.membershipIds.map((id) => String(id).trim()).filter(Boolean)
-      : membershipId ? [membershipId]
-      : [];
+    const membershipIds = Array.isArray(body.membershipIds)
+      ? body.membershipIds.map((id) => String(id).trim()).filter(Boolean)
+      : membershipId
+        ? [membershipId]
+        : [];
     const action = body.action;
 
     if (!organizationId || !membershipIds.length || !action) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const membership = await getMembershipForUser(organizationId, decoded.uid);
-    if (
-      !membership ||
-      membership.status !== "active" ||
-      !roleMeetsMinimum(membership.role, "church_admin")
-    ) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    for (const id of membershipIds) {
+      const target = await getChurchMembershipRowById(id);
+      if (!target) {
+        return NextResponse.json({ error: "Membership not found" }, { status: 404 });
+      }
+      if (target.organizationId !== organizationId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      const allowed = await userCanReviewChurchMemberships(
+        decoded.uid,
+        decoded.email,
+        target.churchId
+      );
+      if (!allowed) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     if (membershipIds.length === 1) {
@@ -130,18 +120,14 @@ export async function POST(request: Request) {
       } else {
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
       }
-    } else {
-      if (action === "remove") {
-        for (const membershipId of membershipIds) {
-          await removeBranchMembership(membershipId, decoded.uid);
-        }
-      } else {
-        await bulkReviewBranchMemberships(
-          membershipIds,
-          action,
-          decoded.uid
-        );
+    } else if (action === "remove") {
+      for (const id of membershipIds) {
+        await removeBranchMembership(id, decoded.uid);
       }
+    } else if (action === "approve" || action === "reject") {
+      await bulkReviewBranchMemberships(membershipIds, action, decoded.uid);
+    } else {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });

@@ -1,46 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
+import { useQuery } from "@tanstack/react-query";
 
 import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 
-import { db } from "@/lib/firebase";
-import {
-  normalizePrayerRequestFromFirestore,
-  PRAYER_REQUESTS_COLLECTION,
-} from "@/lib/prayer-request-firestore";
+import { getPrayerRequestById } from "@/lib/firebase-prayer-request-queries";
+import { QUERY_GC_TIME, QUERY_STALE_TIME } from "@/lib/react-query-config";
 
 export function usePrayerRequest(
   requestId: string,
   initialRequest: FirebasePrayerRequest | null = null
 ) {
-  const [request, setRequest] = useState(initialRequest);
-  const [loading, setLoading] = useState(!initialRequest);
+  const { data: request = initialRequest, isLoading } = useQuery({
+    queryKey: ["prayer-request", requestId],
+    enabled: Boolean(requestId),
+    initialData: initialRequest ?? undefined,
+    staleTime: QUERY_STALE_TIME,
+    gcTime: QUERY_GC_TIME,
+    queryFn: () => getPrayerRequestById(requestId),
+  });
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      doc(db, PRAYER_REQUESTS_COLLECTION, requestId),
-      (snapshot) => {
-        if (!snapshot.exists()) {
-          setRequest(null);
-        } else {
-          setRequest(
-            normalizePrayerRequestFromFirestore(
-              snapshot.id,
-              snapshot.data() as Record<string, unknown>
-            )
-          );
-        }
-        setLoading(false);
-      },
-      () => {
-        setLoading(false);
-      }
-    );
-
-    return unsubscribe;
-  }, [requestId]);
-
-  return { request, loading };
+  return { request: request ?? null, loading: isLoading };
 }

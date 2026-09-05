@@ -1,5 +1,6 @@
 "use client";
 
+import { useSignUp } from "@clerk/nextjs";
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,8 +22,8 @@ import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination
 import { buildAuthHref, sanitizeCallbackUrl } from "@/lib/callback-url";
 import { getFirebaseAuthErrorMessage } from "@/lib/firebase-auth-errors";
 import {
+  finishSignUpAndSyncProfile,
   signInWithGoogle,
-  signUpWithEmail,
 } from "@/lib/firebase-auth-service";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +58,8 @@ export function FirebaseSignUpForm({
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
-  const redirectTo = sanitizeCallbackUrl(callbackUrl);
+  const redirectTo = sanitizeCallbackUrl(callbackUrl, CREATE_WORKSPACE_PATH);
+  const { signUp, fetchStatus } = useSignUp();
 
   const {
     register,
@@ -67,17 +69,25 @@ export function FirebaseSignUpForm({
     resolver: zodResolver(signUpSchema),
   });
 
-  const isDisabled = isLoading || isGoogleLoading;
+  const isDisabled = isLoading || isGoogleLoading || fetchStatus === "fetching";
 
   async function onSubmit(data: SignUpValues) {
     setIsLoading(true);
     try {
-      const { profile } = await signUpWithEmail(
-        data.email,
-        data.password,
-        data.firstName,
-        data.lastName
-      );
+      const { error } = await signUp.password({
+        emailAddress: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+      if (error) {
+        throw error;
+      }
+
+      const { profile } = await finishSignUpAndSyncProfile(signUp, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
       setAuthCookie(true, { role: profile.role, profile });
       toast.success(
         `We sent a verification email to ${data.email}. Please verify before continuing.`
@@ -93,7 +103,9 @@ export function FirebaseSignUpForm({
   async function handleGoogleSignUp() {
     setIsGoogleLoading(true);
     try {
-      const googleResult = await signInWithGoogle();
+      const googleResult = await signInWithGoogle({
+        redirectUrlComplete: redirectTo,
+      });
       if ("redirected" in googleResult) return;
 
       const { profile } = googleResult;
@@ -117,6 +129,7 @@ export function FirebaseSignUpForm({
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+        <div id="clerk-captcha" />
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-2">
             <Label htmlFor="firstName">First name</Label>

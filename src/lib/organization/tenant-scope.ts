@@ -15,6 +15,20 @@ export type TenantScope = {
   branchId?: string;
 };
 
+export type WorkspaceTenantScope = Required<
+  Pick<TenantScope, "organizationId" | "churchId" | "branchId">
+>;
+
+export function isWorkspaceTenantScopeComplete(
+  scope: Partial<TenantScope>
+): scope is WorkspaceTenantScope {
+  return Boolean(
+    scope.organizationId?.trim() &&
+      scope.churchId?.trim() &&
+      scope.branchId?.trim()
+  );
+}
+
 export type TenantContentFields = {
   organizationId: string;
   churchId: string;

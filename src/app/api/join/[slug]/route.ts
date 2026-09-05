@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getClerkIdentity, verifyBearerToken } from "@/lib/email/verify-auth";
 import {
   getChurchByJoinSlug,
   joinUserToChurchBySlug,
@@ -28,12 +29,8 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ?
-    authHeader.slice(7)
-  : null;
-
-  if (!token) {
+  const verified = await verifyBearerToken(request);
+  if (!verified) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -51,13 +48,11 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const decoded = await getAuth().verifyIdToken(token);
-    const authUser = await getAuth().getUser(decoded.uid);
     const { slug } = await context.params;
+    const identity = await getClerkIdentity(verified.uid);
 
-    const result = await joinUserToChurchBySlug(decoded.uid, slug, {
-      emailVerified: authUser.emailVerified,
+    const result = await joinUserToChurchBySlug(verified.uid, slug, {
+      emailVerified: identity?.emailVerified ?? false,
     });
     return NextResponse.json({
       churchName: result.churchName,

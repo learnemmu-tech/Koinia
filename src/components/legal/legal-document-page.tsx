@@ -60,7 +60,7 @@ export function LegalDocumentPage({
 
             <div className="mt-6 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-white" />
                 Effective: {effectiveDate}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/50 px-3 py-1 text-xs text-muted-foreground">

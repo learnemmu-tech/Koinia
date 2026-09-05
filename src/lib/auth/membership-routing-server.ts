@@ -1,88 +1,35 @@
 import "server-only";
 
-import { getAdminDb } from "@/lib/firebase-admin";
-import type { FirestoreUser, UserRole } from "@/lib/firebase-auth-service";
+import type { FirestoreUser } from "@/lib/firebase-auth-service";
 import {
   resolveMembershipRouting,
   type MembershipRoutingResult,
 } from "@/lib/auth/membership-routing";
 import { getWorkspaceType } from "@/lib/organization/workspace-type";
 import type { FirebaseBranchMembership } from "@/types/branch-membership";
-
 import {
-  BRANCH_MEMBERSHIPS_COLLECTION,
-  normalizeBranchMembershipFromFirestore,
-} from "@/lib/organization/branch-membership-firestore";
+  getAppUserByClerkId,
+  mapAppUserToProfile,
+} from "@/lib/postgres/app-user";
+import { listAllBranchMembershipsForUser } from "@/lib/postgres/memberships";
 import {
+  countOrganizationChurches,
   getMembershipForUser,
   getOrganizationById,
-} from "@/lib/organization/organization-server";
+} from "@/lib/postgres/tenants";
 
-export async function listAllBranchMembershipsForUser(
+export async function listAllBranchMembershipsForUserExport(
   userId: string
 ): Promise<FirebaseBranchMembership[]> {
-  const adminDb = getAdminDb();
-  if (!adminDb) return [];
-
-  const snap = await adminDb
-    .collection(BRANCH_MEMBERSHIPS_COLLECTION)
-    .where("userId", "==", userId)
-    .get();
-
-  return snap.docs.map((doc) =>
-    normalizeBranchMembershipFromFirestore(
-      doc.id,
-      doc.data() as Record<string, unknown>
-    )
-  );
+  return listAllBranchMembershipsForUser(userId);
 }
+
+export { listAllBranchMembershipsForUser };
 
 async function loadUserProfile(userId: string): Promise<FirestoreUser | null> {
-  const adminDb = getAdminDb();
-  if (!adminDb) return null;
-
-  const snap = await adminDb.collection("users").doc(userId).get();
-  if (!snap.exists) return null;
-
-  const data = snap.data() as Record<string, unknown>;
-  return {
-    firstName: String(data.firstName ?? ""),
-    lastName: String(data.lastName ?? ""),
-    email: String(data.email ?? ""),
-    role: (data.role as UserRole) ?? "user",
-    churchId: data.churchId ? String(data.churchId) : undefined,
-    organizationId: data.organizationId ? String(data.organizationId) : undefined,
-    activeBranchId: data.activeBranchId ? String(data.activeBranchId) : undefined,
-    pendingBranchId: data.pendingBranchId ? String(data.pendingBranchId) : undefined,
-    needsChurchOnboarding: data.needsChurchOnboarding === true,
-    createdAt: data.createdAt,
-  };
-}
-
-async function countOrganizationChurches(organizationId: string): Promise<number> {
-  const adminDb = getAdminDb();
-  if (!adminDb || !organizationId) return 0;
-
-  const snap = await adminDb
-    .collection("churches")
-    .where("organizationId", "==", organizationId)
-    .where("isActive", "==", true)
-    .get();
-
-  return snap.size;
-}
-
-async function countOrganizationBranches(organizationId: string): Promise<number> {
-  const adminDb = getAdminDb();
-  if (!adminDb || !organizationId) return 0;
-
-  const snap = await adminDb
-    .collection("branches")
-    .where("organizationId", "==", organizationId)
-    .where("isActive", "==", true)
-    .get();
-
-  return snap.size;
+  const appUser = await getAppUserByClerkId(userId);
+  if (!appUser) return null;
+  return mapAppUserToProfile(appUser);
 }
 
 export async function resolveUserMembershipRouting(
@@ -92,21 +39,16 @@ export async function resolveUserMembershipRouting(
   const profile = await loadUserProfile(userId);
   const organizationId = profile?.organizationId?.trim() ?? "";
 
-  const [membership, branchMemberships, churchesCount, branchesCount, organization] =
+  const [membership, branchMemberships, churchesCount, organization] =
     await Promise.all([
-      organizationId ?
-        getMembershipForUser(organizationId, userId)
-      : Promise.resolve(null),
+      organizationId
+        ? getMembershipForUser(organizationId, userId)
+        : Promise.resolve(null),
       listAllBranchMembershipsForUser(userId),
-      organizationId ?
-        countOrganizationChurches(organizationId)
-      : Promise.resolve(0),
-      organizationId ?
-        countOrganizationBranches(organizationId)
-      : Promise.resolve(0),
-      organizationId ?
-        getOrganizationById(organizationId)
-      : Promise.resolve(null),
+      organizationId
+        ? countOrganizationChurches(organizationId)
+        : Promise.resolve(0),
+      organizationId ? getOrganizationById(organizationId) : Promise.resolve(null),
     ]);
 
   const workspaceType = getWorkspaceType(organization);
@@ -116,7 +58,7 @@ export async function resolveUserMembershipRouting(
     membership,
     branchMemberships,
     churchesCount,
-    branchesCount,
+    branchesCount: churchesCount,
     workspaceType,
     callbackUrl,
   });

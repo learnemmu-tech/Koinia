@@ -135,7 +135,7 @@ const COMPARISON_ROWS: ComparisonRow[] = [
 function ComparisonCell({ value }: { value: string | boolean }) {
   if (typeof value === "boolean") {
     return value ?
-        <Check className="mx-auto size-4 text-green-600" aria-label="Yes" />
+        <Check className="mx-auto size-4 text-white" aria-label="Yes" />
       : <X className="mx-auto size-4 text-muted-foreground/40" aria-label="No" />;
   }
   if (value === "Unlimited") {
@@ -193,7 +193,7 @@ export function PricingPageClient() {
               )}
             >
               Yearly
-              <span className="ml-1.5 text-xs text-green-600">Save ~17%</span>
+              <span className="ml-1.5 text-xs text-[#A1A1A1]">Save ~17%</span>
             </button>
           </div>
         </div>

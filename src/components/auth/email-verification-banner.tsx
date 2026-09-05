@@ -3,19 +3,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MailWarning, X } from "lucide-react";
 import { toast } from "sonner";
-import { sendEmailVerification, type User } from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
-import { firebaseAuth } from "@/lib/firebase-auth-service";
+import {
+  firebaseAuth,
+  sendSessionEmailVerification,
+  type SessionUser,
+} from "@/lib/firebase-auth-service";
 
-function isGoogleAccount(user: User) {
+function isGoogleAccount(user: SessionUser) {
   return user.providerData.some(
     (provider) => provider.providerId === "google.com"
   );
 }
 
-function isPasswordAccount(user: User) {
+function isPasswordAccount(user: SessionUser) {
   return user.providerData.some(
     (provider) => provider.providerId === "password"
   );
@@ -26,8 +29,7 @@ export function EmailVerificationBanner() {
   const [showBanner, setShowBanner] = useState(false);
   const verifiedToastShownRef = useRef(false);
 
-  const syncVerificationState = useCallback(async () => {
-    const current = firebaseAuth.currentUser;
+  const applyVerificationState = useCallback((current: SessionUser | null) => {
     if (!current) {
       setShowBanner(false);
       return;
@@ -38,19 +40,12 @@ export function EmailVerificationBanner() {
       return;
     }
 
-    try {
-      await current.reload();
-    } catch {
-      // Ignore reload failures; keep current state.
-    }
-
-    const refreshed = firebaseAuth.currentUser;
-    if (!refreshed?.email) {
+    if (!current.email) {
       setShowBanner(false);
       return;
     }
 
-    if (refreshed.emailVerified) {
+    if (current.emailVerified) {
       setShowBanner(false);
       if (!verifiedToastShownRef.current) {
         verifiedToastShownRef.current = true;
@@ -61,53 +56,13 @@ export function EmailVerificationBanner() {
       return;
     }
 
-    if (isPasswordAccount(refreshed)) {
-      setShowBanner(true);
-    } else {
-      setShowBanner(false);
-    }
+    setShowBanner(isPasswordAccount(current));
   }, []);
 
   useEffect(() => {
     if (loading) return;
-
-    if (!user) {
-      setShowBanner(false);
-      return;
-    }
-
-    if (user.emailVerified || isGoogleAccount(user)) {
-      setShowBanner(false);
-      return;
-    }
-
-    if (isPasswordAccount(user)) {
-      setShowBanner(true);
-    }
-
-    void syncVerificationState();
-  }, [loading, user, syncVerificationState]);
-
-  useEffect(() => {
-    if (!user || user.emailVerified || isGoogleAccount(user)) return;
-
-    const interval = window.setInterval(() => {
-      void syncVerificationState();
-    }, 5000);
-
-    return () => window.clearInterval(interval);
-  }, [user, syncVerificationState]);
-
-  useEffect(() => {
-    if (!user || user.emailVerified || isGoogleAccount(user)) return;
-
-    function handleFocus() {
-      void syncVerificationState();
-    }
-
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
-  }, [user, syncVerificationState]);
+    applyVerificationState(user);
+  }, [loading, user, applyVerificationState]);
 
   if (loading || !showBanner || !user?.email) {
     return null;
@@ -118,7 +73,7 @@ export function EmailVerificationBanner() {
     if (!current) return;
 
     try {
-      await sendEmailVerification(current);
+      await sendSessionEmailVerification();
       toast.success("Verification email sent. Please check your inbox.");
     } catch {
       toast.error("Could not send verification email. Try again later.");

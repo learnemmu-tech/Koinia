@@ -8,13 +8,8 @@ import type { FirebaseFavorite } from "@/types/firebase-favorite";
 import type { FirebaseSermon } from "@/types/firebase-sermon";
 import type { FirebaseSong } from "@/types/firebase-song";
 
-import { normalizeArticleFromFirestore } from "@/lib/article-firestore";
-import {
-  getFirestoreDocsByIdsSafe,
-} from "@/lib/firestore-batch-get";
-import { normalizeEventFromFirestore } from "@/lib/event-firestore";
-import { normalizeSermonFromFirestore } from "@/lib/sermon-firestore";
-import { filterPublishedSongs, normalizeSongFromFirestore } from "@/lib/song-firestore";
+import { fetchTenantContentPage } from "@/lib/api-client";
+import { filterPublishedSongs } from "@/lib/song-firestore";
 
 export type ResolvedFavoriteEntry =
   | { itemType: "song"; favorite: FirebaseFavorite; item: FirebaseSong }
@@ -138,12 +133,13 @@ async function loadSongs(favorites: FirebaseFavorite[]): Promise<FirebaseSong[]>
     .filter((favorite) => favorite.itemType === "song")
     .map((favorite) => favorite.itemId);
 
-  const songs = await getFirestoreDocsByIdsSafe(
-    "songs",
+  if (ids.length === 0) return [];
+  const page = await fetchTenantContentPage<FirebaseSong>({
+    collection: "songs",
     ids,
-    normalizeSongFromFirestore
-  );
-  return filterPublishedSongs(songs);
+    limit: 50,
+  });
+  return filterPublishedSongs(page.items);
 }
 
 async function loadSermons(
@@ -153,13 +149,13 @@ async function loadSermons(
     .filter((favorite) => favorite.itemType === "sermon")
     .map((favorite) => favorite.itemId);
 
-  const sermons = await getFirestoreDocsByIdsSafe(
-    "sermons",
+  if (ids.length === 0) return [];
+  const page = await fetchTenantContentPage<FirebaseSermon>({
+    collection: "sermons",
     ids,
-    normalizeSermonFromFirestore
-  );
-
-  return sermons.filter((sermon) => sermon.isPublished);
+    limit: 50,
+  });
+  return page.items.filter((sermon) => sermon.isPublished);
 }
 
 async function loadArticles(
@@ -169,13 +165,13 @@ async function loadArticles(
     .filter((favorite) => favorite.itemType === "article")
     .map((favorite) => favorite.itemId);
 
-  const articles = await getFirestoreDocsByIdsSafe(
-    "articles",
+  if (ids.length === 0) return [];
+  const page = await fetchTenantContentPage<FirebaseArticle>({
+    collection: "articles",
     ids,
-    normalizeArticleFromFirestore
-  );
-
-  return articles.filter((article) => article.isPublished);
+    limit: 50,
+  });
+  return page.items.filter((article) => article.isPublished);
 }
 
 async function loadEvents(
@@ -185,11 +181,11 @@ async function loadEvents(
     .filter((favorite) => favorite.itemType === "event")
     .map((favorite) => favorite.itemId);
 
-  const events = await getFirestoreDocsByIdsSafe(
-    "events",
+  if (ids.length === 0) return [];
+  const page = await fetchTenantContentPage<FirebaseEvent>({
+    collection: "events",
     ids,
-    normalizeEventFromFirestore
-  );
-
-  return events.filter((event) => event.status === "published");
+    limit: 50,
+  });
+  return page.items.filter((event) => event.status === "published");
 }

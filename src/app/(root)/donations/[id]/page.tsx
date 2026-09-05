@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
-import { DonationCampaignDetailClient } from "@/components/donations/donation-campaign-detail-client";
+import {
+  DonationCampaignDetailClient,
+} from "@/components/donations/donation-campaign-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getPageTenantContext } from "@/lib/church-page-data";
 import { getDonationCampaignByIdCached } from "@/lib/cached-donation-data";
@@ -44,7 +46,7 @@ export default async function DonationCampaignPage({
   return (
     <article
       aria-label={campaign?.title ?? "Donation campaign"}
-      className="mx-auto w-full min-w-0 max-w-5xl pb-10"
+      className="-mx-4 min-h-full bg-[#0A0A0A] sm:-mx-6 md:-mx-8"
     >
       {campaign ?
         <JsonLd

@@ -15,19 +15,19 @@ type AuthRedirectProps = {
 
 /** Redirects authenticated users away from sign-in/sign-up pages. */
 export function AuthRedirect({ children, callbackUrl }: AuthRedirectProps) {
-  const { user, loading } = useFirebaseAuth();
+  const { user, loading, profileReady } = useFirebaseAuth();
   const router = useRouter();
   const redirectTo = sanitizeCallbackUrl(callbackUrl);
 
   React.useEffect(() => {
-    if (!loading && user) {
+    if (!loading && profileReady && user) {
       void fetchPostAuthDestination(redirectTo).then((destination) => {
         router.replace(destination);
       });
     }
-  }, [user, loading, router, redirectTo]);
+  }, [user, loading, profileReady, router, redirectTo]);
 
-  if (loading) return <AuthLoading />;
+  if (loading || (user && !profileReady)) return <AuthLoading />;
   if (user) return <AuthLoading />;
 
   return <>{children}</>;

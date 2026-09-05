@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import type { TenantScope } from "@/lib/organization/tenant-scope";
-import { isWorkspaceTenantScopeComplete } from "@/lib/tenant-query-builder";
+import { isWorkspaceTenantScopeComplete } from "@/lib/organization/tenant-scope";
 import {
   resolveEffectiveBranchId,
   resolveEffectiveChurchId,

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { useQueryClient } from "@tanstack/react-query";
 
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 
@@ -15,8 +15,6 @@ import { toast } from "sonner";
 
 
 import { OnboardingWizardShell } from "@/components/onboarding/onboarding-wizard-shell";
-
-import { OnboardingSuccessScreen } from "@/components/onboarding/onboarding-success-screen";
 
 import { WorkspaceTypeSelector } from "@/components/onboarding/workspace-type-selector";
 
@@ -45,7 +43,7 @@ import { buildCreateWorkspaceAuthHref, WAITING_APPROVAL_PATH } from "@/lib/auth/
 import { useWorkspaceAccess } from "@/hooks/use-workspace-access";
 
 import { firebaseAuth } from "@/lib/firebase-auth-service";
-import { waitForUserProfileUpdate, buildPostOnboardingProfilePatch, isWorkspaceProfileComplete } from "@/lib/auth/wait-for-user-profile";
+import { buildPostOnboardingProfilePatch, isWorkspaceProfileComplete } from "@/lib/auth/wait-for-user-profile";
 
 import { COUNTRIES } from "@/lib/countries";
 
@@ -107,8 +105,6 @@ export function ChurchOnboardingForm() {
 
   const [loading, setLoading] = useState(false);
 
-  const [successJoinSlug, setSuccessJoinSlug] = useState<string | null>(null);
-
 
 
   useEffect(() => {
@@ -151,16 +147,6 @@ export function ChurchOnboardingForm() {
     };
 
     reader.readAsDataURL(file);
-
-  }
-
-
-
-  function clearLogo() {
-
-    setLogoFile(undefined);
-
-    setLogoPreview("");
 
   }
 
@@ -343,22 +329,10 @@ export function ChurchOnboardingForm() {
 
 
 
-      let resolvedProfile = await refreshProfile(profilePatch);
-
-      if (!isWorkspaceProfileComplete(resolvedProfile)) {
-        const confirmed = await waitForUserProfileUpdate(user.uid, {
-          organizationId: result.organizationId,
-          needsChurchOnboarding: false,
-        });
-        if (confirmed) {
-          resolvedProfile = await refreshProfile(profilePatch);
-        }
-      }
+      const resolvedProfile = await refreshProfile(profilePatch);
 
       if (!resolvedProfile || !isWorkspaceProfileComplete(resolvedProfile)) {
-        throw new Error(
-          "Workspace was created but your profile could not be loaded. Please refresh the page."
-        );
+        throw new Error("Failed to create workspace.");
       }
 
       await refetch();
@@ -392,13 +366,8 @@ export function ChurchOnboardingForm() {
       await queryClient.refetchQueries({ queryKey: ["membership-routing"] });
       await queryClient.refetchQueries({ queryKey: ["organization"] });
 
-      if (workspaceType === "independent_church" && result.joinSlug?.trim()) {
-        sessionStorage.setItem("onboarding_show_success", "1");
-        setSuccessJoinSlug(result.joinSlug.trim());
-        return;
-      }
-
       router.replace("/dashboard");
+      router.refresh();
 
     } catch (error) {
 
@@ -418,33 +387,11 @@ export function ChurchOnboardingForm() {
 
 
 
-  if (successJoinSlug) {
-
-    return (
-
-      <OnboardingSuccessScreen
-
-        churchName={name.trim()}
-
-        joinSlug={successJoinSlug}
-
-      />
-
-    );
-
-  }
-
-
-
   if (step === 1) {
 
     return (
 
       <OnboardingWizardShell
-
-        step={1}
-
-        totalSteps={2}
 
         title="Create Your Workspace"
 
@@ -496,10 +443,6 @@ export function ChurchOnboardingForm() {
 
     <OnboardingWizardShell
 
-      step={2}
-
-      totalSteps={2}
-
       variant="form"
 
       title="Create Your Workspace"
@@ -517,6 +460,37 @@ export function ChurchOnboardingForm() {
     >
 
       <form onSubmit={handleSubmit} className="space-y-5">
+
+        <div className="flex flex-col items-center gap-2">
+          <input
+            id="logo-upload"
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            disabled={loading}
+            onChange={(e) => handleLogoPick(e.target.files?.[0])}
+          />
+          <label
+            htmlFor="logo-upload"
+            className={cn(
+              "relative flex size-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/[0.04] transition-colors",
+              loading
+                ? "cursor-not-allowed opacity-60"
+                : "hover:border-primary/40 hover:bg-white/[0.07]"
+            )}
+          >
+            {logoPreview ?
+              <img
+                src={logoPreview}
+                alt=""
+                className="size-full object-cover"
+              />
+            : <Plus className="size-7 text-muted-foreground" />}
+          </label>
+          <p className="text-xs text-muted-foreground">
+            PNG or JPG, max {MAX_IMAGE_SIZE_LABEL}
+          </p>
+        </div>
 
         <div className="space-y-2">
 
@@ -659,98 +633,6 @@ export function ChurchOnboardingForm() {
             disabled={loading}
 
           />
-
-        </div>
-
-
-
-        <div className="space-y-2">
-
-          <Label>Logo (optional)</Label>
-
-          <input
-
-            id="logo-upload"
-
-            type="file"
-
-            accept="image/*"
-
-            className="sr-only"
-
-            disabled={loading}
-
-            onChange={(e) => handleLogoPick(e.target.files?.[0])}
-
-          />
-
-          <div className="flex items-center gap-4">
-
-            {logoPreview ?
-
-              <div className="relative">
-
-                <img
-
-                  src={logoPreview}
-
-                  alt="Logo preview"
-
-                  className="size-14 rounded-lg border border-white/10 object-cover"
-
-                />
-
-                <button
-
-                  type="button"
-
-                  onClick={clearLogo}
-
-                  className="absolute -right-1.5 -top-1.5 rounded-full border bg-background p-0.5 shadow-sm"
-
-                  aria-label="Remove logo"
-
-                >
-
-                  <X className="size-3" />
-
-                </button>
-
-              </div>
-
-            : null}
-
-            <label
-
-              htmlFor="logo-upload"
-
-              className={cn(
-
-                "inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-white/15 px-4 text-sm text-muted-foreground transition-colors",
-
-                loading ?
-
-                  "cursor-not-allowed opacity-60"
-
-                : "hover:border-primary/40 hover:bg-white/[0.03]"
-
-              )}
-
-            >
-
-              <ImagePlus className="size-4" />
-
-              {logoPreview ? "Change logo" : "Upload logo"}
-
-            </label>
-
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-
-            PNG or JPG, max {MAX_IMAGE_SIZE_LABEL}. Skip to use a default logo.
-
-          </p>
 
         </div>
 

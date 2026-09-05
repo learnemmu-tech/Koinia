@@ -7,7 +7,6 @@ import {
   type ContentPublishEmailType,
 } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
-import { getAdminDb } from "@/lib/firebase-admin";
 
 const bodySchema = z.object({
   type: z.enum(["song", "sermon", "article", "donation_campaign"]),
@@ -18,12 +17,6 @@ export async function POST(request: Request) {
   const authUser = await verifyBearerToken(request);
   if (!authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const adminDb = getAdminDb();
-  if (!adminDb) {
-    console.warn("[api/email/content-published] admin not configured");
-    return NextResponse.json({ success: true });
   }
 
   const canPublish = await verifyChurchContentPublisher(

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { useQuery } from "@tanstack/react-query";
 
+import { fetchTenantContentPage } from "@/lib/api-client";
 import { useChurchManagementAccess } from "@/hooks/use-church-management-access";
 import { useWorkspaceTenantScope } from "@/hooks/use-workspace-tenant-scope";
-import { db } from "@/lib/firebase";
-import { BRANCH_MEMBERSHIPS_COLLECTION } from "@/lib/organization/branch-membership-firestore";
-import { PRAYER_REQUESTS_COLLECTION } from "@/lib/prayer-request-firestore";
+import { QUERY_GC_TIME, QUERY_STALE_TIME } from "@/lib/react-query-config";
+import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
+import type { FirebaseBranchMembership } from "@/types/branch-membership";
 
 export type SidebarAdminBadges = {
   pendingPrayers: number;
@@ -25,88 +25,48 @@ export function useSidebarAdminBadges(): SidebarAdminBadges {
   const { canAccessChurchManagement, loading: accessLoading } =
     useChurchManagementAccess();
   const scope = useWorkspaceTenantScope();
-  const [badges, setBadges] = useState<SidebarAdminBadges>(EMPTY_BADGES);
+  const churchId = scope.churchId?.trim() ?? "";
+  const enabled =
+    !accessLoading &&
+    canAccessChurchManagement &&
+    !scope.blocked &&
+    Boolean(churchId);
 
-  useEffect(() => {
-    if (accessLoading || !canAccessChurchManagement || scope.blocked) {
-      setBadges(EMPTY_BADGES);
-      return;
-    }
-
-    const churchId = scope.churchId?.trim();
-
-    if (!churchId) {
-      setBadges(EMPTY_BADGES);
-      return;
-    }
-
-    let pendingPrayers = 0;
-    let pendingMembers = 0;
-
-    const prayersQuery = query(
-      collection(db, PRAYER_REQUESTS_COLLECTION),
-      where("churchId", "==", churchId),
-      where("status", "==", "pending")
-    );
-
-    const membersQuery = query(
-      collection(db, BRANCH_MEMBERSHIPS_COLLECTION),
-      where("churchId", "==", churchId),
-      where("status", "==", "pending")
-    );
-
-    const unsubscribePrayers = onSnapshot(
-      prayersQuery,
-      (snapshot) => {
-        pendingPrayers = snapshot.size;
-        setBadges({
-          pendingPrayers,
-          pendingMembers,
-          pendingContent: pendingPrayers + pendingMembers,
-        });
-      },
-      () => {
-        pendingPrayers = 0;
-        setBadges({
-          pendingPrayers,
-          pendingMembers,
-          pendingContent: pendingPrayers + pendingMembers,
-        });
-      }
-    );
-
-    const unsubscribeMembers = onSnapshot(
-      membersQuery,
-      (snapshot) => {
-        pendingMembers = snapshot.size;
-        setBadges({
-          pendingPrayers,
-          pendingMembers,
-          pendingContent: pendingPrayers + pendingMembers,
-        });
-      },
-      () => {
-        pendingMembers = 0;
-        setBadges({
-          pendingPrayers,
-          pendingMembers,
-          pendingContent: pendingPrayers + pendingMembers,
-        });
-      }
-    );
-
-    return () => {
-      unsubscribePrayers();
-      unsubscribeMembers();
-    };
-  }, [
-    accessLoading,
-    canAccessChurchManagement,
-    scope.blocked,
-    scope.churchId,
-  ]);
+  const { data: badges = EMPTY_BADGES } = useQuery({
+    queryKey: ["sidebar-admin-badges", churchId, scope.organizationId],
+    enabled,
+    refetchInterval: 60_000,
+    staleTime: QUERY_STALE_TIME,
+    gcTime: QUERY_GC_TIME,
+    queryFn: async () => {
+      const [prayers, membersRes] = await Promise.all([
+        fetchTenantContentPage<FirebasePrayerRequest>({
+          collection: "prayerRequests",
+          churchId,
+          organizationId: scope.organizationId,
+          limit: 50,
+        }),
+        (async () => {
+          const { fetchWithAuth } = await import("@/lib/api-client");
+          const response = await fetchWithAuth(
+            `/api/memberships/pending?organizationId=${encodeURIComponent(scope.organizationId ?? "")}&branchId=${encodeURIComponent(churchId)}`
+          );
+          if (!response.ok) return { pending: [] as FirebaseBranchMembership[] };
+          return response.json() as Promise<{ pending: FirebaseBranchMembership[] }>;
+        })(),
+      ]);
+      const pendingPrayers = prayers.items.filter(
+        (item) => item.status === "pending"
+      ).length;
+      const pendingMembers = membersRes.pending.length;
+      return {
+        pendingPrayers,
+        pendingMembers,
+        pendingContent: pendingPrayers,
+      };
+    },
+  });
 
   if (!canAccessChurchManagement) return EMPTY_BADGES;
-
   return badges;
 }

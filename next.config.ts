@@ -8,6 +8,7 @@ const isDocker = process.env.IS_DOCKER === "true";
 
 const config: NextConfig = {
   reactStrictMode: true,
+  serverExternalPackages: ["pg"],
   images: {
     remotePatterns: [
       {
@@ -25,6 +26,10 @@ const config: NextConfig = {
       {
         protocol: "https",
         hostname: "googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "img.clerk.com",
       },
     ],
     unoptimized: !isDocker,

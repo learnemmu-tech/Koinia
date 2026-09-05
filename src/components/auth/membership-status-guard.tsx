@@ -16,7 +16,6 @@ import {
   MEMBERSHIP_REMOVED_PATH,
   WAITING_APPROVAL_PATH,
 } from "@/lib/auth/auth-paths";
-import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
 
 const AUTH_PATHS = new Set([
   "/signin",
@@ -42,7 +41,7 @@ export function MembershipStatusGuard() {
   const router = useRouter();
   const pathname = usePathname();
   const { authUser, loading: authLoading, profileReady } = useFirebaseAuth();
-  const { routing, loading: routingLoading } = useMembershipRouting(pathname);
+  const { routing, loading: routingLoading } = useMembershipRouting();
   const redirectingRef = useRef(false);
 
   useMembershipRealtimeSync();
@@ -67,8 +66,6 @@ export function MembershipStatusGuard() {
 
     if (isWaitingApprovalPath(pathname)) {
       if (status === "active") {
-        redirectingRef.current = true;
-        router.replace(destination || WORKSPACE_BASE);
         return;
       }
       if (status === "rejected") {

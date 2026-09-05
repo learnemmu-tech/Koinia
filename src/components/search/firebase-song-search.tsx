@@ -8,7 +8,7 @@ import type { FirebaseSong } from "@/types/firebase-song";
 import { ProtectedContentLink } from "@/components/auth/protected-content-link";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { useContentTenantScope } from "@/hooks/use-workspace-tenant-scope";
-import { searchSongs } from "@/lib/firebase-queries";
+import { fetchTenantContentPage } from "@/lib/api-client";
 import { getSongAlternateTitle, getSongDisplayTitle } from "@/lib/song-firestore";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { cn, getSongCoverUrl } from "@/lib/utils";
@@ -38,7 +38,27 @@ export function FirebaseSongSearch({ query }: FirebaseSongSearchProps) {
 
       setLoading(true);
       try {
-        const results = await searchSongs(scope, query);
+        const page = await fetchTenantContentPage<FirebaseSong>({
+          collection: "songs",
+          churchId: scope.churchId,
+          organizationId: scope.organizationId,
+          limit: 50,
+        });
+        const normalized = query.trim().toLowerCase();
+        const results = page.items.filter((song) => {
+          const haystack = [
+            song.songTitle,
+            song.alternateTitle ?? "",
+            song.artist ?? "",
+            song.category,
+            song.scriptureReference ?? "",
+            ...song.tags,
+            song.title,
+          ]
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(normalized);
+        });
         setSongs(results);
       } catch {
         setSongs([]);

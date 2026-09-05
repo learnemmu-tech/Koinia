@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { addSong, updateSong } from "@/lib/firebase-queries";
+import { addSong, updateSong } from "@/lib/content-mutations-client";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
 import { useSubscriptionOptional } from "@/context/subscription-context";

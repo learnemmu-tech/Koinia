@@ -1,61 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
-import { db } from "@/lib/firebase";
-import {
-  normalizePrayerRequestFromFirestore,
-  PRAYER_REQUESTS_COLLECTION,
-} from "@/lib/prayer-request-firestore";
+import { listMyPrayerRequests } from "@/lib/prayer-user-actions";
+import { QUERY_GC_TIME, QUERY_STALE_TIME } from "@/lib/react-query-config";
 
 export function useUserPrayerRequests() {
   const { user } = useFirebaseAuth();
-  const [requests, setRequests] = useState<FirebasePrayerRequest[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user?.uid) {
-      setRequests([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    const requestsQuery = query(
-      collection(db, PRAYER_REQUESTS_COLLECTION),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(
-      requestsQuery,
-      (snapshot) => {
-        setRequests(
-          snapshot.docs.map((docSnap) =>
-            normalizePrayerRequestFromFirestore(
-              docSnap.id,
-              docSnap.data() as Record<string, unknown>
-            )
-          )
-        );
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-
-    return unsubscribe;
-  }, [user?.uid]);
+  const { data: requests = [], isLoading } = useQuery({
+    queryKey: ["user-prayer-requests", user?.uid],
+    enabled: Boolean(user?.uid),
+    staleTime: QUERY_STALE_TIME,
+    gcTime: QUERY_GC_TIME,
+    queryFn: () => listMyPrayerRequests(user!.uid),
+  });
 
   const grouped = useMemo(() => {
     const pending = requests.filter((request) => request.status === "pending");
@@ -63,5 +26,5 @@ export function useUserPrayerRequests() {
     return { pending, approved, all: requests };
   }, [requests]);
 
-  return { requests, grouped, loading };
+  return { requests, grouped, loading: isLoading };
 }

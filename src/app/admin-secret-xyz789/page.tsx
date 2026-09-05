@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Plus } from "lucide-react";
-import { collection, onSnapshot, orderBy } from "firebase/firestore";
 
 import type { FirebaseSong } from "@/types/firebase-song";
 
@@ -10,63 +9,31 @@ import { Button } from "@/components/ui/button";
 import { AddMusicModal } from "@/components/admin/add-music-modal";
 import { MusicList } from "@/components/admin/music-list";
 import { useAdminChurchId } from "@/hooks/use-admin-church-id";
-import { buildClientScopedQuery } from "@/lib/church-query-builder";
-import { MULTI_CHURCH_ENABLED } from "@/lib/feature-flags";
-import { normalizeSongFromFirestore } from "@/lib/song-firestore";
-import { db } from "@/lib/firebase";
+import { useAdminSongs } from "@/hooks/use-admin-collections";
 
 export default function AdminPage() {
   const adminChurchId = useAdminChurchId();
-  const [songs, setSongs] = useState<FirebaseSong[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: songs, loading } = useAdminSongs();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSong, setSelectedSong] = useState<FirebaseSong | null>(null);
 
-  useEffect(() => {
-    if (MULTI_CHURCH_ENABLED && !adminChurchId) {
-      setSongs([]);
-      setLoading(false);
-      return;
-    }
-
-    const songsQuery = buildClientScopedQuery(
-      collection(db, "songs"),
-      adminChurchId,
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(
-      songsQuery,
-      (snapshot) => {
-        setSongs(
-          snapshot.docs.map((doc) =>
-            normalizeSongFromFirestore(doc.id, doc.data())
-          )
-        );
-        setLoading(false);
-      },
-      (error) => {
-        console.error("[AdminPage] Firestore snapshot failed:", error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [adminChurchId]);
-
-  function handleAddMusic() {    setSelectedSong(null);
+  function handleAddMusic() {
+    setSelectedSong(null);
     setIsModalOpen(true);
   }
 
-  function handleEditSong(song: FirebaseSong) {    setSelectedSong(song);
+  function handleEditSong(song: FirebaseSong) {
+    setSelectedSong(song);
     setIsModalOpen(true);
   }
 
-  function handleCloseModal() {    setIsModalOpen(false);
+  function handleCloseModal() {
+    setIsModalOpen(false);
     setSelectedSong(null);
   }
 
-  function handleSongSaved() {    handleCloseModal();
+  function handleSongSaved() {
+    handleCloseModal();
   }
 
   return (
@@ -98,7 +65,7 @@ export default function AdminPage() {
         loading={loading}
         onEdit={handleEditSong}
         onDelete={() => {
-          /* Real-time snapshot keeps songs current */
+          /* Query refetch keeps songs current */
         }}
       />
     </div>

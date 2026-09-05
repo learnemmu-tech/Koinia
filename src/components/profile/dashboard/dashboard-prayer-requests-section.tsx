@@ -39,7 +39,7 @@ function PrayerRequestList({
             <p className="font-medium">{request.title}</p>
             <div className="flex flex-wrap gap-2">
               {request.isAnswered ?
-                <Badge className="border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400">
+                <Badge className="border-[#2A2A2A] bg-[#1A1A1A] text-[#A1A1A1]">
                   Prayer Answered
                 </Badge>
               : null}

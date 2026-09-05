@@ -1,10 +1,6 @@
-import type { DocumentData } from "firebase/firestore";
-
 import type {
-  CreateSongInput,
   FirebaseSong,
   SongCategory,
-  UpdateSongInput,
 } from "@/types/firebase-song";
 
 import { resolveDocumentChurchId } from "./church-scope";
@@ -201,47 +197,4 @@ export function filterPublishedSongs(songs: FirebaseSong[]): FirebaseSong[] {
 
 export function sortSongsByLatest(songs: FirebaseSong[]): FirebaseSong[] {
   return [...songs].sort((a, b) => b.createdAt - a.createdAt);
-}
-
-/** Writes canonical + legacy fields so older clients keep working. */
-export function toSongFirestorePayload(
-  input: CreateSongInput | UpdateSongInput
-): DocumentData {
-  const payload: DocumentData = { ...input };
-
-  if (input.songTitle !== undefined) {
-    const title = input.songTitle.trim();
-    payload.songTitle = title;
-    payload.title = title;
-    payload.englishTitle = title;
-  }
-
-  if (input.alternateTitle !== undefined) {
-    const alternate = input.alternateTitle.trim();
-    payload.alternateTitle = alternate;
-    payload.teluguTitle = alternate;
-  }
-
-  if (input.originalLyrics !== undefined) {
-    payload.originalLyrics = input.originalLyrics;
-    payload.lyrics = input.originalLyrics;
-    payload.translatedLyrics = input.originalLyrics;
-  }
-
-  if (input.translationLyrics !== undefined) {
-    payload.translationLyrics = input.translationLyrics;
-    payload.transliteratedLyrics = input.translationLyrics;
-    payload.englishLyrics = input.translationLyrics;
-  }
-
-  if (input.tags !== undefined) {
-    payload.tags = input.tags;
-  }
-
-  if (input.published !== undefined) {
-    payload.published = input.published;
-    payload.isPublished = input.published;
-  }
-
-  return payload;
 }

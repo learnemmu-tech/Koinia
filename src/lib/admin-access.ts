@@ -9,7 +9,8 @@ import {
  * Platform super-admin email for multi-church operations (optional feature flag).
  * Church workspace access uses membership cookies — see setAuthSession.
  */
-export const SUPER_ADMIN_EMAIL = "futureblock07@gmail.com";
+export const SUPER_ADMIN_EMAIL =
+  process.env.SUPER_ADMIN_EMAIL?.trim() || "futureblock07@gmail.com";
 
 export function isSuperAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;

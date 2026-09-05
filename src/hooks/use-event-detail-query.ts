@@ -1,15 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { doc, getDoc } from "firebase/firestore";
 
 import type { FirebaseEvent } from "@/types/firebase-event";
 
-import {
-  EVENTS_COLLECTION,
-  normalizeEventFromFirestore,
-} from "@/lib/event-firestore";
-import { db } from "@/lib/firebase";
+import { fetchTenantContentPage } from "@/lib/api-client";
 import {
   QUERY_GC_TIME,
   QUERY_STALE_TIME,
@@ -22,12 +17,12 @@ export function useEventDetailQuery(
   return useQuery({
     queryKey: ["event-detail", eventId],
     queryFn: async () => {
-      const snapshot = await getDoc(doc(db, EVENTS_COLLECTION, eventId));
-      if (!snapshot.exists()) return null;
-      return normalizeEventFromFirestore(
-        snapshot.id,
-        snapshot.data() as Record<string, unknown>
-      );
+      const page = await fetchTenantContentPage<FirebaseEvent>({
+        collection: "events",
+        ids: [eventId],
+        limit: 1,
+      });
+      return page.items[0] ?? initialEvent;
     },
     initialData: initialEvent,
     staleTime: QUERY_STALE_TIME,

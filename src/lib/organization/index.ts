@@ -91,8 +91,4 @@ export {
   DEFAULT_BRANCH_NAME,
   DEFAULT_CHURCH_LOGO,
 } from "./onboarding-constants";
-export {
-  createChurchWithDefaultBranch,
-  createDefaultBranchForChurch,
-  provisionFirstChurchForUser,
-} from "./onboarding-server";
+export type { FirstChurchOnboardingInput } from "./onboarding-server";

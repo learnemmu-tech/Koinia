@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_SONG_COVER } from "@/config/site";
-import { deleteArticle } from "@/lib/firebase-article-queries";
+import { deleteArticle } from "@/lib/content-mutations-client";
 import { getSongCoverUrl } from "@/lib/utils";
 
 type ArticleListProps = {
@@ -140,7 +140,7 @@ export function ArticleList({
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
                         article.isPublished
-                          ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                          ? "bg-[#1A1A1A] text-[#A1A1A1]"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >

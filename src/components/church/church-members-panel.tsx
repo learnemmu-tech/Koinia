@@ -85,10 +85,13 @@ export function ChurchMembersPanel({
         `/api/memberships/branch?organizationId=${encodeURIComponent(organization.id)}&branchId=${encodeURIComponent(branchId)}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (res.ok) {
-        setData((await res.json()) as BranchMembersResponse);
-        setSelectedIds(new Set());
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(body.error ?? "Failed to load members");
+        return;
       }
+      setData((await res.json()) as BranchMembersResponse);
+      setSelectedIds(new Set());
     } finally {
       setLoading(false);
     }
@@ -215,7 +218,9 @@ export function ChurchMembersPanel({
               disabled={busy}
               onClick={() => void review([member.id], "approve")}
             >
-              <UserCheck className="mr-1.5 size-4" />
+              {busy ?
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              : <UserCheck className="mr-1.5 size-4" />}
               Approve
             </Button>
             <Button
@@ -224,7 +229,9 @@ export function ChurchMembersPanel({
               disabled={busy}
               onClick={() => void review([member.id], "reject")}
             >
-              <UserX className="mr-1.5 size-4" />
+              {busy ?
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              : <UserX className="mr-1.5 size-4" />}
               Reject
             </Button>
           </div>

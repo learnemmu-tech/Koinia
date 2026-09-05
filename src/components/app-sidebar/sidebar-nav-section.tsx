@@ -8,7 +8,6 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -23,15 +22,65 @@ type SidebarNavSectionsProps = {
   className?: string;
 };
 
-function NavBadge({ count }: { count: number }) {
+function NavBadge({ count, collapsed }: { count: number; collapsed?: boolean }) {
   if (count <= 0) return null;
 
+  if (collapsed) {
+    return (
+      <span className="absolute right-1 top-0.5 size-2 rounded-full bg-[#FF4444]" />
+    );
+  }
+
   return (
-    <span className="ml-auto flex size-[18px] shrink-0 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold leading-none text-white">
+    <span className="ml-auto flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#FF4444] text-[10px] font-semibold leading-none text-white">
       {count > 9 ? "9+" : count}
     </span>
   );
 }
+
+function CollapsedNavLabel({ label }: { label: string }) {
+  const presetBreaks: Record<string, [string, string]> = {
+    "Content Management": ["Content", "Management"],
+    "Prayer Requests": ["Prayer", "Requests"],
+    "Church Settings": ["Church", "Settings"],
+    "Organization Settings": ["Organization", "Settings"],
+  };
+
+  const preset = presetBreaks[label];
+  if (preset) {
+    return (
+      <span className="max-w-[4.5rem] text-center text-[11px] font-medium leading-[1.15]">
+        {preset[0]}
+        <br />
+        {preset[1]}
+      </span>
+    );
+  }
+
+  const words = label.trim().split(/\s+/);
+  if (words.length >= 2 && label.length > 11) {
+    const mid = Math.ceil(words.length / 2);
+    return (
+      <span className="max-w-[4.5rem] text-center text-[11px] font-medium leading-[1.15]">
+        {words.slice(0, mid).join(" ")}
+        <br />
+        {words.slice(mid).join(" ")}
+      </span>
+    );
+  }
+
+  return (
+    <span className="max-w-[4.5rem] text-center text-[11px] font-medium leading-[1.15]">
+      {label}
+    </span>
+  );
+}
+
+const expandedNavLinkClass =
+  "flex h-[34px] w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors duration-150";
+
+const collapsedNavLinkClass =
+  "relative flex w-full flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 transition-colors duration-150";
 
 export function SidebarNavSections({
   sections,
@@ -39,7 +88,8 @@ export function SidebarNavSections({
   className,
 }: SidebarNavSectionsProps) {
   const pathname = usePathname();
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
+  const isCollapsed = state === "collapsed" && !isMobile;
   const isSuperAdmin = useIsPlatformSuperAdmin();
   const { user } = useFirebaseAuth();
   const badges = useSidebarAdminBadges();
@@ -51,6 +101,7 @@ export function SidebarNavSections({
   function resolveBadge(item: AppNavItem): number {
     if (!showBadges || !item.badgeKey) return 0;
     if (item.badgeKey === "pendingPrayers") return badges.pendingPrayers;
+    if (item.badgeKey === "pendingMembers") return badges.pendingMembers;
     if (item.badgeKey === "pendingContent") return badges.pendingContent;
     return 0;
   }
@@ -70,16 +121,20 @@ export function SidebarNavSections({
           <SidebarGroup
             key={section.label ?? `section-${index}`}
             className={cn(
-              "px-2 py-0",
-              section.label ? "mt-5 first:mt-0" : "mt-0"
+              "px-1 py-0",
+              isCollapsed ?
+                "mt-0.5 first:mt-0"
+              : section.label ?
+                "mt-5 first:mt-0"
+              : "mt-0"
             )}
           >
-            {section.label ?
-              <SidebarGroupLabel className="mb-1 h-auto px-3 py-0 text-[10px] font-medium uppercase tracking-[0.1em] text-sidebar-foreground/40">
+            {section.label && !isCollapsed ?
+              <SidebarGroupLabel className="mb-1.5 h-auto px-3 py-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6B7280]">
                 {section.label}
               </SidebarGroupLabel>
             : null}
-            <SidebarMenu className="gap-0.5">
+            <SidebarMenu className={cn(isCollapsed ? "gap-0.5" : "gap-0.5")}>
               {visibleItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = item.match(pathname);
@@ -87,25 +142,36 @@ export function SidebarNavSections({
 
                 return (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.label}
+                    <Link
+                      href={item.href}
+                      onClick={closeMobile}
                       className={cn(
-                        "h-9 rounded-md px-3 py-2 transition-colors duration-150",
-                        "hover:bg-white/5",
-                        "data-[active=true]:bg-white/10 data-[active=true]:text-sidebar-foreground",
-                        "[&>svg]:size-4 [&>svg]:shrink-0",
-                        "data-[active=false]:[&>svg]:text-sidebar-foreground/50",
-                        "data-[active=true]:[&>svg]:text-sidebar-foreground"
+                        isCollapsed ? collapsedNavLinkClass : expandedNavLinkClass,
+                        isActive ?
+                          isCollapsed ?
+                            "bg-[#1A1A1A] font-medium text-white"
+                          : "border-l-2 border-white bg-[#1A1A1A] pl-[10px] font-medium text-white"
+                        : isCollapsed ?
+                          "text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white"
+                        : "border-l-2 border-transparent text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white",
+                        isCollapsed ?
+                          "[&>svg]:size-[22px] [&>svg]:shrink-0"
+                        : "[&>svg]:size-4 [&>svg]:shrink-0",
+                        isActive ? "[&>svg]:text-white" : "[&>svg]:text-[#A1A1A1]"
                       )}
                     >
-                      <Link href={item.href} onClick={closeMobile}>
-                        <Icon />
-                        <span className="truncate text-sm">{item.label}</span>
-                        <NavBadge count={badgeCount} />
-                      </Link>
-                    </SidebarMenuButton>
+                      <Icon />
+                      {isCollapsed ?
+                        <>
+                          <CollapsedNavLabel label={item.label} />
+                          <NavBadge count={badgeCount} collapsed />
+                        </>
+                      : <>
+                          <span className="truncate">{item.label}</span>
+                          <NavBadge count={badgeCount} />
+                        </>
+                      }
+                    </Link>
                   </SidebarMenuItem>
                 );
               })}

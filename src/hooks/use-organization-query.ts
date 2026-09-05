@@ -41,6 +41,7 @@ export function useOrganizationQuery(
     queryKey: ["organization", organizationId ?? "default"],
     queryFn: () => fetchOrganization(organizationId),
     staleTime: QUERY_STALE_TIME,
+    retry: 1,
     enabled: enabled && organizationId !== null,
   });
 }

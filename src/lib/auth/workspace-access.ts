@@ -181,7 +181,7 @@ export function canAccessWorkspace(input: WorkspaceAccessInput): boolean {
   }
 
   const hasWorkspacePointers = Boolean(
-    profile.churchId?.trim() && profile.activeBranchId?.trim()
+    profile.churchId?.trim() || profile.activeBranchId?.trim()
   );
   if (!hasWorkspacePointers) return false;
 

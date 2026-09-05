@@ -16,12 +16,12 @@ import {
   joinPathForSlug,
   MEMBERSHIP_REMOVED_PATH,
   parseJoinSlugFromPath,
+  POST_AUTH_CONTINUE_PATH,
   WAITING_APPROVAL_PATH,
 } from "./auth-paths";
 import {
   hasActiveWorkspace,
   isMembershipPending,
-  needsChurchOnboarding,
   type WorkspaceAccessInput,
 } from "./workspace-access";
 
@@ -112,7 +112,21 @@ export function resolveMembershipRouting({
   callbackUrl,
   branchMemberships = [],
 }: ResolveMembershipRoutingInput): MembershipRoutingResult {
-  const sanitized = callbackUrl ? sanitizeCallbackUrl(callbackUrl, "") : "";
+  let sanitized = callbackUrl ? sanitizeCallbackUrl(callbackUrl, "") : "";
+  if (
+    sanitized === "/signin" ||
+    sanitized.startsWith("/signin/") ||
+    sanitized === "/signup" ||
+    sanitized.startsWith("/signup/") ||
+    sanitized === "/sso-callback" ||
+    sanitized.startsWith("/sso-callback/") ||
+    sanitized === "/forgot-password" ||
+    sanitized.startsWith("/forgot-password/") ||
+    sanitized === POST_AUTH_CONTINUE_PATH ||
+    sanitized.startsWith(`${POST_AUTH_CONTINUE_PATH}/`)
+  ) {
+    sanitized = "";
+  }
 
   if (isInvitePath(sanitized)) {
     return { status: "none", destination: sanitized };
@@ -157,11 +171,14 @@ export function resolveMembershipRouting({
     return { status: "none", destination: joinPathForSlug(joinSlug) };
   }
 
-  if (isCreateWorkspacePathInternal(sanitized, sanitizeCallbackUrl)) {
-    if (hasActiveWorkspace(accessInput)) {
-      return { status: "active", destination: WORKSPACE_BASE };
-    }
+  const pgOnboardingDone = profile?.needsChurchOnboarding === false;
+
+  if (!pgOnboardingDone) {
     return { status: "none", destination: CREATE_WORKSPACE_PATH };
+  }
+
+  if (isCreateWorkspacePathInternal(sanitized, sanitizeCallbackUrl)) {
+    return { status: "active", destination: WORKSPACE_BASE };
   }
 
   if (
@@ -180,23 +197,15 @@ export function resolveMembershipRouting({
     return { status: "active", destination: WORKSPACE_BASE };
   }
 
-  if (needsChurchOnboarding(accessInput)) {
-    return { status: "none", destination: CREATE_WORKSPACE_PATH };
-  }
-
   if (
     sanitized &&
     sanitized !== CREATE_WORKSPACE_PATH &&
     sanitized !== "/"
   ) {
-    return { status: "none", destination: sanitized };
+    return { status: "active", destination: sanitized };
   }
 
-  if (hasActiveWorkspace(accessInput)) {
-    return { status: "active", destination: WORKSPACE_BASE };
-  }
-
-  return { status: "none", destination: CREATE_WORKSPACE_PATH };
+  return { status: "active", destination: WORKSPACE_BASE };
 }
 
 export function resolveMembershipRoutingDestination(
