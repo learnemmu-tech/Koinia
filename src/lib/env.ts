@@ -13,6 +13,10 @@ export const env = createEnv({
 
     CLERK_SECRET_KEY: z.string().min(1),
 
+    SUPABASE_URL: z.string().url(),
+    SUPABASE_SECRET_KEY: z.string().min(1),
+    SUPABASE_STORAGE_BUCKET: z.string().min(1).default("faithconnecthub"),
+
     UMAMI_WEBSITE_ID: z.string().optional(),
   },
 

@@ -169,11 +169,16 @@ export function AddChurchModal({
   async function uploadImage(
     churchId: string,
     file: File,
-    idToken: string
+    idToken: string,
+    kind: "church-logo" | "church-cover",
+    replaceUrl?: string
   ): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
-    return uploadSongFileLocal(churchId, "cover", formData, undefined, idToken);
+    return uploadSongFileLocal(churchId, "cover", formData, undefined, idToken, {
+      kind,
+      replaceUrl,
+    });
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -248,10 +253,22 @@ export function AddChurchModal({
         let bannerUrl = input.bannerUrl;
 
         if (logoFile) {
-          logoUrl = await uploadImage(initialChurch.id, logoFile, idToken);
+          logoUrl = await uploadImage(
+            initialChurch.id,
+            logoFile,
+            idToken,
+            "church-logo",
+            initialChurch.logoUrl
+          );
         }
         if (bannerFile) {
-          bannerUrl = await uploadImage(initialChurch.id, bannerFile, idToken);
+          bannerUrl = await uploadImage(
+            initialChurch.id,
+            bannerFile,
+            idToken,
+            "church-cover",
+            initialChurch.bannerUrl
+          );
         }
 
         if (logoUrl !== input.logoUrl || bannerUrl !== input.bannerUrl) {
@@ -287,10 +304,15 @@ export function AddChurchModal({
         let bannerUrl = "";
 
         if (logoFile) {
-          logoUrl = await uploadImage(churchId, logoFile, idToken);
+          logoUrl = await uploadImage(churchId, logoFile, idToken, "church-logo");
         }
         if (bannerFile) {
-          bannerUrl = await uploadImage(churchId, bannerFile, idToken);
+          bannerUrl = await uploadImage(
+            churchId,
+            bannerFile,
+            idToken,
+            "church-cover"
+          );
         }
 
         if (logoUrl || bannerUrl) {

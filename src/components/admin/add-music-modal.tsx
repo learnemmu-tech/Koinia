@@ -228,7 +228,11 @@ export function AddMusicModal({
     onProgress?.(30);
     return uploadSongFileLocal(songId, fileType, fd, (percent) => {
       onProgress?.(30 + percent * 0.7);
-    }, idToken);
+    }, idToken, {
+      kind: "song",
+      replaceUrl:
+        fileType === "cover" ? initialSong?.imageUrl : initialSong?.audioUrl,
+    });
   }
 
   function buildSongPayload() {
