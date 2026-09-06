@@ -286,15 +286,15 @@ export function ShortsPageClient({
   return (
     <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden bg-background md:h-auto md:min-h-[calc(100dvh-3.5rem)] md:overflow-visible">
       <div className="z-20 shrink-0 border-b border-border/60 bg-background/95 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-3 py-2 md:px-6">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Video className="size-4 shrink-0 text-primary" aria-hidden />
-            <div className="min-w-0">
-              <h1 className="truncate text-[15px] font-semibold leading-tight text-foreground">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-2 px-3 py-1.5 md:gap-3 md:px-6 md:py-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <Video className="size-5 shrink-0 text-primary" aria-hidden />
+            <div className="min-w-0 leading-none">
+              <h1 className="truncate font-heading text-base font-semibold tracking-tight text-foreground">
                 Shorts
               </h1>
               {churchName ?
-                <p className="truncate text-[11px] leading-tight text-muted-foreground">
+                <p className="mt-0.5 truncate text-[11px] font-medium leading-none text-muted-foreground">
                   {churchName}
                 </p>
               : null}
@@ -306,7 +306,7 @@ export function ShortsPageClient({
             : null}
           </div>
 
-          <div className="hidden items-center gap-1 rounded-full border border-border bg-card p-0.5 md:flex">
+          <div className="hidden h-8 shrink-0 items-center rounded-full border border-border/80 bg-muted/40 p-0.5 md:flex">
             {filters.map((item) => (
               <button
                 key={item.id}
@@ -318,10 +318,10 @@ export function ShortsPageClient({
                   void reloadFeed(item.id);
                 }}
                 className={cn(
-                  "h-8 rounded-full px-3 text-xs font-medium transition-colors",
+                  "h-7 rounded-full px-2.5 text-[12px] font-medium leading-none transition-colors",
                   filter === item.id ?
-                    "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                    "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover-hover:hover:text-foreground"
                 )}
               >
                 {item.label}
@@ -333,7 +333,7 @@ export function ShortsPageClient({
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full border border-border bg-primary px-3 text-[13px] font-medium text-primary-foreground transition-colors duration-200 active:bg-primary/80 hover-hover:hover:bg-primary/90"
+              className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary px-2.5 text-[12px] font-semibold leading-none text-primary-foreground transition-colors duration-200 active:bg-primary/80 hover-hover:hover:bg-primary/90"
             >
               <Plus className="size-3.5" aria-hidden />
               Create

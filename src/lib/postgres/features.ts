@@ -1075,6 +1075,28 @@ export async function listUsersForEmailBroadcast() {
     .from(users);
 }
 
+/** Active church members with email fields — used for church content emails. */
+export async function listActiveChurchMembersForEmail(churchId: string) {
+  if (!churchId.trim()) return [];
+  return db
+    .select({
+      id: users.id,
+      clerkId: users.clerkId,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      emailPreferences: users.emailPreferences,
+    })
+    .from(churchMemberships)
+    .innerJoin(users, eq(users.id, churchMemberships.userId))
+    .where(
+      and(
+        eq(churchMemberships.churchId, churchId),
+        eq(churchMemberships.status, "active")
+      )
+    );
+}
+
 export async function listChurchAdminAppUsers(
   churchId: string,
   organizationId?: string

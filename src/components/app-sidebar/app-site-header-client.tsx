@@ -27,7 +27,7 @@ export function AppSiteHeaderClient() {
 
       <div className="flex shrink-0 items-center gap-2">
         {!mounted || loading ?
-          <div className="size-9" />
+          <div className="size-10" />
         : authUser ?
           <NotificationBell userId={authUser.uid} />
         : <Button asChild size="sm" variant="outline" className="rounded-full">

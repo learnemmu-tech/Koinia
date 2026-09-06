@@ -284,6 +284,7 @@ export async function publishShort(input: {
   }
 
   const now = new Date();
+  const isFirstPublish = !short.publishedAt;
   const [updated] = await db
     .update(videoShorts)
     .set({
@@ -299,7 +300,7 @@ export async function publishShort(input: {
     .where(eq(videoShorts.id, short.id))
     .returning();
 
-  return updated!;
+  return { ...updated!, isFirstPublish };
 }
 
 export async function updateShortMetadata(input: {

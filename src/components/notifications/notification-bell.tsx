@@ -136,12 +136,19 @@ export function NotificationBell({
         : <button
             type="button"
             aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
-            className="relative flex size-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background/60 text-foreground transition-colors hover-hover:hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-sm transition-colors hover-hover:hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Bell className="size-4" />
             {unreadCount > 0 ?
-              <span className="absolute -right-1 -top-1 flex size-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF4444] px-0.5 text-[10px] font-semibold leading-none text-white">
-                {unreadCount > 99 ? "99+" : unreadCount > 9 ? "9+" : unreadCount}
+              <span className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-5 w-5 min-h-5 min-w-5 max-h-5 max-w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FF4444] text-white">
+                <span
+                  className={cn(
+                    "font-semibold leading-none tabular-nums",
+                    unreadCount > 99 ? "text-[9px]" : "text-[11px]"
+                  )}
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount > 9 ? "9+" : unreadCount}
+                </span>
               </span>
             : null}
           </button>

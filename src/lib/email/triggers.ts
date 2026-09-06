@@ -10,10 +10,11 @@ import {
   getPrayerRequestById,
   getSongById,
   getSermonById,
+  listActiveChurchMembersForEmail,
   listChurchAdminAppUsers,
-  listUsersForEmailBroadcast,
 } from "@/lib/postgres/features";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { getShortById } from "@/lib/postgres/shorts";
 import { getChurchById } from "@/lib/postgres/tenants";
 import { formatEventDate } from "@/lib/event-firestore";
 import {
@@ -34,32 +35,35 @@ export type ContentPublishEmailType =
   | "article"
   | "donation_campaign";
 
-async function forEachEligibleUser(
-  preferenceKey: EmailPreferenceKey,
-  onUser: (user: { id: string; email: string; userName: string }) => void
-): Promise<number> {
-  const rows = await listUsersForEmailBroadcast();
-  let queued = 0;
+type EmailRecipient = { id: string; email: string; userName: string };
+
+async function listEligibleChurchEmailRecipients(input: {
+  churchId: string;
+  preferenceKey?: EmailPreferenceKey;
+  excludeClerkId?: string;
+}): Promise<EmailRecipient[]> {
+  const rows = await listActiveChurchMembersForEmail(input.churchId);
+  const exclude = input.excludeClerkId?.trim();
+  const recipients: EmailRecipient[] = [];
 
   for (const row of rows) {
+    if (exclude && row.clerkId === exclude) continue;
     const email = row.email.trim();
     if (!email) continue;
 
-    const preferences = normalizeEmailPreferences(row.emailPreferences);
-    if (!canSendPreferenceEmail(preferences, preferenceKey)) continue;
+    if (input.preferenceKey) {
+      const preferences = normalizeEmailPreferences(row.emailPreferences);
+      if (!canSendPreferenceEmail(preferences, input.preferenceKey)) continue;
+    }
 
-    const userName =
-      `${row.firstName} ${row.lastName}`.trim() || "Friend";
-
-    onUser({
+    recipients.push({
       id: row.clerkId ?? row.id,
       email,
-      userName,
+      userName: `${row.firstName} ${row.lastName}`.trim() || "Friend",
     });
-    queued += 1;
   }
 
-  return queued;
+  return recipients;
 }
 
 export function triggerWelcomeEmails(input: {
@@ -319,7 +323,8 @@ export async function triggerEventRegistrationEmails(input: {
 }
 
 export async function triggerEventAnnouncementEmails(
-  eventId: string
+  eventId: string,
+  excludeClerkId?: string
 ): Promise<void> {
   try {
     const event = await getEventById(eventId);
@@ -332,8 +337,14 @@ export async function triggerEventAnnouncementEmails(
       return;
     }
 
-    await forEachEligibleUser("event", (user) => {
-      dispatchEmail(`event-announcement:${user.id}`, () =>
+    const recipients = await listEligibleChurchEmailRecipients({
+      churchId: event.churchId,
+      preferenceKey: "event",
+      excludeClerkId,
+    });
+
+    await Promise.allSettled(
+      recipients.map((user) =>
         EmailService.sendEventAnnouncement({
           to: user.email,
           userName: user.userName,
@@ -345,8 +356,8 @@ export async function triggerEventAnnouncementEmails(
           eventId: event.id,
           userId: user.id,
         })
-      );
-    });
+      )
+    );
   } catch (error) {
     console.error("[email] event announcement trigger failed:", error);
   }
@@ -354,7 +365,8 @@ export async function triggerEventAnnouncementEmails(
 
 export async function triggerContentAnnouncementEmails(
   type: ContentPublishEmailType,
-  contentId: string
+  contentId: string,
+  excludeClerkId?: string
 ): Promise<void> {
   try {
     switch (type) {
@@ -367,8 +379,14 @@ export async function triggerContentAnnouncementEmails(
           .filter(Boolean)
           .join(" · ");
 
-        await forEachEligibleUser("song", (user) => {
-          dispatchEmail(`song-published:${user.id}`, () =>
+        const recipients = await listEligibleChurchEmailRecipients({
+          churchId: song.churchId,
+          preferenceKey: "song",
+          excludeClerkId,
+        });
+
+        await Promise.allSettled(
+          recipients.map((user) =>
             EmailService.sendSongPublished({
               to: user.email,
               userName: user.userName,
@@ -377,8 +395,8 @@ export async function triggerContentAnnouncementEmails(
               songId: song.id,
               userId: user.id,
             })
-          );
-        });
+          )
+        );
         return;
       }
 
@@ -386,8 +404,14 @@ export async function triggerContentAnnouncementEmails(
         const sermon = await getSermonById(contentId);
         if (!sermon || !sermon.isPublished) return;
 
-        await forEachEligibleUser("sermon", (user) => {
-          dispatchEmail(`sermon-published:${user.id}`, () =>
+        const recipients = await listEligibleChurchEmailRecipients({
+          churchId: sermon.churchId,
+          preferenceKey: "sermon",
+          excludeClerkId,
+        });
+
+        await Promise.allSettled(
+          recipients.map((user) =>
             EmailService.sendSermonPublished({
               to: user.email,
               userName: user.userName,
@@ -397,8 +421,8 @@ export async function triggerContentAnnouncementEmails(
               sermonId: sermon.id,
               userId: user.id,
             })
-          );
-        });
+          )
+        );
         return;
       }
 
@@ -406,8 +430,14 @@ export async function triggerContentAnnouncementEmails(
         const article = await getArticleById(contentId);
         if (!article || !article.isPublished) return;
 
-        await forEachEligibleUser("article", (user) => {
-          dispatchEmail(`article-published:${user.id}`, () =>
+        const recipients = await listEligibleChurchEmailRecipients({
+          churchId: article.churchId,
+          preferenceKey: "article",
+          excludeClerkId,
+        });
+
+        await Promise.allSettled(
+          recipients.map((user) =>
             EmailService.sendArticlePublished({
               to: user.email,
               userName: user.userName,
@@ -416,8 +446,8 @@ export async function triggerContentAnnouncementEmails(
               articleId: article.id,
               userId: user.id,
             })
-          );
-        });
+          )
+        );
         return;
       }
 
@@ -430,8 +460,14 @@ export async function triggerContentAnnouncementEmails(
           currency: campaign.currency,
         }).format(campaign.targetAmount);
 
-        await forEachEligibleUser("donation", (user) => {
-          dispatchEmail(`donation-campaign:${user.id}`, () =>
+        const recipients = await listEligibleChurchEmailRecipients({
+          churchId: campaign.churchId,
+          preferenceKey: "donation",
+          excludeClerkId,
+        });
+
+        await Promise.allSettled(
+          recipients.map((user) =>
             EmailService.sendDonationCampaignAnnouncement({
               to: user.email,
               userName: user.userName,
@@ -441,12 +477,43 @@ export async function triggerContentAnnouncementEmails(
               campaignId: campaign.id,
               userId: user.id,
             })
-          );
-        });
+          )
+        );
       }
     }
   } catch (error) {
     console.error(`[email] ${type} announcement trigger failed:`, error);
+  }
+}
+
+export async function triggerShortPublishedEmails(
+  shortId: string,
+  excludeClerkId?: string
+): Promise<void> {
+  try {
+    const short = await getShortById(shortId);
+    if (!short?.publishedAt || !short.videoUrl) return;
+
+    const recipients = await listEligibleChurchEmailRecipients({
+      churchId: short.churchId,
+      excludeClerkId,
+    });
+
+    const caption = short.caption.trim() || "A new Short from your church";
+
+    await Promise.allSettled(
+      recipients.map((user) =>
+        EmailService.sendShortPublished({
+          to: user.email,
+          userName: user.userName,
+          caption,
+          shortId: short.id,
+          userId: user.id,
+        })
+      )
+    );
+  } catch (error) {
+    console.error("[email] short published trigger failed:", error);
   }
 }
 

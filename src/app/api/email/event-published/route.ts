@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    void triggerEventAnnouncementEmails(body.eventId);
+    await triggerEventAnnouncementEmails(body.eventId, authUser.uid);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[api/email/event-published]", error);

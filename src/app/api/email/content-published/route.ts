@@ -36,9 +36,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    void triggerContentAnnouncementEmails(
+    await triggerContentAnnouncementEmails(
       body.type as ContentPublishEmailType,
-      body.contentId
+      body.contentId,
+      authUser.uid
     );
     return NextResponse.json({ success: true });
   } catch (error) {

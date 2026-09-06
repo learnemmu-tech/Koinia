@@ -11,6 +11,7 @@ import { MembershipApprovedEmail } from "@/emails/templates/membership-approved-
 import { PrayerApprovedEmail } from "@/emails/templates/prayer-approved-email";
 import { PrayerConfirmationEmail } from "@/emails/templates/prayer-confirmation-email";
 import { SermonPublishedEmail } from "@/emails/templates/sermon-published-email";
+import { ShortPublishedEmail } from "@/emails/templates/short-published-email";
 import { SongPublishedEmail } from "@/emails/templates/song-published-email";
 import { WelcomeEmail } from "@/emails/templates/welcome-email";
 
@@ -271,6 +272,24 @@ export const EmailService = {
         articleTitle: input.articleTitle,
         summary: input.summary,
         articleId: input.articleId,
+      }),
+    });
+  },
+
+  async sendShortPublished(input: {
+    to: string;
+    userName: string;
+    caption: string;
+    shortId: string;
+    userId?: string;
+  }): Promise<SendEmailResult> {
+    return sendEmail({
+      to: input.to,
+      subject: `New Short: ${input.caption}`,
+      react: ShortPublishedEmail({
+        userName: input.userName,
+        caption: input.caption,
+        shortId: input.shortId,
       }),
     });
   },

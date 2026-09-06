@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { triggerShortPublishedEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import {
   deleteShort,
@@ -73,6 +74,9 @@ export async function PATCH(request: Request, context: RouteContext) {
             ? (body.visibility as ShortVisibility)
             : undefined,
       });
+      if (updated.isFirstPublish) {
+        await triggerShortPublishedEmails(updated.id, verified.uid);
+      }
       return NextResponse.json({ id: updated.id, publishedAt: updated.publishedAt });
     }
 
