@@ -28,7 +28,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { MAX_SHORT_THUMBNAIL_BYTES } from "@/types/video-short";
+import { MAX_SHORT_SOURCE_THUMBNAIL_BYTES } from "@/types/video-short";
+import { compressShortCoverIfNeeded } from "@/lib/compress-short-image";
 import {
   deleteShort,
   reportShort,
@@ -44,7 +45,7 @@ type ShortActionRailProps = {
   onLike: () => void;
   onComments: () => void;
   canManage: boolean;
-  getToken: () => Promise<string | null>;
+  getToken: (forceRefresh?: boolean) => Promise<string | null>;
   onDeleted?: () => void;
   onCoverUpdated?: (thumbnailUrl: string | null) => void;
   variant?: "default" | "overlay";
@@ -172,20 +173,20 @@ export function ShortActionRail({
       toast.error("Cover image must be JPG, PNG, or WebP.");
       return;
     }
-    if (file.size > MAX_SHORT_THUMBNAIL_BYTES) {
-      toast.error("Cover image must be 2 MB or smaller.");
-      return;
-    }
-
-    const token = await getToken();
-    if (!token) {
-      toast.error("Sign in to update the cover image.");
+    if (file.size > MAX_SHORT_SOURCE_THUMBNAIL_BYTES) {
+      toast.error("Cover image must be 20 MB or smaller.");
       return;
     }
 
     setBusy(true);
     try {
-      const url = await uploadShortFile(short.id, "thumbnail", file, token);
+      const processed = await compressShortCoverIfNeeded(file);
+      const token = await getToken(true);
+      if (!token) {
+        toast.error("Sign in to update the cover image.");
+        return;
+      }
+      const url = await uploadShortFile(short.id, "thumbnail", processed, token);
       onCoverUpdated?.(url);
       toast.success("Cover image updated.");
     } catch (error) {

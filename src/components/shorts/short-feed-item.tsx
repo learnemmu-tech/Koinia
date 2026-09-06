@@ -6,6 +6,7 @@ import type { VideoShort } from "@/types/video-short";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ShortVideoPlayer } from "@/components/shorts/short-video-player";
 import { ShortActionRail } from "@/components/shorts/short-action-rail";
+import { parseShortCaption } from "@/lib/short-caption";
 import { cn } from "@/lib/utils";
 
 type ShortFeedItemProps = {
@@ -17,9 +18,10 @@ type ShortFeedItemProps = {
   canManage: boolean;
   muted: boolean;
   onMutedChange: (muted: boolean) => void;
+  attachSrc?: boolean;
   onLike: () => void;
   onComments: () => void;
-  getToken: () => Promise<string | null>;
+  getToken: (forceRefresh?: boolean) => Promise<string | null>;
   onDeleted?: () => void;
   onCoverUpdated?: (thumbnailUrl: string | null) => void;
   itemRef?: (node: HTMLDivElement | null) => void;
@@ -44,10 +46,14 @@ function CreatorCaptionBlock({
   overlay?: boolean;
   className?: string;
 }) {
-  const longCaption = short.caption.length > 90;
+  const { title, description, topic } = React.useMemo(
+    () => parseShortCaption(short.caption, short.category),
+    [short.caption, short.category]
+  );
+  const canExpand = description.length > 110 || description.includes("\n");
 
   return (
-    <div className={cn("min-w-0 space-y-1.5", className)}>
+    <div className={cn("min-w-0 space-y-2 text-left", className)}>
       <div className="flex items-center gap-2.5">
         <Avatar
           className={cn(
@@ -79,33 +85,56 @@ function CreatorCaptionBlock({
         </div>
       </div>
 
-      {short.caption ?
-        <div>
-          <p
-            className={cn(
-              "text-sm leading-snug",
-              overlay ? "text-white" : "text-foreground",
-              !expanded && "line-clamp-2"
-            )}
-          >
-            {short.caption}
-            {short.category ?
-              <span className={cn(overlay ? "text-white/70" : "text-muted-foreground")}>
-                {` — ${short.category}`}
-              </span>
-            : null}
-          </p>
-          {longCaption ?
+      {title || description || topic ?
+        <div className="space-y-1.5">
+          {title ?
+            <h2
+              className={cn(
+                "text-left text-[15px] font-semibold leading-snug tracking-tight md:text-base",
+                overlay ? "text-white" : "text-foreground",
+                !expanded && "line-clamp-2"
+              )}
+            >
+              {title}
+            </h2>
+          : null}
+
+          {description ?
+            <p
+              className={cn(
+                "text-left whitespace-pre-line text-[13px] leading-relaxed md:text-sm",
+                overlay ? "text-white/85" : "text-muted-foreground",
+                !expanded && "line-clamp-3"
+              )}
+            >
+              {description}
+            </p>
+          : null}
+
+          {canExpand ?
             <button
               type="button"
               className={cn(
-                "mt-1 text-xs font-medium",
-                overlay ? "text-white/70 active:text-white" : "text-muted-foreground active:text-foreground"
+                "text-left text-xs font-medium",
+                overlay ?
+                  "text-white/70 active:text-white"
+                : "text-muted-foreground active:text-foreground"
               )}
               onClick={onToggleExpanded}
             >
-              {expanded ? "less" : "more"}
+              {expanded ? "Less" : "More"}
             </button>
+          : null}
+
+          {topic ?
+            <p
+              className={cn(
+                "pt-0.5 text-left text-[11px] font-medium uppercase tracking-wide",
+                overlay ? "text-white/60" : "text-muted-foreground/80"
+              )}
+            >
+              {topic}
+            </p>
           : null}
         </div>
       : null}
@@ -122,6 +151,7 @@ function ShortFeedItemComponent({
   canManage,
   muted,
   onMutedChange,
+  attachSrc = true,
   onLike,
   onComments,
   getToken,
@@ -137,21 +167,22 @@ function ShortFeedItemComponent({
     <article
       ref={itemRef}
       data-short-id={short.id}
-      className="h-full snap-start snap-always md:h-auto"
+      className="h-full snap-start snap-always"
     >
       <div className="relative h-full w-full overflow-hidden bg-black md:hidden">
         <ShortVideoPlayer
           src={short.videoUrl}
           poster={short.thumbnailUrl}
           active={active}
+          attachSrc={attachSrc}
           immersive
           muted={muted}
           onMutedChange={onMutedChange}
           className="absolute inset-0 h-full w-full"
         />
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 via-black/25 to-transparent pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-16">
-          <div className="pointer-events-auto max-w-[calc(100%-4.5rem)] px-4">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 max-h-[70%] bg-gradient-to-t from-black/70 via-black/25 to-transparent pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-16">
+          <div className="pointer-events-auto max-h-[45svh] max-w-[calc(100%-4.5rem)] overflow-y-auto px-4">
             <CreatorCaptionBlock
               short={short}
               overlay
@@ -178,20 +209,23 @@ function ShortFeedItemComponent({
         </div>
       </div>
 
-      <div className="hidden min-h-[calc(100dvh-8rem)] items-center justify-center px-4 py-6 md:flex lg:py-8">
-        <div className="flex w-full max-w-[420px] flex-col items-center gap-4">
-          <div className="flex items-end gap-3">
-            <div className="w-[min(calc(100vw-6.5rem),340px)] shrink-0 overflow-hidden rounded-2xl">
+      <div className="hidden h-full min-h-0 items-center justify-center px-4 py-3 md:flex">
+        <div className="flex h-full min-h-0 w-full max-w-[320px] flex-col gap-2.5">
+          <div className="flex shrink-0 items-end justify-center gap-3">
+            <div className="relative aspect-[9/16] h-[min(420px,calc(100dvh-20rem))] w-auto shrink-0 overflow-hidden rounded-2xl bg-black">
               <ShortVideoPlayer
                 src={short.videoUrl}
                 poster={short.thumbnailUrl}
                 active={active}
+                attachSrc={attachSrc}
+                immersive
                 muted={muted}
                 onMutedChange={onMutedChange}
+                className="absolute inset-0 h-full w-full"
               />
             </div>
 
-            <div className="shrink-0 pb-2">
+            <div className="shrink-0 pb-1">
               <ShortActionRail
                 short={short}
                 liked={liked}
@@ -207,7 +241,7 @@ function ShortFeedItemComponent({
             </div>
           </div>
 
-          <div className="w-full px-0.5">
+          <div className="min-h-0 w-full flex-1 overflow-y-auto overscroll-y-contain px-0.5">
             <CreatorCaptionBlock
               short={short}
               expanded={expanded}

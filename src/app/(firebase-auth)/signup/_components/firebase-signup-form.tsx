@@ -12,6 +12,8 @@ import { z } from "zod";
 
 import { siteConfig } from "@/config/site";
 
+import { AuthEmailVerificationStep } from "@/components/auth/auth-email-verification-step";
+import { AuthLoading } from "@/components/auth/auth-loading";
 import { Google } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +24,9 @@ import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination
 import { buildAuthHref, sanitizeCallbackUrl } from "@/lib/callback-url";
 import { getFirebaseAuthErrorMessage } from "@/lib/firebase-auth-errors";
 import {
-  finishSignUpAndSyncProfile,
   signInWithGoogle,
+  activateClerkSession,
+  syncSessionProfileAfterClerkAuth,
 } from "@/lib/firebase-auth-service";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +52,16 @@ type FirebaseSignUpFormProps = React.HTMLAttributes<HTMLDivElement> & {
   callbackUrl?: string;
 };
 
+function isSignUpEmailVerificationPending(
+  signUp: ReturnType<typeof useSignUp>["signUp"]
+) {
+  return (
+    signUp.status === "missing_requirements" &&
+    signUp.unverifiedFields.includes("email_address") &&
+    signUp.missingFields.length === 0
+  );
+}
+
 export function FirebaseSignUpForm({
   className,
   callbackUrl = CREATE_WORKSPACE_PATH,
@@ -56,10 +69,20 @@ export function FirebaseSignUpForm({
 }: FirebaseSignUpFormProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
+  const [isResending, setIsResending] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [verificationCode, setVerificationCode] = React.useState("");
+  const [verificationEmail, setVerificationEmail] = React.useState("");
+  const [verificationError, setVerificationError] = React.useState<string | null>(
+    null
+  );
+  const profileDetailsRef = React.useRef<{ firstName: string; lastName: string }>(
+    { firstName: "", lastName: "" }
+  );
   const router = useRouter();
   const redirectTo = sanitizeCallbackUrl(callbackUrl, CREATE_WORKSPACE_PATH);
   const { signUp, fetchStatus } = useSignUp();
+  const [isCompletingAuth, setIsCompletingAuth] = React.useState(false);
 
   const {
     register,
@@ -70,9 +93,38 @@ export function FirebaseSignUpForm({
   });
 
   const isDisabled = isLoading || isGoogleLoading || fetchStatus === "fetching";
+  const showVerificationStep =
+    Boolean(verificationEmail) || isSignUpEmailVerificationPending(signUp);
+
+  async function completeSignUpSession() {
+    setIsCompletingAuth(true);
+
+    const { error: finalizeError } = await signUp.finalize();
+    if (finalizeError) {
+      if (signUp.createdSessionId) {
+        await activateClerkSession(signUp.createdSessionId);
+      } else {
+        setIsCompletingAuth(false);
+        throw finalizeError;
+      }
+    }
+
+    const { profile } = await syncSessionProfileAfterClerkAuth(
+      profileDetailsRef.current
+    );
+    setAuthCookie(true, { role: profile.role, profile });
+    toast.success("Account created successfully!");
+    router.replace(await fetchPostAuthDestination(redirectTo));
+  }
 
   async function onSubmit(data: SignUpValues) {
     setIsLoading(true);
+    setVerificationError(null);
+    profileDetailsRef.current = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+    };
+
     try {
       const { error } = await signUp.password({
         emailAddress: data.email,
@@ -84,20 +136,77 @@ export function FirebaseSignUpForm({
         throw error;
       }
 
-      const { profile } = await finishSignUpAndSyncProfile(signUp, {
-        firstName: data.firstName,
-        lastName: data.lastName,
-      });
-      setAuthCookie(true, { role: profile.role, profile });
-      toast.success(
-        `We sent a verification email to ${data.email}. Please verify before continuing.`
-      );
-      router.push(await fetchPostAuthDestination(redirectTo));
+      if (signUp.status === "complete") {
+        await completeSignUpSession();
+        return;
+      }
+
+      const sendResult = await signUp.verifications.sendEmailCode();
+      if (sendResult.error) {
+        throw sendResult.error;
+      }
+
+      setVerificationEmail(data.email);
+      toast.success(`We sent a verification code to ${data.email}.`);
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
+      setIsCompletingAuth(false);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleVerifyCode(event: React.FormEvent) {
+    event.preventDefault();
+    if (verificationCode.length !== 6) {
+      setVerificationError("Enter the 6-digit verification code.");
+      return;
+    }
+
+    setIsLoading(true);
+    setVerificationError(null);
+
+    try {
+      const { error } = await signUp.verifications.verifyEmailCode({
+        code: verificationCode,
+      });
+      if (error) {
+        throw error;
+      }
+
+      await completeSignUpSession();
+    } catch (error) {
+      const message = getFirebaseAuthErrorMessage(error);
+      setVerificationError(message);
+      toast.error(message);
+      setIsCompletingAuth(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleResendCode() {
+    setIsResending(true);
+    setVerificationError(null);
+
+    try {
+      const { error } = await signUp.verifications.sendEmailCode();
+      if (error) {
+        throw error;
+      }
+      toast.success("Verification code sent.");
+    } catch (error) {
+      toast.error(getFirebaseAuthErrorMessage(error));
+    } finally {
+      setIsResending(false);
+    }
+  }
+
+  function handleBackToSignUp() {
+    setVerificationCode("");
+    setVerificationEmail("");
+    setVerificationError(null);
+    void signUp.reset();
   }
 
   async function handleGoogleSignUp() {
@@ -117,6 +226,28 @@ export function FirebaseSignUpForm({
     } finally {
       setIsGoogleLoading(false);
     }
+  }
+
+  if (isCompletingAuth) {
+    return <AuthLoading />;
+  }
+
+  if (showVerificationStep) {
+    return (
+      <AuthEmailVerificationStep
+        className={className}
+        email={verificationEmail || signUp.emailAddress || ""}
+        code={verificationCode}
+        onCodeChange={setVerificationCode}
+        onVerify={handleVerifyCode}
+        onResend={() => void handleResendCode()}
+        onBack={handleBackToSignUp}
+        isLoading={isLoading}
+        isResending={isResending}
+        errorMessage={verificationError}
+        {...props}
+      />
+    );
   }
 
   return (

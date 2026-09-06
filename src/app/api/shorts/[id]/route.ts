@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { triggerShortPublishedEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
@@ -75,7 +75,11 @@ export async function PATCH(request: Request, context: RouteContext) {
             : undefined,
       });
       if (updated.isFirstPublish) {
-        await triggerShortPublishedEmails(updated.id, verified.uid);
+        after(() =>
+          triggerShortPublishedEmails(updated.id, verified.uid).catch((error) => {
+            console.error("[shorts/publish] email dispatch failed", error);
+          })
+        );
       }
       return NextResponse.json({ id: updated.id, publishedAt: updated.publishedAt });
     }

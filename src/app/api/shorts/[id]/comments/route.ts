@@ -34,9 +34,9 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  let body: { body?: string } = {};
+  let body: { body?: string; parentId?: string | null } = {};
   try {
-    body = (await request.json()) as { body?: string };
+    body = (await request.json()) as { body?: string; parentId?: string | null };
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -47,16 +47,19 @@ export async function POST(request: Request, context: RouteContext) {
       clerkId: verified.uid,
       email: verified.email,
       body: body.body ?? "",
+      parentId: typeof body.parentId === "string" ? body.parentId : null,
     });
     return NextResponse.json({
       id: comment.id,
       body: comment.body,
+      parentId: comment.parentId,
       createdAt: comment.createdAt.toISOString(),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Comment failed.";
     const status =
       message === "Short not found." ? 404
+      : message === "Parent comment not found." ? 404
       : message === "Unauthorized" ? 401
       : 400;
     return NextResponse.json({ error: message }, { status });

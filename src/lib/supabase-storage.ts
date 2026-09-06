@@ -157,6 +157,68 @@ export async function uploadShortObject(input: {
   };
 }
 
+export async function createShortSignedUpload(input: {
+  churchId: string;
+  shortId: string;
+  slot: "video" | "thumbnail";
+  ext: string;
+}): Promise<{
+  objectKey: string;
+  publicUrl: string;
+  signedUrl: string;
+  token: string;
+}> {
+  if (input.slot === "video") {
+    await ensureShortVideoBucketLimit();
+  }
+
+  const objectKey = buildShortStorageObjectKey(
+    input.churchId,
+    input.shortId,
+    input.slot,
+    input.ext
+  );
+  const client = getSupabaseStorageClient();
+  const { data, error } = await client.storage
+    .from(getSupabaseStorageBucket())
+    .createSignedUploadUrl(objectKey, { upsert: true });
+
+  if (error || !data?.signedUrl || !data.token) {
+    throw new Error(error?.message || "Could not create a signed upload URL.");
+  }
+
+  return {
+    objectKey,
+    publicUrl: getPublicStorageUrl(objectKey),
+    signedUrl: data.signedUrl,
+    token: data.token,
+  };
+}
+
+export function isOwnedShortObjectKey(input: {
+  objectKey: string;
+  churchId: string;
+  shortId: string;
+  slot: "video" | "thumbnail";
+}): boolean {
+  const key = input.objectKey.trim();
+  if (!key || key.includes("..") || key.startsWith("/")) return false;
+
+  const church = input.churchId.trim();
+  const short = input.shortId.trim();
+  if (!SAFE_ID.test(church) || !SAFE_ID.test(short)) return false;
+
+  if (input.slot === "video") {
+    return new RegExp(
+      `^shorts/${church}/${short}/video\\.[a-z0-9]{1,8}$`
+    ).test(key);
+  }
+
+  return new RegExp(`^shorts/${short}/cover/[a-zA-Z0-9-]+\\.[a-z0-9]{1,8}$`).test(
+    key
+  );
+}
+
 export function buildStorageObjectKey(
   kind: StorageUploadKind,
   entityId: string,

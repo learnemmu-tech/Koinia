@@ -77,10 +77,22 @@ function CollapsedNavLabel({ label }: { label: string }) {
 }
 
 const expandedNavLinkClass =
-  "flex h-[34px] w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors duration-150";
+  "flex h-[34px] w-full items-center gap-2 rounded-md border-l border-transparent px-3 py-1.5 text-sm transition-colors duration-200";
 
 const collapsedNavLinkClass =
-  "relative flex w-full flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 transition-colors duration-150";
+  "relative flex w-full flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 transition-colors duration-200";
+
+const navIdleClass =
+  "text-sidebar-foreground/55 [&>svg]:text-sidebar-foreground/45";
+
+const navHoverClass =
+  "hover-hover:hover:text-sidebar-foreground/90 hover-hover:hover:[&>svg]:text-sidebar-foreground/75";
+
+const navActiveExpandedClass =
+  "border-l border-sidebar-foreground/25 bg-gradient-to-r from-white/[0.05] to-transparent pl-[11px] font-medium text-sidebar-foreground shadow-[inset_0_1px_0_0_hsl(var(--sidebar-foreground)/0.04)] [&>svg]:text-sidebar-foreground";
+
+const navActiveCollapsedClass =
+  "font-medium text-sidebar-foreground [&>svg]:text-sidebar-foreground";
 
 export function SidebarNavSections({
   sections,
@@ -148,16 +160,11 @@ export function SidebarNavSections({
                       className={cn(
                         isCollapsed ? collapsedNavLinkClass : expandedNavLinkClass,
                         isActive ?
-                          isCollapsed ?
-                            "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                          : "border-l-2 border-sidebar-primary bg-sidebar-accent pl-[10px] font-medium text-sidebar-accent-foreground"
-                        : isCollapsed ?
-                          "text-muted-foreground hover-hover:hover:bg-sidebar-accent hover-hover:hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground"
-                        : "border-l-2 border-transparent text-muted-foreground hover-hover:hover:bg-sidebar-accent hover-hover:hover:text-sidebar-accent-foreground active:bg-sidebar-accent",
+                          isCollapsed ? navActiveCollapsedClass : navActiveExpandedClass
+                        : cn(navIdleClass, navHoverClass),
                         isCollapsed ?
                           "[&>svg]:size-[22px] [&>svg]:shrink-0"
-                        : "[&>svg]:size-4 [&>svg]:shrink-0",
-                        isActive ? "[&>svg]:text-sidebar-accent-foreground" : "[&>svg]:text-muted-foreground"
+                        : "[&>svg]:size-4 [&>svg]:shrink-0"
                       )}
                     >
                       <Icon />

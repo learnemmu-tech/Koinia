@@ -5,6 +5,7 @@ import type { VideoShort } from "@/types/video-short";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { DEFAULT_SONG_COVER } from "@/config/site";
+import { parseShortCaption } from "@/lib/short-caption";
 import { cn } from "@/lib/utils";
 
 import { HomeCollectionRail, homeRailItemClass, HOME_RAIL_PORTRAIT } from "./home-collection-rail";
@@ -24,7 +25,8 @@ function initials(name: string) {
 function HomeShortCard({ short }: { short: VideoShort }) {
   const href = `/shorts?short=${encodeURIComponent(short.id)}`;
   const poster = short.thumbnailUrl || DEFAULT_SONG_COVER;
-  const caption = short.caption.trim();
+  const parsed = parseShortCaption(short.caption, short.category);
+  const caption = parsed.title || parsed.description || short.caption.trim();
 
   return (
     <Link

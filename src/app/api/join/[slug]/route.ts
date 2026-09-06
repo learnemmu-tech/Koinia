@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  clearJoinIntentCookieOnResponse,
+  setJoinIntentCookieOnResponse,
+} from "@/lib/auth/join-intent-cookie";
 import { getClerkIdentity, verifyBearerToken } from "@/lib/email/verify-auth";
 import {
   getChurchByJoinSlug,
@@ -25,7 +29,11 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Church not found" }, { status: 404 });
   }
 
-  return NextResponse.json(church);
+  const response = NextResponse.json(church);
+  if (church.slugStatus === "active") {
+    return setJoinIntentCookieOnResponse(response, church.slug);
+  }
+  return response;
 }
 
 export async function POST(request: Request, context: RouteContext) {
@@ -54,10 +62,12 @@ export async function POST(request: Request, context: RouteContext) {
     const result = await joinUserToChurchBySlug(verified.uid, slug, {
       emailVerified: identity?.emailVerified ?? false,
     });
-    return NextResponse.json({
-      churchName: result.churchName,
-      status: result.status,
-    });
+    return clearJoinIntentCookieOnResponse(
+      NextResponse.json({
+        churchName: result.churchName,
+        status: result.status,
+      })
+    );
   } catch (error) {
     console.error("[api/join]", error);
     return NextResponse.json(

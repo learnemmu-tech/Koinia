@@ -1,5 +1,6 @@
 "use client";
 
+import { useSignIn } from "@clerk/nextjs";
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +10,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { AuthEmailVerificationStep } from "@/components/auth/auth-email-verification-step";
+import { AuthLoading } from "@/components/auth/auth-loading";
 import { Google } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +20,11 @@ import { setAuthCookie } from "@/context/firebase-auth-context";
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination";
 import { buildAuthHref, sanitizeCallbackUrl } from "@/lib/callback-url";
 import { getFirebaseAuthErrorMessage } from "@/lib/firebase-auth-errors";
-import { signInWithEmail, signInWithGoogle, getUserProfile } from "@/lib/firebase-auth-service";
+import {
+  signInWithGoogle,
+  activateClerkSession,
+  syncSessionProfileAfterClerkAuth,
+} from "@/lib/firebase-auth-service";
 import { cn } from "@/lib/utils";
 
 const signInSchema = z.object({
@@ -44,9 +51,17 @@ export function FirebaseSignInForm({
 }: FirebaseSignInFormProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
+  const [isResending, setIsResending] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [verificationCode, setVerificationCode] = React.useState("");
+  const [verificationEmail, setVerificationEmail] = React.useState("");
+  const [verificationError, setVerificationError] = React.useState<string | null>(
+    null
+  );
   const router = useRouter();
   const redirectTo = sanitizeCallbackUrl(callbackUrl);
+  const { signIn, fetchStatus } = useSignIn();
+  const [isCompletingAuth, setIsCompletingAuth] = React.useState(false);
 
   const {
     register,
@@ -56,21 +71,137 @@ export function FirebaseSignInForm({
     resolver: zodResolver(signInSchema),
   });
 
-  const isDisabled = isLoading || isGoogleLoading;
+  const isDisabled = isLoading || isGoogleLoading || fetchStatus === "fetching";
+  const showVerificationStep =
+    Boolean(verificationEmail) ||
+    signIn.status === "needs_client_trust" ||
+    signIn.status === "needs_second_factor";
+
+  async function completeSignInSession() {
+    setIsCompletingAuth(true);
+
+    const { error: finalizeError } = await signIn.finalize();
+    if (finalizeError) {
+      if (signIn.createdSessionId) {
+        await activateClerkSession(signIn.createdSessionId);
+      } else {
+        setIsCompletingAuth(false);
+        throw finalizeError;
+      }
+    }
+
+    const { profile } = await syncSessionProfileAfterClerkAuth();
+    setAuthCookie(true, { role: profile.role, profile });
+    toast.success("Signed in successfully!");
+    router.replace(await fetchPostAuthDestination(redirectTo));
+  }
+
+  async function sendSignInVerificationCode() {
+    if (signIn.status === "needs_second_factor") {
+      const emailCodeFactor = signIn.supportedSecondFactors?.find(
+        (factor) => factor.strategy === "email_code"
+      );
+      if (!emailCodeFactor) {
+        throw new Error("Additional verification is required to sign in.");
+      }
+      const { error } = await signIn.mfa.sendEmailCode();
+      if (error) {
+        throw error;
+      }
+      return;
+    }
+
+    const { error } = await signIn.mfa.sendEmailCode();
+    if (error) {
+      throw error;
+    }
+  }
 
   async function onSubmit(data: SignInValues) {
     setIsLoading(true);
+    setVerificationError(null);
+
     try {
-      const { user } = await signInWithEmail(data.email, data.password);
-      const profile = await getUserProfile(user.uid);
-      setAuthCookie(true, { role: profile?.role ?? "user", profile: profile ?? undefined });
-      toast.success("Signed in successfully!");
-      router.push(await fetchPostAuthDestination(redirectTo));
+      const { error } = await signIn.password({
+        emailAddress: data.email,
+        password: data.password,
+      });
+      if (error) {
+        throw error;
+      }
+
+      if (signIn.status === "complete") {
+        await completeSignInSession();
+        return;
+      }
+
+      if (
+        signIn.status === "needs_client_trust" ||
+        signIn.status === "needs_second_factor"
+      ) {
+        await sendSignInVerificationCode();
+        setVerificationEmail(data.email);
+        toast.success(`We sent a verification code to ${data.email}.`);
+        return;
+      }
+
+      throw new Error("Additional verification is required to sign in.");
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
+      setIsCompletingAuth(false);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleVerifyCode(event: React.FormEvent) {
+    event.preventDefault();
+    if (verificationCode.length !== 6) {
+      setVerificationError("Enter the 6-digit verification code.");
+      return;
+    }
+
+    setIsLoading(true);
+    setVerificationError(null);
+
+    try {
+      const { error } = await signIn.mfa.verifyEmailCode({
+        code: verificationCode,
+      });
+      if (error) {
+        throw error;
+      }
+
+      await completeSignInSession();
+    } catch (error) {
+      const message = getFirebaseAuthErrorMessage(error);
+      setVerificationError(message);
+      toast.error(message);
+      setIsCompletingAuth(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleResendCode() {
+    setIsResending(true);
+    setVerificationError(null);
+
+    try {
+      await sendSignInVerificationCode();
+      toast.success("Verification code sent.");
+    } catch (error) {
+      toast.error(getFirebaseAuthErrorMessage(error));
+    } finally {
+      setIsResending(false);
+    }
+  }
+
+  function handleBackToSignIn() {
+    setVerificationCode("");
+    setVerificationEmail("");
+    setVerificationError(null);
+    void signIn.reset();
   }
 
   async function handleGoogleSignIn() {
@@ -90,6 +221,28 @@ export function FirebaseSignInForm({
     } finally {
       setIsGoogleLoading(false);
     }
+  }
+
+  if (isCompletingAuth) {
+    return <AuthLoading />;
+  }
+
+  if (showVerificationStep) {
+    return (
+      <AuthEmailVerificationStep
+        className={className}
+        email={verificationEmail}
+        code={verificationCode}
+        onCodeChange={setVerificationCode}
+        onVerify={handleVerifyCode}
+        onResend={() => void handleResendCode()}
+        onBack={handleBackToSignIn}
+        isLoading={isLoading}
+        isResending={isResending}
+        errorMessage={verificationError}
+        {...props}
+      />
+    );
   }
 
   return (

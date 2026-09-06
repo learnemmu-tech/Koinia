@@ -2,6 +2,7 @@ import "server-only";
 
 import { clerkClient } from "@clerk/nextjs/server";
 
+import { resolveEffectiveCallbackUrl } from "@/lib/auth/resolve-effective-callback-url";
 import {
   resolveUserMembershipRouting,
 } from "@/lib/auth/membership-routing-server";
@@ -33,5 +34,6 @@ export async function completePostAuthRouting(
     console.error("[auth] PostgreSQL user sync failed during post-auth routing", error);
   }
 
-  return resolveUserMembershipRouting(clerkUserId, callbackUrl);
+  const effectiveCallbackUrl = await resolveEffectiveCallbackUrl(callbackUrl);
+  return resolveUserMembershipRouting(clerkUserId, effectiveCallbackUrl);
 }

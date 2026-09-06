@@ -283,9 +283,15 @@ export const EmailService = {
     shortId: string;
     userId?: string;
   }): Promise<SendEmailResult> {
+    const titleLine =
+      input.caption
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find(Boolean) || "A new Short";
+
     return sendEmail({
       to: input.to,
-      subject: `New Short: ${input.caption}`,
+      subject: `New Short: ${titleLine}`.slice(0, 180),
       react: ShortPublishedEmail({
         userName: input.userName,
         caption: input.caption,

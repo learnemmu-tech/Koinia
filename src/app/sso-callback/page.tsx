@@ -12,8 +12,6 @@ export default function SSOCallbackPage() {
       <AuthenticateWithRedirectCallback
         signInFallbackRedirectUrl={POST_AUTH_CONTINUE_PATH}
         signUpFallbackRedirectUrl={POST_AUTH_CONTINUE_PATH}
-        signInForceRedirectUrl={POST_AUTH_CONTINUE_PATH}
-        signUpForceRedirectUrl={POST_AUTH_CONTINUE_PATH}
       />
     </>
   );

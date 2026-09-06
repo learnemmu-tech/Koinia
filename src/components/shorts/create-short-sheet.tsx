@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import {
   SHORT_CATEGORIES,
   MAX_SHORT_DURATION_SECONDS,
+  MAX_SHORT_SOURCE_THUMBNAIL_BYTES,
   MAX_SHORT_SOURCE_VIDEO_BYTES,
-  MAX_SHORT_THUMBNAIL_BYTES,
   SHORT_VIDEO_COMPRESS_THRESHOLD_BYTES,
   type ShortCategory,
   type ShortVisibility,
@@ -32,6 +32,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ShortVideoPlayer } from "@/components/shorts/short-video-player";
+import { compressShortCoverIfNeeded } from "@/lib/compress-short-image";
+import { extractShortPosterFrame } from "@/lib/extract-short-poster";
 import {
   compressShortVideoIfNeeded,
   type CompressShortVideoProgress,
@@ -46,7 +48,7 @@ import { cn } from "@/lib/utils";
 type CreateShortSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  getToken: () => Promise<string | null>;
+  getToken: (forceRefresh?: boolean) => Promise<string | null>;
   onPublished?: () => void;
 };
 
@@ -179,6 +181,16 @@ export function CreateShortSheet({
       return;
     }
 
+    if (
+      file.type === "video/quicktime" ||
+      file.name.toLowerCase().endsWith(".mov") ||
+      file.type.includes("hevc")
+    ) {
+      toast.message(
+        "Some iPhone videos use HEVC/MOV. If playback fails in a browser, export as MP4 (H.264)."
+      );
+    }
+
     setCompressing(true);
     setCompressProgress({ phase: "loading", percent: 0 });
 
@@ -215,16 +227,32 @@ export function CreateShortSheet({
       return;
     }
 
-    if (file.size > MAX_SHORT_THUMBNAIL_BYTES) {
-      toast.error("Cover image must be 2 MB or smaller.");
+    if (file.size > MAX_SHORT_SOURCE_THUMBNAIL_BYTES) {
+      toast.error("Cover image must be 20 MB or smaller.");
       if (coverInputRef.current) coverInputRef.current.value = "";
       return;
     }
 
-    if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
-    setCoverFile(file);
-    setCoverPreviewUrl(URL.createObjectURL(file));
-    setErrors((prev) => ({ ...prev, cover: undefined }));
+    void (async () => {
+      try {
+        const originalMb = (file.size / (1024 * 1024)).toFixed(1);
+        const processed = await compressShortCoverIfNeeded(file);
+        if (processed.size < file.size) {
+          toast.success(
+            `Cover compressed from ${originalMb} MB to ${(processed.size / (1024 * 1024)).toFixed(1)} MB.`
+          );
+        }
+        if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
+        setCoverFile(processed);
+        setCoverPreviewUrl(URL.createObjectURL(processed));
+        setErrors((prev) => ({ ...prev, cover: undefined }));
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Could not prepare cover image."
+        );
+        if (coverInputRef.current) coverInputRef.current.value = "";
+      }
+    })();
   }
 
   function removeCover() {
@@ -262,11 +290,13 @@ export function CreateShortSheet({
       return;
     }
 
-    const token = await getToken();
-    if (!token) {
-      toast.error("Sign in to post a Short.");
-      return;
-    }
+    const requireToken = async () => {
+      const next = await getToken(true);
+      if (!next) {
+        throw new Error("Sign in to post a Short.");
+      }
+      return next;
+    };
 
     const caption = buildCaption(title, description, topic);
     const category = resolveCategory(topic);
@@ -284,9 +314,20 @@ export function CreateShortSheet({
         setCompressProgress(null);
       }
 
+      let coverToUpload = coverFile;
+      const usedCustomCover = Boolean(coverToUpload);
+      if (coverToUpload) {
+        coverToUpload = await compressShortCoverIfNeeded(coverToUpload);
+        setCoverFile(coverToUpload);
+      }
+
+      // No custom cover: grab a poster frame while the video is uploading.
+      const posterPromise =
+        usedCustomCover ? null : extractShortPosterFrame(fileToUpload);
+
       const draft = await createShortDraft(
         { caption, category, visibility },
-        token
+        await requireToken()
       );
       setUploadProgress(25);
 
@@ -294,27 +335,33 @@ export function CreateShortSheet({
         draft.id,
         "video",
         fileToUpload,
-        token,
+        await requireToken(),
         setUploadProgress
       );
 
+      if (posterPromise) {
+        coverToUpload = await posterPromise;
+      }
+
       let thumbnailUrl: string | null = null;
-      if (coverFile) {
+      if (coverToUpload) {
         try {
           thumbnailUrl = await uploadShortFile(
             draft.id,
             "thumbnail",
-            coverFile,
-            token
+            coverToUpload,
+            await requireToken()
           );
           if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl);
           setCoverPreviewUrl(thumbnailUrl);
         } catch (error) {
-          throw new Error(
-            error instanceof Error
-              ? `Cover image upload failed: ${error.message}`
-              : "Cover image upload failed. Please try again."
-          );
+          if (usedCustomCover) {
+            throw new Error(
+              error instanceof Error
+                ? `Cover image upload failed: ${error.message}`
+                : "Cover image upload failed. Please try again."
+            );
+          }
         }
       }
 
@@ -328,7 +375,7 @@ export function CreateShortSheet({
           category,
           visibility,
         },
-        token
+        await requireToken()
       );
 
       toast.success("Short published!");
@@ -535,7 +582,7 @@ export function CreateShortSheet({
                             Upload cover image
                           </span>
                           <span className="text-[11px] text-muted-foreground">
-                            JPG, PNG or WebP · 9:16
+                            JPG, PNG or WebP · auto-compressed over 2 MB
                           </span>
                         </button>
                       }

@@ -5,7 +5,10 @@ import { Loader2, Send, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
-import type { VideoShortComment } from "@/types/video-short";
+import {
+  MAX_SHORT_COMMENT_DEPTH,
+  type VideoShortComment,
+} from "@/types/video-short";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +51,43 @@ function useIsDesktop() {
   return isDesktop;
 }
 
+function mapCommentTree(
+  comments: VideoShortComment[],
+  update: (comment: VideoShortComment) => VideoShortComment
+): VideoShortComment[] {
+  return comments.map((comment) => {
+    const next = update(comment);
+    return next.replies.length > 0 ?
+        { ...next, replies: mapCommentTree(next.replies, update) }
+      : next;
+  });
+}
+
+function filterCommentTree(
+  comments: VideoShortComment[],
+  predicate: (comment: VideoShortComment) => boolean
+): VideoShortComment[] {
+  return comments.filter(predicate).map((comment) => ({
+    ...comment,
+    replies: filterCommentTree(comment.replies, predicate),
+  }));
+}
+
+function insertReply(
+  comments: VideoShortComment[],
+  parentId: string,
+  reply: VideoShortComment
+): VideoShortComment[] {
+  return comments.map((comment) => {
+    if (comment.id === parentId) {
+      return { ...comment, replies: [...comment.replies, reply] };
+    }
+    return comment.replies.length > 0 ?
+        { ...comment, replies: insertReply(comment.replies, parentId, reply) }
+      : comment;
+  });
+}
+
 function CommentSkeleton() {
   return (
     <div className="space-y-3 py-2">
@@ -61,6 +101,74 @@ function CommentSkeleton() {
         </div>
       ))}
     </div>
+  );
+}
+
+function CommentNode({
+  comment,
+  depth,
+  onReply,
+}: {
+  comment: VideoShortComment;
+  depth: number;
+  onReply: (target: { id: string; displayName: string }) => void;
+}) {
+  const nextDepth = Math.min(depth + 1, MAX_SHORT_COMMENT_DEPTH);
+
+  return (
+    <li className="flex gap-3">
+      <Avatar className={cn("shrink-0", depth > 0 ? "size-7" : "size-8")}>
+        <AvatarFallback className="text-[10px]">
+          {initials(comment.creator.displayName)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <p className="truncate text-sm font-medium text-foreground">
+            {comment.creator.displayName}
+          </p>
+          <time
+            className="shrink-0 text-[11px] text-muted-foreground"
+            dateTime={comment.createdAt}
+          >
+            {formatDistanceToNow(new Date(comment.createdAt), {
+              addSuffix: true,
+            })}
+          </time>
+        </div>
+        <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+          {comment.body}
+        </p>
+        <button
+          type="button"
+          onClick={() =>
+            onReply({ id: comment.id, displayName: comment.creator.displayName })
+          }
+          className="mt-1 text-[11px] font-medium text-muted-foreground transition-colors hover-hover:hover:text-foreground"
+        >
+          Reply
+        </button>
+
+        {comment.replies.length > 0 ?
+          <ul
+            className={cn(
+              "mt-3 space-y-3",
+              // Indent up to three visual levels, then keep replies flat.
+              depth < MAX_SHORT_COMMENT_DEPTH && "border-l border-border/60 pl-3"
+            )}
+          >
+            {comment.replies.map((reply) => (
+              <CommentNode
+                key={reply.id}
+                comment={reply}
+                depth={nextDepth}
+                onReply={onReply}
+              />
+            ))}
+          </ul>
+        : null}
+      </div>
+    </li>
   );
 }
 
@@ -79,12 +187,18 @@ export function ShortCommentsSheet({
   const [loading, setLoading] = React.useState(false);
   const [posting, setPosting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [replyTo, setReplyTo] = React.useState<{
+    id: string;
+    displayName: string;
+  } | null>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (!open || !shortId) {
       setComments([]);
       setBody("");
       setError(null);
+      setReplyTo(null);
       return;
     }
 
@@ -129,10 +243,12 @@ export function ShortCommentsSheet({
       authUser?.email ||
       "You";
 
+    const parentId = replyTo?.id ?? null;
     const optimistic: VideoShortComment = {
       id: `optimistic-${Date.now()}`,
       shortId,
       userId: profile?.email ?? "me",
+      parentId,
       body: trimmed,
       createdAt: new Date().toISOString(),
       creator: {
@@ -142,30 +258,33 @@ export function ShortCommentsSheet({
         displayName,
         photoUrl: authUser?.photoURL ?? null,
       },
+      replies: [],
     };
 
     setPosting(true);
     setError(null);
     setBody("");
-    setComments((prev) => [optimistic, ...prev]);
+    setReplyTo(null);
+    setComments((prev) =>
+      parentId ? insertReply(prev, parentId, optimistic) : [optimistic, ...prev]
+    );
 
     try {
-      const created = await postShortComment(shortId, trimmed, token);
+      const created = await postShortComment(shortId, trimmed, token, parentId);
       setComments((prev) =>
-        prev.map((comment) =>
+        mapCommentTree(prev, (comment) =>
           comment.id === optimistic.id ?
-            {
-              ...comment,
-              id: created.id,
-              createdAt: created.createdAt,
-            }
+            { ...comment, id: created.id, createdAt: created.createdAt }
           : comment
         )
       );
       onCommentAdded?.(shortId);
     } catch (err) {
-      setComments((prev) => prev.filter((comment) => comment.id !== optimistic.id));
+      setComments((prev) =>
+        filterCommentTree(prev, (comment) => comment.id !== optimistic.id)
+      );
       setBody(trimmed);
+      if (parentId && replyTo) setReplyTo(replyTo);
       const message =
         err instanceof Error ? err.message : "Couldn't post your comment.";
       setError(message);
@@ -220,31 +339,15 @@ export function ShortCommentsSheet({
             </div>
           : <ul className="space-y-4 pb-2">
               {comments.map((comment) => (
-                <li key={comment.id} className="flex gap-3">
-                  <Avatar className="size-8 shrink-0">
-                    <AvatarFallback className="text-[10px]">
-                      {initials(comment.creator.displayName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {comment.creator.displayName}
-                      </p>
-                      <time
-                        className="shrink-0 text-[11px] text-muted-foreground"
-                        dateTime={comment.createdAt}
-                      >
-                        {formatDistanceToNow(new Date(comment.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </time>
-                    </div>
-                    <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-                      {comment.body}
-                    </p>
-                  </div>
-                </li>
+                <CommentNode
+                  key={comment.id}
+                  comment={comment}
+                  depth={0}
+                  onReply={(target) => {
+                    setReplyTo(target);
+                    inputRef.current?.focus();
+                  }}
+                />
               ))}
             </ul>
           }
@@ -254,14 +357,34 @@ export function ShortCommentsSheet({
           <p className="px-4 pb-1 text-xs text-destructive">{error}</p>
         : null}
 
+        {replyTo ?
+          <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border/60 bg-muted/30 px-4 py-2">
+            <p className="min-w-0 truncate text-xs text-muted-foreground">
+              Replying to{" "}
+              <span className="font-medium text-foreground">
+                @{replyTo.displayName}
+              </span>
+            </p>
+            <button
+              type="button"
+              aria-label="Cancel reply"
+              onClick={() => setReplyTo(null)}
+              className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover-hover:hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        : null}
+
         <form
           onSubmit={(event) => void handleSubmit(event)}
           className="flex shrink-0 gap-2 border-t border-border bg-background p-4"
         >
           <Input
+            ref={inputRef}
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            placeholder="Add a comment…"
+            placeholder={replyTo ? `Reply to @${replyTo.displayName}…` : "Add a comment…"}
             maxLength={500}
             disabled={posting}
             className="h-11 rounded-[10px]"

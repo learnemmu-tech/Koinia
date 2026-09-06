@@ -92,6 +92,8 @@ export const videoShortComments = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** Null for a top-level comment, otherwise the comment being replied to. */
+    parentId: uuid("parent_id"),
     body: text("body").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()
@@ -102,10 +104,16 @@ export const videoShortComments = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    foreignKey({
+      columns: [table.parentId],
+      foreignColumns: [table.id],
+      name: "video_short_comments_parent_id_fk",
+    }).onDelete("cascade"),
     index("video_short_comments_short_id_created_at_idx").on(
       table.shortId,
       table.createdAt
     ),
+    index("video_short_comments_parent_id_idx").on(table.parentId),
   ]
 );
 

@@ -43,7 +43,7 @@ function WorkspaceAvatar({
 }) {
   if (hasCustomLogo(logoUrl)) {
     return (
-      <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-card">
+      <div className="relative size-8 shrink-0 overflow-hidden rounded-lg bg-sidebar-accent/60 ring-1 ring-sidebar-foreground/10 shadow-sm">
         <ImageWithFallback
           src={logoUrl!}
           fallback={DEFAULT_CHURCH_LOGO}
@@ -59,8 +59,9 @@ function WorkspaceAvatar({
   return (
     <div
       className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-full",
-        "bg-accent text-[10px] font-semibold text-muted-foreground"
+        "flex size-8 shrink-0 items-center justify-center rounded-lg",
+        "bg-sidebar-accent/70 text-[11px] font-semibold tracking-tight text-sidebar-foreground/80",
+        "ring-1 ring-sidebar-foreground/10 shadow-sm"
       )}
       aria-hidden
     >
@@ -68,6 +69,9 @@ function WorkspaceAvatar({
     </div>
   );
 }
+
+const workspaceTriggerClass =
+  "group/workspace relative flex min-w-0 w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/20";
 
 export function SidebarWorkspaceHeader() {
   const organizationCtx = useOrganizationOptional();
@@ -78,9 +82,19 @@ export function SidebarWorkspaceHeader() {
 
   if (organizationCtx?.loading && !organizationCtx.organization) {
     return (
-      <div className="flex min-w-0 items-center gap-2">
-        <Skeleton className="size-7 shrink-0 rounded-full" />
-        <Skeleton className="h-3.5 w-28" />
+      <div
+        className={cn(
+          workspaceTriggerClass,
+          isCollapsed && "justify-center px-1.5"
+        )}
+      >
+        <Skeleton className="size-8 shrink-0 rounded-lg" />
+        {!isCollapsed ?
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Skeleton className="h-2 w-14" />
+            <Skeleton className="h-3.5 w-28" />
+          </div>
+        : null}
       </div>
     );
   }
@@ -122,14 +136,26 @@ export function SidebarWorkspaceHeader() {
   const showBranchSwitcher =
     branchContext?.showBranchSwitcher && branches.length > 1;
 
+  const nameBlock =
+    !isCollapsed ?
+      showBranchSwitcher ?
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/45">
+            Workspace
+          </p>
+          <p className="truncate text-[13px] font-semibold leading-none tracking-[-0.01em] text-sidebar-foreground">
+            {churchName}
+          </p>
+        </div>
+      : <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-none tracking-[-0.01em] text-sidebar-foreground">
+          {churchName}
+        </p>
+    : null;
+
   const identity = (
     <>
       <WorkspaceAvatar name={churchName} logoUrl={logoUrl} />
-      {!isCollapsed ?
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-sidebar-foreground">
-          {churchName}
-        </span>
-      : null}
+      {nameBlock}
     </>
   );
 
@@ -141,13 +167,13 @@ export function SidebarWorkspaceHeader() {
             type="button"
             title={isCollapsed ? churchName : undefined}
             className={cn(
-              "flex min-w-0 w-full items-center gap-2 text-left focus-visible:outline-none",
-              isCollapsed && "justify-center"
+              workspaceTriggerClass,
+              isCollapsed && "justify-center px-1.5"
             )}
           >
             {identity}
             {!isCollapsed ?
-              <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+              <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-foreground/40 transition-colors group-hover/workspace:text-sidebar-foreground/65" />
             : null}
           </button>
         </DropdownMenuTrigger>
@@ -173,8 +199,8 @@ export function SidebarWorkspaceHeader() {
       href="/"
       title={isCollapsed ? churchName : undefined}
       className={cn(
-        "flex min-w-0 w-full items-center gap-2",
-        isCollapsed && "justify-center"
+        workspaceTriggerClass,
+        isCollapsed && "justify-center px-1.5"
       )}
     >
       {identity}

@@ -9,6 +9,8 @@ type ShortVideoPlayerProps = {
   src: string;
   poster?: string | null;
   active: boolean;
+  /** When false, keep the poster but do not attach the video source. */
+  attachSrc?: boolean;
   className?: string;
   immersive?: boolean;
   muted?: boolean;
@@ -19,10 +21,13 @@ type ShortVideoPlayerProps = {
 const muteBtn =
   "pointer-events-auto flex size-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-colors duration-200 active:bg-black/60 hover-hover:hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40";
 
+const WAITING_GRACE_MS = 450;
+
 export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
   src,
   poster,
   active,
+  attachSrc = true,
   className,
   immersive = false,
   muted: mutedProp,
@@ -38,35 +43,96 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
   const [loading, setLoading] = React.useState(true);
   const [failed, setFailed] = React.useState(false);
   const hideTimerRef = React.useRef<number | null>(null);
-  const playableSrc = src?.trim() ?? "";
+  const waitingTimerRef = React.useRef<number | null>(null);
+  const mutedRef = React.useRef(muted);
+  const playableSrc = attachSrc ? (src?.trim() ?? "") : "";
 
-  React.useEffect(() => {
+  function clearWaitingTimer() {
+    if (waitingTimerRef.current) {
+      window.clearTimeout(waitingTimerRef.current);
+      waitingTimerRef.current = null;
+    }
+  }
+
+  function applyMuted(next: boolean) {
     const video = videoRef.current;
     if (!video) return;
-    video.muted = muted;
+    video.muted = next;
+    if (next) {
+      video.setAttribute("muted", "");
+    } else {
+      video.removeAttribute("muted");
+      if (video.volume === 0) {
+        video.volume = 1;
+      }
+    }
+  }
+
+  function isVideoVisible(video: HTMLVideoElement) {
+    return video.offsetParent !== null;
+  }
+
+  function setMuted(next: boolean) {
+    mutedRef.current = next;
+    applyMuted(next);
+    if (onMutedChange) onMutedChange(next);
+    else setInternalMuted(next);
+  }
+
+  React.useEffect(() => {
+    mutedRef.current = muted;
+    applyMuted(muted);
   }, [muted]);
 
   React.useEffect(() => {
     const video = videoRef.current;
-    if (!video || !playableSrc) return;
+    if (!video) return;
 
     setFailed(false);
-    setLoading(true);
+    clearWaitingTimer();
 
-    if (active) {
-      void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-    } else {
+    if (!playableSrc) {
       video.pause();
       setPlaying(false);
-      video.currentTime = 0;
-      setProgress(0);
+      setLoading(false);
       setShowPlayHint(true);
+      return;
     }
+
+    const alreadyReady = video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
+
+    if (active) {
+      // Each Short renders mobile + desktop players; only the visible one may play.
+      if (!isVideoVisible(video)) {
+        video.pause();
+        setPlaying(false);
+        setLoading(false);
+        return;
+      }
+
+      if (!alreadyReady) setLoading(true);
+      applyMuted(mutedRef.current);
+      void video
+        .play()
+        .then(() => {
+          setPlaying(true);
+          setLoading(false);
+          applyMuted(mutedRef.current);
+        })
+        .catch(() => setPlaying(false));
+      return;
+    }
+
+    video.pause();
+    setPlaying(false);
+    setShowPlayHint(true);
+    setLoading(false);
   }, [active, playableSrc]);
 
   React.useEffect(() => {
     return () => {
       if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+      clearWaitingTimer();
     };
   }, []);
 
@@ -77,17 +143,11 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
     }
   }
 
-  function setMuted(next: boolean) {
-    if (onMutedChange) onMutedChange(next);
-    else setInternalMuted(next);
-    const video = videoRef.current;
-    if (video) video.muted = next;
-  }
-
   function togglePlay() {
     const video = videoRef.current;
     if (!video || !playableSrc || failed) return;
     if (video.paused) {
+      applyMuted(mutedRef.current);
       void video.play();
       setPlaying(true);
       setShowPlayHint(false);
@@ -100,7 +160,12 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
 
   function toggleMute(event: React.MouseEvent) {
     event.stopPropagation();
-    setMuted(!muted);
+    const next = !muted;
+    setMuted(next);
+    const video = videoRef.current;
+    if (video && !next && video.paused && isVideoVisible(video)) {
+      void video.play();
+    }
   }
 
   function retryPlayback(event: React.MouseEvent) {
@@ -110,6 +175,7 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
     setFailed(false);
     setLoading(true);
     video.load();
+    applyMuted(mutedRef.current);
     void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
   }
 
@@ -128,7 +194,6 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
           src={playableSrc}
           poster={poster ?? undefined}
           playsInline
-          muted={muted}
           loop
           preload={active ? "auto" : "metadata"}
           className="size-full object-cover"
@@ -137,16 +202,28 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
             if (Number.isFinite(duration)) {
               onDuration?.(Math.round(duration));
             }
-            setLoading(false);
+            if (event.currentTarget.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+              setLoading(false);
+            }
           }}
-          onWaiting={() => setLoading(true)}
+          onWaiting={() => {
+            clearWaitingTimer();
+            waitingTimerRef.current = window.setTimeout(() => {
+              setLoading(true);
+            }, WAITING_GRACE_MS);
+          }}
           onPlaying={() => {
+            clearWaitingTimer();
             setLoading(false);
             setFailed(false);
             scheduleHidePlayHint();
           }}
-          onCanPlay={() => setLoading(false)}
+          onCanPlay={() => {
+            clearWaitingTimer();
+            setLoading(false);
+          }}
           onError={() => {
+            clearWaitingTimer();
             setFailed(true);
             setLoading(false);
             setPlaying(false);
@@ -159,6 +236,13 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
           }}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
+        />
+      : poster ?
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={poster}
+          alt=""
+          className="size-full object-cover"
         />
       : <div className="size-full bg-muted" aria-hidden />}
 
@@ -176,7 +260,7 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
         : <Volume2 className="size-4" />}
       </button>
 
-      {loading && !failed ?
+      {loading && !failed && playableSrc ?
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <Loader2 className="size-7 animate-spin text-white/80" aria-hidden />
           <span className="sr-only">Loading video</span>
@@ -199,7 +283,7 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
       <div
         className={cn(
           "pointer-events-none absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-200",
-          !playing && !loading && !failed && showPlayHint ? "opacity-100" : "opacity-0"
+          !playing && !loading && !failed && showPlayHint && playableSrc ? "opacity-100" : "opacity-0"
         )}
       >
         <span className="flex size-14 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm">

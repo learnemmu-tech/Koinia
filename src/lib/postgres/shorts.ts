@@ -1,9 +1,10 @@
 import "server-only";
 
-import { and, desc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  churches,
   users,
   videoShortComments,
   videoShortLikes,
@@ -120,9 +121,14 @@ async function requireViewableShort(
   return short;
 }
 
+function escapeLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
 export async function listShortsForScope(input: {
   scope: TenantScope;
   filter: ShortsFeedFilter;
+  query?: string | null;
   viewerClerkId?: string | null;
   viewerEmail?: string;
   limit?: number;
@@ -141,29 +147,62 @@ export async function listShortsForScope(input: {
     );
   }
 
-  const visibilityCondition = canViewChurchOnly
+  const ownChurchVisibility = canViewChurchOnly
     ? or(
         eq(videoShorts.visibility, "public"),
         eq(videoShorts.visibility, "church")
       )
     : eq(videoShorts.visibility, "public");
 
-  const rows = await db
-    .select()
+  // "My Church" stays inside the active church. "Latest" widens to everything
+  // published publicly across the organization, plus the viewer's own church.
+  const scopeCondition =
+    input.filter === "latest" && input.scope.organizationId ?
+      and(
+        eq(videoShorts.organizationId, input.scope.organizationId),
+        or(
+          eq(videoShorts.visibility, "public"),
+          and(eq(videoShorts.churchId, churchId), ownChurchVisibility)
+        )
+      )
+    : and(eq(videoShorts.churchId, churchId), ownChurchVisibility);
+
+  const search = input.query?.trim() ?? "";
+  const searchCondition =
+    search ?
+      (() => {
+        const pattern = `%${escapeLikePattern(search)}%`;
+        return or(
+          ilike(videoShorts.caption, pattern),
+          // `category` is a Postgres enum, so it needs an explicit text cast.
+          sql`${videoShorts.category}::text ilike ${pattern}`,
+          ilike(churches.name, pattern),
+          ilike(users.email, pattern),
+          sql`concat_ws(' ', ${users.firstName}, ${users.lastName}) ilike ${pattern}`
+        );
+      })()
+    : undefined;
+
+  const joined = await db
+    .select({ short: videoShorts, churchName: churches.name })
     .from(videoShorts)
+    .leftJoin(users, eq(users.id, videoShorts.userId))
+    .leftJoin(churches, eq(churches.id, videoShorts.churchId))
     .where(
       and(
-        eq(videoShorts.churchId, churchId),
         isNotNull(videoShorts.videoUrl),
         isNotNull(videoShorts.publishedAt),
-        visibilityCondition
+        scopeCondition,
+        searchCondition
       )
     )
     .orderBy(desc(videoShorts.publishedAt))
     .limit(limit);
 
-  const church = await getChurchById(churchId);
-  const churchName = church?.name ?? "Church";
+  const rows = joined.map((row) => row.short);
+  const churchNames = new Map(
+    joined.map((row) => [row.short.churchId, row.churchName ?? "Church"])
+  );
   const creators = await loadCreatorsMap(rows.map((row) => row.userId));
 
   let likedIds = new Set<string>();
@@ -206,9 +245,9 @@ export async function listShortsForScope(input: {
         displayName: "Member",
         photoUrl: null,
       },
-      churchName,
+      churchNames.get(row.churchId) ?? "Church",
       likedIds.has(row.id),
-      isAdmin || row.userId === viewerUserId
+      (isAdmin && row.churchId === churchId) || row.userId === viewerUserId
     )
   );
 }
@@ -472,30 +511,55 @@ export async function toggleShortLike(input: {
   return { liked: true, likeCount: updated?.likeCount ?? short.likeCount + 1 };
 }
 
+/**
+ * Loads every comment for a Short in one query and builds the reply tree in
+ * memory. Top-level comments stay newest-first; replies read oldest-first so a
+ * thread reads like a conversation.
+ */
 export async function listShortComments(shortId: string): Promise<VideoShortComment[]> {
   const rows = await db
     .select()
     .from(videoShortComments)
     .where(eq(videoShortComments.shortId, shortId))
-    .orderBy(desc(videoShortComments.createdAt))
-    .limit(100);
+    .orderBy(asc(videoShortComments.createdAt))
+    .limit(300);
 
   const creators = await loadCreatorsMap(rows.map((row) => row.userId));
-  return rows.map((row) => ({
-    id: row.id,
-    shortId: row.shortId,
-    userId: row.userId,
-    body: row.body,
-    createdAt: row.createdAt.toISOString(),
-    creator:
-      creators.get(row.userId) ?? {
-        id: row.userId,
-        firstName: "",
-        lastName: "",
-        displayName: "Member",
-        photoUrl: null,
-      },
-  }));
+
+  const nodes = new Map<string, VideoShortComment>();
+  for (const row of rows) {
+    nodes.set(row.id, {
+      id: row.id,
+      shortId: row.shortId,
+      userId: row.userId,
+      parentId: row.parentId ?? null,
+      body: row.body,
+      createdAt: row.createdAt.toISOString(),
+      creator:
+        creators.get(row.userId) ?? {
+          id: row.userId,
+          firstName: "",
+          lastName: "",
+          displayName: "Member",
+          photoUrl: null,
+        },
+      replies: [],
+    });
+  }
+
+  const roots: VideoShortComment[] = [];
+  for (const row of rows) {
+    const node = nodes.get(row.id)!;
+    const parent = row.parentId ? nodes.get(row.parentId) : undefined;
+    if (parent && parent.id !== node.id) {
+      parent.replies.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  roots.reverse();
+  return roots;
 }
 
 export async function getShortCommentsForViewer(
@@ -512,6 +576,7 @@ export async function addShortComment(input: {
   clerkId: string;
   email?: string;
   body: string;
+  parentId?: string | null;
 }) {
   const short = await requireViewableShort(input.shortId, input.clerkId, input.email);
 
@@ -521,11 +586,30 @@ export async function addShortComment(input: {
   const body = input.body.trim();
   if (!body) throw new Error("Comment cannot be empty.");
 
+  let parentId: string | null = null;
+  const requestedParentId = input.parentId?.trim();
+  if (requestedParentId) {
+    const [parent] = await db
+      .select({
+        id: videoShortComments.id,
+        shortId: videoShortComments.shortId,
+      })
+      .from(videoShortComments)
+      .where(eq(videoShortComments.id, requestedParentId))
+      .limit(1);
+
+    if (!parent || parent.shortId !== short.id) {
+      throw new Error("Parent comment not found.");
+    }
+    parentId = parent.id;
+  }
+
   const [inserted] = await db
     .insert(videoShortComments)
     .values({
       shortId: short.id,
       userId: appUser.id,
+      parentId,
       body,
     })
     .returning();
@@ -562,13 +646,26 @@ export async function deleteShortComment(input: {
   );
   if (!isOwner && !isAdmin) throw new Error("Unauthorized");
 
+  // Replies cascade in the database, so the counter must drop by the whole thread.
+  const threadSize = await db.execute<{ total: number }>(sql`
+    with recursive thread as (
+      select id from video_short_comments where id = ${comment.id}
+      union all
+      select child.id
+      from video_short_comments child
+      join thread on child.parent_id = thread.id
+    )
+    select count(*)::int as total from thread
+  `);
+  const removed = Number(threadSize.rows?.[0]?.total ?? 1) || 1;
+
   await db
     .delete(videoShortComments)
     .where(eq(videoShortComments.id, comment.id));
   await db
     .update(videoShorts)
     .set({
-      commentCount: sql`GREATEST(${videoShorts.commentCount} - 1, 0)`,
+      commentCount: sql`GREATEST(${videoShorts.commentCount} - ${removed}, 0)`,
     })
     .where(eq(videoShorts.id, short.id));
 }

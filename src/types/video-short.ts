@@ -49,10 +49,15 @@ export type VideoShortComment = {
   id: string;
   shortId: string;
   userId: string;
+  parentId: string | null;
   body: string;
   createdAt: string;
   creator: VideoShortCreator;
+  replies: VideoShortComment[];
 };
+
+/** Visual indentation stops here; deeper replies stay at this depth. */
+export const MAX_SHORT_COMMENT_DEPTH = 3;
 
 export type ShortsFeedFilter = "church" | "latest";
 
@@ -71,3 +76,6 @@ export const SHORT_VIDEO_UPLOAD_TARGET_BYTES = 48 * 1024 * 1024;
 export const MAX_SHORT_SOURCE_VIDEO_BYTES = 400 * 1024 * 1024;
 
 export const MAX_SHORT_THUMBNAIL_BYTES = 2 * 1024 * 1024;
+
+/** Largest cover image users may pick before compression. */
+export const MAX_SHORT_SOURCE_THUMBNAIL_BYTES = 20 * 1024 * 1024;

@@ -375,6 +375,28 @@ export async function signInWithEmail(email: string, password: string) {
   return { user };
 }
 
+export async function syncSessionProfileAfterClerkAuth(options?: {
+  firstName?: string;
+  lastName?: string;
+}): Promise<{ user: SessionUser; profile: FirestoreUser }> {
+  const user = sessionUserFromClerk();
+  if (!user) {
+    throw new Error("Signed in but user is unavailable.");
+  }
+  bindFirebaseAuthCurrentUser(user);
+  const profile = await createOrUpdateUserInFirestore(user, options);
+  return { user, profile };
+}
+
+export async function activateClerkSession(
+  sessionId: string | null | undefined
+): Promise<void> {
+  if (!sessionId) {
+    throw new Error("No Clerk session is available.");
+  }
+  await getClerk().setActive({ session: sessionId });
+}
+
 export async function finishSignUpAndSyncProfile(
   signUp: SignUpAttempt,
   options: { firstName: string; lastName: string }
@@ -390,13 +412,13 @@ export async function finishSignUpAndSyncProfile(
       if (signUp.verifications?.sendEmailLink) {
         await runClerkAction(() =>
           signUp.verifications!.sendEmailLink!({
-            verificationUrl: `${window.location.origin}/sso-callback`,
+            verificationUrl: emailVerificationRedirectUrl(),
           })
         );
       } else {
         await signUp.prepareEmailAddressVerification?.({
           strategy: "email_link",
-          redirectUrl: `${window.location.origin}/sso-callback`,
+          redirectUrl: emailVerificationRedirectUrl(),
         });
       }
     } catch {
@@ -484,6 +506,20 @@ function postAuthContinueUrl(intended: string): string {
   return `${POST_AUTH_CONTINUE_PATH}?callbackUrl=${encodeURIComponent(path)}`;
 }
 
+function currentAuthCallbackTarget(): string {
+  if (typeof window === "undefined") return "/";
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get("callbackUrl")?.trim();
+  if (fromQuery) return fromQuery;
+  const path = `${window.location.pathname}${window.location.search}`;
+  return path || "/";
+}
+
+function emailVerificationRedirectUrl(): string {
+  const continuePath = postAuthContinueUrl(currentAuthCallbackTarget());
+  return `${window.location.origin}${continuePath}`;
+}
+
 export async function signInWithGoogle(options?: {
   redirectUrlComplete?: string;
 }): Promise<GoogleSignInResult> {
@@ -540,7 +576,7 @@ export async function sendSessionEmailVerification() {
   try {
     await email.prepareVerification({
       strategy: "email_link",
-      redirectUrl: `${window.location.origin}/sso-callback`,
+      redirectUrl: emailVerificationRedirectUrl(),
     });
   } catch {
     await email.prepareVerification({ strategy: "email_code" });

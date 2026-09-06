@@ -4,7 +4,7 @@ import type { FirebaseChurch } from "@/types/firebase-church";
 
 import { getPublishedShortsForViewer } from "@/lib/cached-shorts-data";
 import { getWorshipCatalogCached } from "@/lib/cached-worship-data";
-import { splitEventsBySchedule } from "@/lib/event-firestore";
+import { filterPublishedEvents } from "@/lib/event-firestore";
 import type { TenantScope } from "@/lib/organization/tenant-scope";
 
 import { HomeArticlesSection } from "./home-articles-section";
@@ -32,7 +32,7 @@ export async function HomeFeed({ scope, church }: HomeFeedProps) {
   ]);
 
   const upcomingEvents = showEvents
-    ? splitEventsBySchedule(catalog.events).upcoming
+    ? filterPublishedEvents(catalog.events)
     : [];
 
   return (

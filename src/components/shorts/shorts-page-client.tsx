@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Plus, Video } from "lucide-react";
+import { Plus, Search, Video, X } from "lucide-react";
 import { toast } from "sonner";
 
 import type { VideoShort } from "@/types/video-short";
@@ -54,6 +54,9 @@ export function ShortsPageClient({
   const [commentsShortId, setCommentsShortId] = React.useState<string | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [filterLoading, setFilterLoading] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [appliedQuery, setAppliedQuery] = React.useState("");
   const [globalMuted, setGlobalMuted] = React.useState(true);
   const deepLinkHandledRef = React.useRef(false);
   const observerRef = React.useRef<IntersectionObserver | null>(null);
@@ -65,9 +68,9 @@ export function ShortsPageClient({
     activeIdRef.current = activeId;
   }, [activeId]);
 
-  const getToken = React.useCallback(async () => {
+  const getToken = React.useCallback(async (forceRefresh = false) => {
     if (!user) return null;
-    return user.getIdToken();
+    return user.getIdToken(forceRefresh);
   }, [user]);
 
   const mergeFeedInteractionState = React.useCallback((items: VideoShort[]) => {
@@ -126,11 +129,16 @@ export function ShortsPageClient({
   }, [user, filter, getToken, mergeFeedInteractionState]);
 
   const reloadFeed = React.useCallback(
-    async (nextFilter: ShortsFeedFilter) => {
+    async (nextFilter: ShortsFeedFilter, nextQuery = "") => {
       setFilterLoading(true);
       try {
         const token = await getToken();
-        const items = await fetchShortsFeed(nextFilter, token ?? undefined);
+        const items = await fetchShortsFeed(
+          nextFilter,
+          token ?? undefined,
+          nextQuery
+        );
+        setAppliedQuery(nextQuery.trim());
         const currentActive = activeIdRef.current;
         setShorts(items);
         setActiveId(
@@ -155,6 +163,24 @@ export function ShortsPageClient({
     },
     [getToken]
   );
+
+  /** Debounced Shorts search — caption, topic, creator, and church. */
+  const searchReadyRef = React.useRef(false);
+  React.useEffect(() => {
+    const trimmed = query.trim();
+
+    if (!searchReadyRef.current) {
+      searchReadyRef.current = true;
+      if (!trimmed) return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (trimmed === appliedQuery) return;
+      void reloadFeed(filter, trimmed);
+    }, 280);
+
+    return () => window.clearTimeout(timer);
+  }, [query, filter, appliedQuery, reloadFeed]);
 
   const shortIdsKey = React.useMemo(
     () => shorts.map((short) => short.id).join("|"),
@@ -283,11 +309,24 @@ export function ShortsPageClient({
     { id: "latest", label: "Latest" },
   ];
 
+  const activeIndex = React.useMemo(
+    () => shorts.findIndex((item) => item.id === activeId),
+    [shorts, activeId]
+  );
+
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden bg-background md:h-auto md:min-h-[calc(100dvh-3.5rem)] md:overflow-visible">
-      <div className="z-20 shrink-0 border-b border-border/60 bg-background/95 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-2 px-3 py-1.5 md:gap-3 md:px-6 md:py-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+    <div
+      data-page-fullbleed
+      className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background"
+    >
+      <div className="z-20 shrink-0 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-md md:px-6">
+        <div className="mx-auto flex min-h-10 w-full max-w-5xl items-center gap-2 md:gap-3">
+          <div
+            className={cn(
+              "min-w-0 flex-1 items-center gap-2.5",
+              searchOpen ? "hidden sm:flex" : "flex"
+            )}
+          >
             <Video className="size-5 shrink-0 text-primary" aria-hidden />
             <div className="min-w-0 leading-none">
               <h1 className="truncate font-heading text-base font-semibold tracking-tight text-foreground">
@@ -306,7 +345,52 @@ export function ShortsPageClient({
             : null}
           </div>
 
-          <div className="hidden h-8 shrink-0 items-center rounded-full border border-border/80 bg-muted/40 p-0.5 md:flex">
+          <div
+            className={cn(
+              "relative shrink-0",
+              searchOpen ? "flex min-w-0 flex-1 sm:flex-none" : "hidden sm:flex"
+            )}
+          >
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search Shorts…"
+              aria-label="Search Shorts"
+              autoFocus={searchOpen}
+              className="h-8 w-full min-w-0 rounded-full border border-border/80 bg-muted/40 pl-8 pr-7 text-[12px] leading-none text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30 sm:w-[10.5rem] md:w-[13rem]"
+            />
+            {query ?
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => {
+                  setQuery("");
+                  setSearchOpen(false);
+                }}
+                className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover-hover:hover:text-foreground"
+              >
+                <X className="size-3" />
+              </button>
+            : null}
+          </div>
+
+          {!searchOpen ?
+            <button
+              type="button"
+              aria-label="Search Shorts"
+              onClick={() => setSearchOpen(true)}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/40 text-muted-foreground transition-colors active:bg-muted/70 sm:hidden"
+            >
+              <Search className="size-3.5" />
+            </button>
+          : null}
+
+          <div className="flex h-8 shrink-0 items-center rounded-full border border-border/80 bg-muted/40 p-0.5">
             {filters.map((item) => (
               <button
                 key={item.id}
@@ -315,7 +399,7 @@ export function ShortsPageClient({
                 onClick={() => {
                   if (item.id === filter) return;
                   setFilter(item.id);
-                  void reloadFeed(item.id);
+                  void reloadFeed(item.id, query.trim());
                 }}
                 className={cn(
                   "h-7 rounded-full px-2.5 text-[12px] font-medium leading-none transition-colors",
@@ -347,21 +431,50 @@ export function ShortsPageClient({
           <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted">
             <Video className="size-7 text-muted-foreground" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">No Shorts yet</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Be the first to share a moment of faith, worship, or encouragement.
-          </p>
-          {canPost ?
-            <Button className="mt-6" onClick={() => setCreateOpen(true)}>
-              Create a Short
-            </Button>
-          : null}
+          {filterLoading ?
+            <h2 className="text-lg font-semibold text-foreground">Searching…</h2>
+          : appliedQuery ?
+            <>
+              <h2 className="text-lg font-semibold text-foreground">
+                No Shorts found
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Nothing matches “{appliedQuery}”. Try a different word.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-6"
+                onClick={() => {
+                  setQuery("");
+                  setSearchOpen(false);
+                }}
+              >
+                Clear search
+              </Button>
+            </>
+          : <>
+              <h2 className="text-lg font-semibold text-foreground">No Shorts yet</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Be the first to share a moment of faith, worship, or encouragement.
+              </p>
+              {canPost ?
+                <Button className="mt-6" onClick={() => setCreateOpen(true)}>
+                  Create a Short
+                </Button>
+              : null}
+            </>
+          }
         </div>
-      : <div className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto scroll-smooth md:h-auto md:flex-none md:overflow-visible">
-          {shorts.map((short) => (
+      : <div className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth">
+          {shorts.map((short, index) => (
             <ShortFeedItem
               key={short.id}
               short={short}
+              attachSrc={
+                activeIndex >= 0
+                  ? Math.abs(index - activeIndex) <= 1
+                  : index <= 1
+              }
               active={activeId === short.id}
               liked={likes[short.id] ?? false}
               likeCount={counts[short.id]?.likes ?? short.likeCount}
@@ -399,7 +512,7 @@ export function ShortsPageClient({
         open={createOpen}
         onOpenChange={setCreateOpen}
         getToken={getToken}
-        onPublished={() => void reloadFeed(filter)}
+        onPublished={() => void reloadFeed(filter, query.trim())}
       />
     </div>
   );

@@ -35,12 +35,8 @@ export function SidebarFooterNav({ items, className }: SidebarFooterNavProps) {
                 isActive={isActive}
                 tooltip={item.label}
                 className={cn(
-                  "h-9 rounded-md px-3 py-2 transition-colors duration-150",
-                  "hover:bg-white/5",
-                  "data-[active=true]:bg-white/10 data-[active=true]:text-sidebar-foreground",
-                  "[&>svg]:size-4 [&>svg]:shrink-0",
-                  "data-[active=false]:[&>svg]:text-sidebar-foreground/50",
-                  "data-[active=true]:[&>svg]:text-sidebar-foreground"
+                  "h-9 rounded-md px-3 py-2",
+                  "[&>svg]:size-4 [&>svg]:shrink-0"
                 )}
               >
                 <Link

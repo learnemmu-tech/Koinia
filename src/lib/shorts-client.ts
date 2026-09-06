@@ -25,9 +25,11 @@ function authHeaders(token?: string): HeadersInit {
 
 export async function fetchShortsFeed(
   filter: ShortsFeedFilter,
-  token?: string
+  token?: string,
+  query?: string
 ): Promise<VideoShort[]> {
-  const response = await fetch(`/api/shorts?filter=${filter}`, {
+  const search = query?.trim() ? `&q=${encodeURIComponent(query.trim())}` : "";
+  const response = await fetch(`/api/shorts?filter=${filter}${search}`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -54,14 +56,44 @@ export async function createShortDraft(
   return parseJson<{ id: string; churchId: string }>(response);
 }
 
-export async function uploadShortFile(
+function putFileToSignedUrl(
+  signedUrl: string,
+  file: File,
+  onProgress?: (percent: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl);
+    xhr.setRequestHeader(
+      "Content-Type",
+      file.type || "application/octet-stream"
+    );
+    xhr.setRequestHeader("x-upsert", "true");
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      const percent = Math.round((event.loaded / event.total) * 80) + 15;
+      onProgress?.(Math.min(95, percent));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      reject(new Error(`Direct upload failed (${xhr.status}).`));
+    };
+    xhr.onerror = () => reject(new Error("Direct upload failed."));
+    xhr.send(file);
+  });
+}
+
+async function uploadShortFileViaProxy(
   shortId: string,
   slot: "video" | "thumbnail",
   file: File,
   token: string,
   onProgress?: (percent: number) => void
 ) {
-  onProgress?.(10);
+  onProgress?.(20);
   const formData = new FormData();
   formData.append("file", file);
 
@@ -77,6 +109,63 @@ export async function uploadShortFile(
   const data = await parseJson<{ url: string }>(response);
   onProgress?.(100);
   return data.url;
+}
+
+export async function uploadShortFile(
+  shortId: string,
+  slot: "video" | "thumbnail",
+  file: File,
+  token: string,
+  onProgress?: (percent: number) => void
+) {
+  onProgress?.(8);
+
+  try {
+    const signedResponse = await fetch(
+      `/api/shorts/upload?shortId=${encodeURIComponent(shortId)}&slot=${slot}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(token),
+        },
+        body: JSON.stringify({
+          action: "sign",
+          contentType: file.type,
+          fileName: file.name,
+          size: file.size,
+        }),
+      }
+    );
+    const signed = await parseJson<{
+      signedUrl: string;
+      objectKey: string;
+      publicUrl: string;
+    }>(signedResponse);
+
+    onProgress?.(15);
+    await putFileToSignedUrl(signed.signedUrl, file, onProgress);
+
+    const completeResponse = await fetch(
+      `/api/shorts/upload?shortId=${encodeURIComponent(shortId)}&slot=${slot}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(token),
+        },
+        body: JSON.stringify({
+          action: "complete",
+          objectKey: signed.objectKey,
+        }),
+      }
+    );
+    const completed = await parseJson<{ url: string }>(completeResponse);
+    onProgress?.(100);
+    return completed.url;
+  } catch {
+    return uploadShortFileViaProxy(shortId, slot, file, token, onProgress);
+  }
 }
 
 export async function publishShort(
@@ -148,7 +237,8 @@ export async function fetchShortComments(shortId: string) {
 export async function postShortComment(
   shortId: string,
   body: string,
-  token: string
+  token: string,
+  parentId?: string | null
 ) {
   const response = await fetch(
     `/api/shorts/${encodeURIComponent(shortId)}/comments`,
@@ -158,10 +248,15 @@ export async function postShortComment(
         "Content-Type": "application/json",
         ...authHeaders(token),
       },
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, parentId: parentId ?? null }),
     }
   );
-  return parseJson<{ id: string; body: string; createdAt: string }>(response);
+  return parseJson<{
+    id: string;
+    body: string;
+    parentId: string | null;
+    createdAt: string;
+  }>(response);
 }
 
 export async function reportShort(

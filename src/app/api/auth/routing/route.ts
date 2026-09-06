@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { resolveUserMembershipRouting } from "@/lib/auth/membership-routing-server";
-import { sanitizeCallbackUrl } from "@/lib/callback-url";
+import { resolveEffectiveCallbackUrl } from "@/lib/auth/resolve-effective-callback-url";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { timed } from "@/lib/perf";
 
@@ -12,7 +12,9 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const callbackUrl = sanitizeCallbackUrl(searchParams.get("callbackUrl"), "/");
+  const callbackUrl = await resolveEffectiveCallbackUrl(
+    searchParams.get("callbackUrl")
+  );
 
   try {
     const routing = await timed("routing.resolve", () =>

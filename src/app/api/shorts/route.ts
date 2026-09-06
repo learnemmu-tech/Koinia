@@ -30,6 +30,7 @@ export async function GET(request: Request) {
   const filter = (searchParams.get("filter") === "latest"
     ? "latest"
     : "church") as ShortsFeedFilter;
+  const query = (searchParams.get("q") ?? "").trim().slice(0, 120);
 
   const churchId = await resolveActiveChurchId();
   if (!churchId) {
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
       churchId: church.id,
     },
     filter,
+    query,
     viewerClerkId: verified?.uid ?? null,
     viewerEmail: verified?.email,
   });

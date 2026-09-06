@@ -31,7 +31,7 @@ export function AppSidebar() {
       collapsible="icon"
       className="border-r border-sidebar-border bg-sidebar"
     >
-      <SidebarHeader className="shrink-0 border-b border-sidebar-border px-2 py-2.5 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-2">
+      <SidebarHeader className="relative shrink-0 overflow-hidden border-b border-sidebar-border/60 bg-gradient-to-b from-white/[0.045] via-sidebar-background to-sidebar-background px-2 py-2.5 shadow-[inset_0_1px_0_0_hsl(var(--sidebar-foreground)/0.06)] group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-2">
         <SidebarWorkspaceHeader />
       </SidebarHeader>
 

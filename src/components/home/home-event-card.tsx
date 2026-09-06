@@ -3,11 +3,16 @@
 import Link from "next/link";
 
 import type { FirebaseEvent } from "@/types/firebase-event";
-import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
 import { formatEventDate, getEventDateStartMs } from "@/lib/event-firestore";
+import {
+  getEventScheduleInfo,
+  type EventScheduleInfo,
+} from "@/lib/event-schedule";
 import { cn, getSongCoverUrl } from "@/lib/utils";
+
+import { HomeEventScheduleBadge } from "./home-event-schedule-badge";
 
 function eventDayParts(eventDate: string) {
   const start = getEventDateStartMs(eventDate);
@@ -25,9 +30,18 @@ function eventDayParts(eventDate: string) {
 type HomeEventCardProps = {
   event: FirebaseEvent;
   className?: string;
+  highlight?: boolean;
+  schedule?: EventScheduleInfo;
+  now?: number;
 };
 
-export function HomeEventCard({ event, className }: HomeEventCardProps) {
+export function HomeEventCard({
+  event,
+  className,
+  highlight = false,
+  schedule,
+  now = Date.now(),
+}: HomeEventCardProps) {
   const href = `/events/${encodeURIComponent(event.id)}`;
   const hasBanner = Boolean(event.bannerImage?.trim());
   const coverUrl = getSongCoverUrl(event.bannerImage);
@@ -35,11 +49,16 @@ export function HomeEventCard({ event, className }: HomeEventCardProps) {
   const dateLabel = formatEventDate(event.eventDate);
   const description = event.description?.trim();
   const meta = [event.eventTime, event.location].filter(Boolean).join(" · ");
+  const scheduleInfo = schedule ?? getEventScheduleInfo(event, now);
+  const showSchedule = highlight && scheduleInfo.label;
 
   return (
     <article
       className={cn(
-        "app-interactive app-interactive-lift app-mobile-card group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 text-left",
+        "app-interactive app-interactive-lift app-mobile-card group flex flex-col overflow-hidden rounded-xl border bg-card/40 text-left",
+        highlight
+          ? "border-primary/35 shadow-sm shadow-primary/5 ring-1 ring-primary/10"
+          : "border-border/50",
         className
       )}
     >
@@ -78,15 +97,21 @@ export function HomeEventCard({ event, className }: HomeEventCardProps) {
           </Badge>
         : null}
 
-        <FavoriteButton
-          itemType="event"
-          itemId={event.id}
-          className="absolute right-3 top-3 z-10"
-        />
+        {showSchedule ?
+          <HomeEventScheduleBadge
+            schedule={scheduleInfo}
+            className="pointer-events-none absolute right-3 top-3 z-10 max-w-[calc(100%-5.5rem)] whitespace-nowrap shadow-sm backdrop-blur-sm"
+          />
+        : null}
       </div>
 
       <Link href={href} className="flex flex-1 flex-col gap-2 p-4 text-left">
-        <h3 className="line-clamp-2 text-left text-base font-semibold leading-snug text-foreground">
+        <h3
+          className={cn(
+            "line-clamp-2 text-left font-semibold leading-snug text-foreground",
+            highlight ? "text-base sm:text-[1.05rem]" : "text-base"
+          )}
+        >
           {event.title}
         </h3>
 
@@ -100,19 +125,36 @@ export function HomeEventCard({ event, className }: HomeEventCardProps) {
           </p>
         : null}
 
-        <div className="mt-auto flex items-center gap-2 pt-3 text-left">
-          <time className="shrink-0 text-xs text-muted-foreground/80">
-            {dateLabel}
-          </time>
-          {event.eventTime ?
-            <>
-              <span aria-hidden className="shrink-0 text-xs text-muted-foreground/50">
-                ·
-              </span>
-              <span className="truncate text-xs text-muted-foreground/80">
-                {event.eventTime}
-              </span>
-            </>
+        <div className="mt-auto space-y-2 pt-3 text-left">
+          <div className="flex items-center gap-2">
+            <time className="shrink-0 text-xs text-muted-foreground/80">
+              {dateLabel}
+            </time>
+            {event.eventTime ?
+              <>
+                <span
+                  aria-hidden
+                  className="shrink-0 text-xs text-muted-foreground/50"
+                >
+                  ·
+                </span>
+                <span className="truncate text-xs text-muted-foreground/80">
+                  {event.eventTime}
+                </span>
+              </>
+            : null}
+          </div>
+
+          {highlight && scheduleInfo.countdownLabel ?
+            <p className="text-xs font-medium text-foreground/80">
+              {scheduleInfo.countdownLabel}
+            </p>
+          : null}
+
+          {highlight ?
+            <span className="inline-flex text-xs font-semibold text-primary">
+              View Event
+            </span>
           : null}
         </div>
       </Link>
