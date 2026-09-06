@@ -4,7 +4,6 @@ import React from "react";
 
 import type { VideoShort } from "@/types/video-short";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { ShortVideoPlayer } from "@/components/shorts/short-video-player";
 import { ShortActionRail } from "@/components/shorts/short-action-rail";
 import { cn } from "@/lib/utils";
@@ -36,48 +35,73 @@ function CreatorCaptionBlock({
   short,
   expanded,
   onToggleExpanded,
+  overlay,
   className,
 }: {
   short: VideoShort;
   expanded: boolean;
   onToggleExpanded: () => void;
+  overlay?: boolean;
   className?: string;
 }) {
-  const longCaption = short.caption.length > 120;
+  const longCaption = short.caption.length > 90;
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <div className="flex items-center gap-2">
-        <Avatar className="size-8 shrink-0 border border-border/40">
+    <div className={cn("min-w-0 space-y-1.5", className)}>
+      <div className="flex items-center gap-2.5">
+        <Avatar
+          className={cn(
+            "size-8 shrink-0",
+            overlay ? "border border-white/25" : "border border-border/40"
+          )}
+        >
           <AvatarFallback className="text-[10px]">
             {initials(short.creator.displayName)}
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">
+          <p
+            className={cn(
+              "truncate text-[15px] font-semibold leading-tight",
+              overlay ? "text-white" : "text-foreground"
+            )}
+          >
             {short.creator.displayName}
           </p>
-          <p className="truncate text-xs text-muted-foreground">{short.churchName}</p>
+          <p
+            className={cn(
+              "truncate text-[12px] leading-tight",
+              overlay ? "text-white/75" : "text-muted-foreground"
+            )}
+          >
+            {short.churchName}
+          </p>
         </div>
-        <Badge variant="secondary" className="ml-auto shrink-0 text-[10px]">
-          {short.category}
-        </Badge>
       </div>
 
       {short.caption ?
         <div>
           <p
             className={cn(
-              "text-sm leading-relaxed text-foreground",
-              !expanded && longCaption && "line-clamp-2"
+              "text-sm leading-snug",
+              overlay ? "text-white" : "text-foreground",
+              !expanded && "line-clamp-2"
             )}
           >
             {short.caption}
+            {short.category ?
+              <span className={cn(overlay ? "text-white/70" : "text-muted-foreground")}>
+                {` — ${short.category}`}
+              </span>
+            : null}
           </p>
           {longCaption ?
             <button
               type="button"
-              className="mt-1 text-xs font-medium text-muted-foreground transition-colors active:text-foreground"
+              className={cn(
+                "mt-1 text-xs font-medium",
+                overlay ? "text-white/70 active:text-white" : "text-muted-foreground active:text-foreground"
+              )}
               onClick={onToggleExpanded}
             >
               {expanded ? "less" : "more"}
@@ -113,10 +137,9 @@ function ShortFeedItemComponent({
     <article
       ref={itemRef}
       data-short-id={short.id}
-      className="snap-start snap-always"
+      className="h-full snap-start snap-always md:h-auto"
     >
-      {/* Mobile — full-screen vertical viewer */}
-      <div className="relative h-[calc(100dvh-3.75rem)] w-full md:hidden">
+      <div className="relative h-full w-full overflow-hidden bg-black md:hidden">
         <ShortVideoPlayer
           src={short.videoUrl}
           poster={short.thumbnailUrl}
@@ -127,17 +150,18 @@ function ShortFeedItemComponent({
           className="absolute inset-0 h-full w-full"
         />
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-background/95 via-background/55 to-transparent pb-[max(1rem,env(safe-area-inset-bottom))] pt-20">
-          <div className="pointer-events-auto px-4 pr-16">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 via-black/25 to-transparent pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-16">
+          <div className="pointer-events-auto max-w-[calc(100%-4.5rem)] px-4">
             <CreatorCaptionBlock
               short={short}
+              overlay
               expanded={expanded}
               onToggleExpanded={() => setExpanded((value) => !value)}
             />
           </div>
         </div>
 
-        <div className="absolute bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] right-2 z-20">
+        <div className="absolute bottom-[max(5.25rem,calc(env(safe-area-inset-bottom)+4.25rem))] right-1.5 z-20">
           <ShortActionRail
             short={short}
             liked={liked}
@@ -154,11 +178,10 @@ function ShortFeedItemComponent({
         </div>
       </div>
 
-      {/* Desktop — preserve existing side-by-side layout */}
-      <div className="hidden min-h-[calc(100dvh-5.5rem)] items-center justify-center px-3 py-4 md:flex">
-        <div className="flex w-full max-w-[min(100%,380px)] flex-col items-center gap-3">
-          <div className="flex items-end gap-2.5 sm:gap-3">
-            <div className="w-[min(calc(100vw-5.5rem),320px)] shrink-0">
+      <div className="hidden min-h-[calc(100dvh-8rem)] items-center justify-center px-4 py-6 md:flex lg:py-8">
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-4">
+          <div className="flex items-end gap-3">
+            <div className="w-[min(calc(100vw-6.5rem),340px)] shrink-0 overflow-hidden rounded-2xl">
               <ShortVideoPlayer
                 src={short.videoUrl}
                 poster={short.thumbnailUrl}
@@ -168,7 +191,7 @@ function ShortFeedItemComponent({
               />
             </div>
 
-            <div className="shrink-0 pb-1">
+            <div className="shrink-0 pb-2">
               <ShortActionRail
                 short={short}
                 liked={liked}

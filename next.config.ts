@@ -17,6 +17,10 @@ function supabaseImageHostname(): string | null {
 }
 
 const config: NextConfig = {
+  // Keep `next dev` and `next build` from sharing an incomplete `.next` cache.
+  // A partial app-paths-manifest from the dev server makes collect-page-data
+  // throw PageNotFoundError for real routes such as /forgot-password.
+  distDir: isProd ? ".next" : ".next-dev",
   reactStrictMode: true,
   serverExternalPackages: ["pg"],
   images: {

@@ -284,60 +284,66 @@ export function ShortsPageClient({
   ];
 
   return (
-    <div className="relative min-h-[calc(100dvh-4rem)] bg-background">
-      <div className="sticky top-0 z-20 border-b border-border/60 bg-background/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-2.5 md:py-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Video className="size-4 shrink-0 text-primary" aria-hidden />
-              <h1 className="truncate font-heading text-lg font-semibold text-foreground">
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden bg-background md:h-auto md:min-h-[calc(100dvh-3.5rem)] md:overflow-visible">
+      <div className="z-20 shrink-0 border-b border-border/60 bg-background/95 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-3 py-2 md:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Video className="size-4 shrink-0 text-primary" aria-hidden />
+            <div className="min-w-0">
+              <h1 className="truncate text-[15px] font-semibold leading-tight text-foreground">
                 Shorts
               </h1>
-              {filterLoading ?
-                <span className="text-xs text-muted-foreground">Updating…</span>
+              {churchName ?
+                <p className="truncate text-[11px] leading-tight text-muted-foreground">
+                  {churchName}
+                </p>
               : null}
             </div>
-            {churchName ?
-              <p className="truncate text-xs text-muted-foreground">{churchName}</p>
+            {filterLoading ?
+              <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                Updating…
+              </span>
             : null}
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-1 rounded-full border border-border bg-card p-1 sm:flex">
-              {filters.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={filterLoading}
-                  onClick={() => {
-                    if (item.id === filter) return;
-                    setFilter(item.id);
-                    void reloadFeed(item.id);
-                  }}
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                    filter === item.id ?
-                      "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {canPost ?
-              <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-1.5">
-                <Plus className="size-4" />
-                <span className="hidden sm:inline">Create</span>
-              </Button>
-            : null}
+          <div className="hidden items-center gap-1 rounded-full border border-border bg-card p-0.5 md:flex">
+            {filters.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                disabled={filterLoading}
+                onClick={() => {
+                  if (item.id === filter) return;
+                  setFilter(item.id);
+                  void reloadFeed(item.id);
+                }}
+                className={cn(
+                  "h-8 rounded-full px-3 text-xs font-medium transition-colors",
+                  filter === item.id ?
+                    "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
+
+          {canPost ?
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full border border-border bg-primary px-3 text-[13px] font-medium text-primary-foreground transition-colors duration-200 active:bg-primary/80 hover-hover:hover:bg-primary/90"
+            >
+              <Plus className="size-3.5" aria-hidden />
+              Create
+            </button>
+          : null}
         </div>
       </div>
 
       {shorts.length === 0 ?
-        <div className="mx-auto flex max-w-md flex-col items-center px-6 py-20 text-center">
+        <div className="mx-auto flex min-h-0 flex-1 max-w-md flex-col items-center justify-center px-6 py-16 text-center">
           <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted">
             <Video className="size-7 text-muted-foreground" />
           </div>
@@ -351,7 +357,7 @@ export function ShortsPageClient({
             </Button>
           : null}
         </div>
-      : <div className="mx-auto h-[calc(100dvh-3.75rem)] max-w-lg snap-y snap-mandatory overflow-y-auto scroll-smooth md:h-auto md:max-h-none md:pb-6">
+      : <div className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto scroll-smooth md:h-auto md:flex-none md:overflow-visible">
           {shorts.map((short) => (
             <ShortFeedItem
               key={short.id}

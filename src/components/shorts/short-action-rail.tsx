@@ -81,18 +81,18 @@ function ActionButton({
       aria-label={active && activeLabel ? activeLabel : label}
       onClick={handleClick}
       className={cn(
-        "app-interactive group flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+        "app-interactive flex min-h-11 w-11 flex-col items-center justify-start gap-1 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
         overlay
-          ? "active:bg-background/15"
+          ? "active:bg-white/10"
           : "hover-hover:hover:bg-muted/40 active:bg-muted/50"
       )}
     >
       <span
         className={cn(
-          "flex size-10 items-center justify-center rounded-full transition-transform duration-150",
-          animating && "scale-[1.12]",
-          active && (overlay ? "text-red-400" : "text-red-500 dark:text-red-400"),
-          overlay && !active && "text-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+          "flex size-11 items-center justify-center rounded-full transition-transform duration-200",
+          animating && "scale-110",
+          active && (overlay ? "text-red-400" : "text-primary"),
+          overlay && !active && "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
         )}
       >
         {children}
@@ -100,9 +100,9 @@ function ActionButton({
       {count !== undefined ?
         <span
           className={cn(
-            "text-[11px] font-medium tabular-nums",
+            "-mt-0.5 text-[11px] font-semibold leading-none tabular-nums",
             overlay
-              ? "text-foreground/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+              ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)]"
               : "text-muted-foreground"
           )}
         >
@@ -238,7 +238,7 @@ export function ShortActionRail({
 
   return (
     <>
-      <div className="flex flex-col items-center gap-1.5">
+      <div className="flex flex-col items-center gap-4">
         <ActionButton
           label="Like"
           activeLabel="Unlike"
@@ -273,20 +273,13 @@ export function ShortActionRail({
               type="button"
               aria-label="More options"
               className={cn(
-                "app-interactive flex min-h-11 min-w-11 flex-col items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                "app-interactive flex size-11 items-center justify-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                 overlay
-                  ? "active:bg-background/15"
+                  ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)] active:bg-white/10"
                   : "hover-hover:hover:bg-muted/40 active:bg-muted/50"
               )}
             >
-              <span
-                className={cn(
-                  "flex size-10 items-center justify-center",
-                  overlay && "text-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
-                )}
-              >
-                <MoreHorizontal className="size-6" />
-              </span>
+              <MoreHorizontal className="size-6" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
