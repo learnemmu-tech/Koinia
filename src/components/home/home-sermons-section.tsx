@@ -2,7 +2,7 @@ import type { FirebaseSermon } from "@/types/firebase-sermon";
 
 import { FirebaseSermonCard } from "@/components/worship/firebase-sermon-card";
 
-import { HomeCollectionRail, homeRailItemClass } from "./home-collection-rail";
+import { HomeCollectionRail, homeRailItemClass, HOME_RAIL_LANDSCAPE } from "./home-collection-rail";
 import { HomeEmptyState } from "./home-empty-state";
 import { HomeSectionHeader } from "./home-section-header";
 
@@ -28,13 +28,13 @@ export function HomeSermonsSection({ sermons }: HomeSermonsSectionProps) {
           title="No sermons yet"
           description="Check back soon for new messages."
         />
-      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:overflow-visible md:px-0">
+      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:items-stretch md:overflow-visible md:px-0">
           {visible.map((sermon) => (
             <div
               key={sermon.id}
-              className={homeRailItemClass("w-[16rem] md:w-auto md:max-w-sm")}
+              className={homeRailItemClass(HOME_RAIL_LANDSCAPE)}
             >
-              <FirebaseSermonCard sermon={sermon} />
+              <FirebaseSermonCard sermon={sermon} className="h-full w-full" />
             </div>
           ))}
         </HomeCollectionRail>

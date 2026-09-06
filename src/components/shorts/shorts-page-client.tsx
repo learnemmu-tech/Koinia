@@ -19,12 +19,14 @@ type ShortsPageClientProps = {
   initialShorts: VideoShort[];
   churchName?: string;
   canPost: boolean;
+  initialShortId?: string;
 };
 
 export function ShortsPageClient({
   initialShorts,
   churchName,
   canPost,
+  initialShortId,
 }: ShortsPageClientProps) {
   const { user } = useFirebaseAuth();
   const { openDialog } = useContentAuthDialog();
@@ -52,6 +54,8 @@ export function ShortsPageClient({
   const [commentsShortId, setCommentsShortId] = React.useState<string | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
   const [filterLoading, setFilterLoading] = React.useState(false);
+  const [globalMuted, setGlobalMuted] = React.useState(true);
+  const deepLinkHandledRef = React.useRef(false);
   const observerRef = React.useRef<IntersectionObserver | null>(null);
   const itemRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const authSyncedRef = React.useRef(false);
@@ -156,6 +160,21 @@ export function ShortsPageClient({
     () => shorts.map((short) => short.id).join("|"),
     [shorts]
   );
+
+  React.useEffect(() => {
+    if (!initialShortId || deepLinkHandledRef.current || shorts.length === 0) return;
+
+    const target = shorts.find((item) => item.id === initialShortId);
+    if (!target) return;
+
+    deepLinkHandledRef.current = true;
+    setActiveId(initialShortId);
+
+    requestAnimationFrame(() => {
+      const node = itemRefs.current.get(initialShortId);
+      node?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [initialShortId, shortIdsKey, shorts]);
 
   React.useEffect(() => {
     observerRef.current?.disconnect();
@@ -267,7 +286,7 @@ export function ShortsPageClient({
   return (
     <div className="relative min-h-[calc(100dvh-4rem)] bg-background">
       <div className="sticky top-0 z-20 border-b border-border/60 bg-background/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-2.5 md:py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Video className="size-4 shrink-0 text-primary" aria-hidden />
@@ -332,7 +351,7 @@ export function ShortsPageClient({
             </Button>
           : null}
         </div>
-      : <div className="mx-auto max-w-lg snap-y snap-mandatory overflow-y-auto scroll-smooth pb-6">
+      : <div className="mx-auto h-[calc(100dvh-3.75rem)] max-w-lg snap-y snap-mandatory overflow-y-auto scroll-smooth md:h-auto md:max-h-none md:pb-6">
           {shorts.map((short) => (
             <ShortFeedItem
               key={short.id}
@@ -342,6 +361,8 @@ export function ShortsPageClient({
               likeCount={counts[short.id]?.likes ?? short.likeCount}
               commentCount={counts[short.id]?.comments ?? short.commentCount}
               canManage={Boolean(short.canManage)}
+              muted={globalMuted}
+              onMutedChange={setGlobalMuted}
               onLike={() => void handleLike(short.id)}
               onComments={() => handleCommentsOpen(short.id)}
               getToken={getToken}

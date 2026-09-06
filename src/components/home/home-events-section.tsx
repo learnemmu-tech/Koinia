@@ -1,6 +1,6 @@
 import type { FirebaseEvent } from "@/types/firebase-event";
 
-import { HomeCollectionRail, homeRailItemClass } from "./home-collection-rail";
+import { HomeCollectionRail, homeRailItemClass, HOME_RAIL_LANDSCAPE } from "./home-collection-rail";
 import { HomeEmptyState } from "./home-empty-state";
 import { HomeEventCard } from "./home-event-card";
 import { HomeSectionHeader } from "./home-section-header";
@@ -29,7 +29,7 @@ export function HomeEventsSection({ events }: HomeEventsSectionProps) {
           {visible.map((event) => (
             <div
               key={event.id}
-              className={homeRailItemClass("w-[16rem] md:w-auto md:max-w-sm")}
+              className={homeRailItemClass(HOME_RAIL_LANDSCAPE)}
             >
               <HomeEventCard event={event} />
             </div>

@@ -63,7 +63,7 @@
   }
 
   .dark {
-    /* True black design system */
+    /* Approved desktop dark theme */
     --background: 0 0% 4%;
     --foreground: 0 0% 100%;
 
@@ -153,7 +153,7 @@
 }
 
 /*
- * True black tokens — unlayered so this wins over themes.css
+ * Approved desktop dark tokens — unlayered so this wins over themes.css
  */
 .dark,
 .dark .theme-zinc,
@@ -189,6 +189,9 @@
   --accent: 0 0% 10%;
   --accent-foreground: 0 0% 100%;
 
+  --destructive: 0 100% 63%;
+  --destructive-foreground: 0 0% 100%;
+
   --border: 0 0% 12%;
   --input: 0 0% 16%;
   --ring: 0 0% 100%;
@@ -206,6 +209,39 @@
   --border-muted: 0 0% 16%;
   --card-hover: 0 0% 10%;
   --card-hover-border: 0 0% 16%;
+}
+
+/*
+ * Mobile/tablet only — dark grey page + near-black cards.
+ * Desktop (lg+) is unchanged.
+ */
+@media (max-width: 1023px) {
+  .dark,
+  .dark .theme-zinc,
+  .dark .theme-slate,
+  .dark .theme-stone,
+  .dark .theme-gray,
+  .dark .theme-neutral,
+  .dark .theme-red,
+  .dark .theme-rose,
+  .dark .theme-orange,
+  .dark .theme-green,
+  .dark .theme-blue,
+  .dark .theme-yellow,
+  .dark .theme-violet {
+    --background: 0 0% 8%;
+  }
+
+  .dark .app-mobile-card {
+    background-color: #080808;
+    border-color: #222222;
+    border-width: 1px;
+    border-style: solid;
+  }
+
+  .dark .app-mobile-card:active {
+    background-color: #111111;
+  }
 }
 
 @layer utilities {

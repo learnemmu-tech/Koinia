@@ -116,7 +116,7 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
   return (
     <article
       className={cn(
-        "group relative w-full",
+        "app-mobile-card group relative flex h-full w-full flex-col",
         "rounded-lg p-2.5",
         "cursor-pointer transition-all duration-200 ease-out",
         "hover-hover:hover:-translate-y-0.5 hover-hover:hover:bg-accent",
@@ -133,12 +133,11 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
           <ImageWithFallback
             src={coverUrl}
             fallback={DEFAULT_SONG_COVER}
-            width={320}
-            height={320}
+            fill
             sizes="(max-width: 640px) 46vw, (max-width: 1024px) 24vw, 200px"
             alt=""
             aria-hidden
-            className="size-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
+            className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
           />
         </ProtectedContentLink>
 
@@ -166,17 +165,15 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
       <ProtectedContentLink
         href={songHref}
         aria-label={`View ${linkLabel}`}
-        className="mt-3 block min-w-0 px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="mt-3 block min-h-[3.75rem] min-w-0 flex-1 px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        <h3 className="line-clamp-2 text-[15px] font-bold leading-[1.2] tracking-tight text-foreground">
+        <h3 className="line-clamp-2 min-h-[2.25rem] text-[15px] font-bold leading-[1.2] tracking-tight text-foreground">
           {displayTitle}
         </h3>
 
-        {artistLine ?
-          <p className="mt-0.5 line-clamp-2 text-[13px] font-normal leading-[1.25] text-muted-foreground">
-            {artistLine}
-          </p>
-        : null}
+        <p className="mt-0.5 line-clamp-2 min-h-[1.625rem] text-[13px] font-normal leading-[1.25] text-muted-foreground">
+          {artistLine || "\u00a0"}
+        </p>
       </ProtectedContentLink>
     </article>
   );

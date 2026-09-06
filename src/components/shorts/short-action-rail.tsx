@@ -47,6 +47,7 @@ type ShortActionRailProps = {
   getToken: () => Promise<string | null>;
   onDeleted?: () => void;
   onCoverUpdated?: (thumbnailUrl: string | null) => void;
+  variant?: "default" | "overlay";
 };
 
 function ActionButton({
@@ -56,6 +57,7 @@ function ActionButton({
   count,
   onClick,
   children,
+  overlay,
 }: {
   label: string;
   activeLabel?: string;
@@ -63,6 +65,7 @@ function ActionButton({
   count?: number;
   onClick: () => void;
   children: React.ReactNode;
+  overlay?: boolean;
 }) {
   const [animating, setAnimating] = React.useState(false);
 
@@ -77,19 +80,32 @@ function ActionButton({
       type="button"
       aria-label={active && activeLabel ? activeLabel : label}
       onClick={handleClick}
-      className="app-interactive group flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-full transition-colors hover-hover:hover:bg-muted/40 active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+      className={cn(
+        "app-interactive group flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+        overlay
+          ? "active:bg-background/15"
+          : "hover-hover:hover:bg-muted/40 active:bg-muted/50"
+      )}
     >
       <span
         className={cn(
           "flex size-10 items-center justify-center rounded-full transition-transform duration-150",
           animating && "scale-[1.12]",
-          active && "text-red-500 dark:text-red-400"
+          active && (overlay ? "text-red-400" : "text-red-500 dark:text-red-400"),
+          overlay && !active && "text-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
         )}
       >
         {children}
       </span>
       {count !== undefined ?
-        <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
+        <span
+          className={cn(
+            "text-[11px] font-medium tabular-nums",
+            overlay
+              ? "text-foreground/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+              : "text-muted-foreground"
+          )}
+        >
           {count}
         </span>
       : null}
@@ -108,7 +124,9 @@ export function ShortActionRail({
   getToken,
   onDeleted,
   onCoverUpdated,
+  variant = "default",
 }: ShortActionRailProps) {
+  const overlay = variant === "overlay";
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const coverInputRef = React.useRef<HTMLInputElement>(null);
@@ -222,24 +240,30 @@ export function ShortActionRail({
     <>
       <div className="flex flex-col items-center gap-1.5">
         <ActionButton
-          label="Like Short"
-          activeLabel="Unlike Short"
+          label="Like"
+          activeLabel="Unlike"
           active={liked}
           count={likeCount}
           onClick={onLike}
+          overlay={overlay}
         >
           <Heart className={cn("size-6", liked && "fill-current")} />
         </ActionButton>
 
         <ActionButton
-          label="Open comments"
+          label="Comments"
           count={commentCount}
           onClick={onComments}
+          overlay={overlay}
         >
           <MessageCircle className="size-6" />
         </ActionButton>
 
-        <ActionButton label="Share Short" onClick={() => void handleShare()}>
+        <ActionButton
+          label="Share"
+          onClick={() => void handleShare()}
+          overlay={overlay}
+        >
           <Share2 className="size-6" />
         </ActionButton>
 
@@ -248,9 +272,19 @@ export function ShortActionRail({
             <button
               type="button"
               aria-label="More options"
-              className="app-interactive flex min-h-11 min-w-11 flex-col items-center justify-center rounded-full transition-colors hover-hover:hover:bg-muted/40 active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className={cn(
+                "app-interactive flex min-h-11 min-w-11 flex-col items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                overlay
+                  ? "active:bg-background/15"
+                  : "hover-hover:hover:bg-muted/40 active:bg-muted/50"
+              )}
             >
-              <span className="flex size-10 items-center justify-center">
+              <span
+                className={cn(
+                  "flex size-10 items-center justify-center",
+                  overlay && "text-foreground drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                )}
+              >
                 <MoreHorizontal className="size-6" />
               </span>
             </button>

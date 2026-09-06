@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ChevronUp, User } from "lucide-react";
+import { ArrowRight, ChevronsUpDown, User } from "lucide-react";
 
 import type { AuthUser } from "@/context/firebase-auth-context";
 import type { FirestoreUser } from "@/lib/firebase-auth-service";
@@ -20,7 +20,6 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 import { AccountMenuItems } from "./account-menu-items";
-import { SidebarFooterNotifications } from "./sidebar-footer-notifications";
 
 const footerIconClass =
   "flex size-7 shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover-hover:hover:bg-accent hover-hover:hover:text-foreground active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -68,9 +67,37 @@ function SidebarToggleButton({
   );
 }
 
+function ProfileAvatar({
+  authUser,
+  displayName,
+  initials,
+  className,
+}: {
+  authUser: AuthUser;
+  displayName: string;
+  initials: string;
+  className?: string;
+}) {
+  return (
+    <Avatar className={cn("shrink-0 rounded-md border border-border", className)}>
+      {authUser.photoURL ?
+        <AvatarImage
+          src={authUser.photoURL}
+          alt={displayName}
+          referrerPolicy="no-referrer"
+          className="rounded-md object-cover"
+        />
+      : null}
+      <AvatarFallback className="rounded-md bg-accent text-[11px] font-semibold text-foreground">
+        {initials}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
 export function SidebarFooterBar() {
   const { authUser, profile, loading } = useFirebaseAuth();
-  const { isMobile, setOpenMobile, state, toggleSidebar } = useSidebar();
+  const { isMobile, state, toggleSidebar } = useSidebar();
   const mounted = useMounted();
   const isCollapsed = state === "collapsed" && !isMobile;
 
@@ -81,12 +108,12 @@ export function SidebarFooterBar() {
           "border-t border-border bg-transparent",
           isCollapsed ?
             "flex flex-col items-center gap-1 px-1 py-2"
-          : "flex h-12 items-center gap-2 px-3 py-2.5"
+          : "flex items-center gap-2 px-2 py-2.5"
         )}
       >
-        <div className="size-7 animate-pulse rounded-full bg-accent" />
+        <div className="size-8 animate-pulse rounded-md bg-accent" />
         {!isCollapsed ?
-          <div className="h-3.5 w-24 animate-pulse rounded bg-accent" />
+          <div className="h-8 flex-1 animate-pulse rounded bg-accent" />
         : null}
       </div>
     );
@@ -133,20 +160,14 @@ export function SidebarFooterBar() {
             <button
               type="button"
               aria-label="Open account menu"
-              className="flex size-7 items-center justify-center rounded-md outline-none hover:bg-accent"
+              className="flex size-8 items-center justify-center rounded-md outline-none hover:bg-accent"
             >
-              <Avatar className="size-7 shrink-0 rounded-full border border-border">
-                {authUser.photoURL ?
-                  <AvatarImage
-                    src={authUser.photoURL}
-                    alt={displayName}
-                    referrerPolicy="no-referrer"
-                  />
-                : null}
-                <AvatarFallback className="rounded-full bg-accent text-[11px] font-semibold text-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <ProfileAvatar
+                authUser={authUser}
+                displayName={displayName}
+                initials={initials}
+                className="size-8"
+              />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="top" className="w-56 rounded-xl">
@@ -163,13 +184,6 @@ export function SidebarFooterBar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <SidebarFooterNotifications
-          userId={authUser.uid}
-          onNavigate={() => {
-            if (isMobile) setOpenMobile(false);
-          }}
-        />
-
         {!isMobile ?
           <SidebarToggleButton isCollapsed={isCollapsed} onToggle={toggleSidebar} />
         : null}
@@ -178,29 +192,29 @@ export function SidebarFooterBar() {
   }
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between gap-2 border-t border-border bg-transparent px-3 py-2.5">
+    <div className="flex shrink-0 items-center gap-1 border-t border-border bg-transparent px-2 py-2.5">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex min-w-0 flex-1 items-center gap-2 text-left outline-none"
+            aria-label="Open account menu"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left outline-none transition-colors hover-hover:hover:bg-accent active:bg-accent"
           >
-            <Avatar className="size-7 shrink-0 rounded-full border border-border">
-              {authUser.photoURL ?
-                <AvatarImage
-                  src={authUser.photoURL}
-                  alt={displayName}
-                  referrerPolicy="no-referrer"
-                />
-              : null}
-              <AvatarFallback className="rounded-full bg-accent text-[11px] font-semibold text-foreground">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-foreground">
-              {displayName}
+            <ProfileAvatar
+              authUser={authUser}
+              displayName={displayName}
+              initials={initials}
+              className="size-8"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold leading-tight text-foreground">
+                {displayName}
+              </span>
+              <span className="block truncate text-xs leading-tight text-muted-foreground">
+                {authUser.email}
+              </span>
             </span>
-            <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
+            <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           </button>
         </DropdownMenuTrigger>
 
@@ -218,18 +232,9 @@ export function SidebarFooterBar() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="flex shrink-0 items-center gap-0.5">
-        <SidebarFooterNotifications
-          userId={authUser.uid}
-          onNavigate={() => {
-            if (isMobile) setOpenMobile(false);
-          }}
-        />
-
-        {!isMobile ?
-          <SidebarToggleButton isCollapsed={isCollapsed} onToggle={toggleSidebar} />
-        : null}
-      </div>
+      {!isMobile ?
+        <SidebarToggleButton isCollapsed={isCollapsed} onToggle={toggleSidebar} />
+      : null}
     </div>
   );
 }

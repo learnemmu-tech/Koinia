@@ -21,7 +21,7 @@ export function HomeSectionHeader({
       <div className="flex items-center justify-between gap-3">
         <h2
           id={id}
-          className="font-heading text-lg font-semibold tracking-tight text-foreground sm:text-xl"
+          className="font-heading text-xl font-semibold tracking-tight text-foreground"
         >
           {title}
         </h2>

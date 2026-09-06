@@ -7,7 +7,6 @@ import { Bell, BookOpen, CalendarDays, Church, HeartHandshake, Loader2, Music, U
 import type { FirebaseNotification } from "@/types/firebase-notification";
 
 import { ImageWithFallback } from "@/components/image-with-fallback";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -134,24 +133,18 @@ export function NotificationBell({
               </span>
             : null}
           </button>
-        : <Button
+        : <button
             type="button"
-            variant="ghost"
-            size="icon"
-            className="size-9 shrink-0"
             aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+            className="relative flex size-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background/60 text-foreground transition-colors hover-hover:hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <span className="relative inline-flex">
-              <Bell className="size-4" />
-              {unreadCount > 0 ?
-                <Badge
-                  className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-background px-1 text-[10px] font-semibold leading-none tabular-nums"
-                >
-                  {unreadCount > 99 ? "99+" : unreadCount > 9 ? "9+" : unreadCount}
-                </Badge>
-              : null}
-            </span>
-          </Button>
+            <Bell className="size-4" />
+            {unreadCount > 0 ?
+              <span className="absolute -right-1 -top-1 flex size-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF4444] px-0.5 text-[10px] font-semibold leading-none text-white">
+                {unreadCount > 99 ? "99+" : unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            : null}
+          </button>
         }
       </DropdownMenuTrigger>
 

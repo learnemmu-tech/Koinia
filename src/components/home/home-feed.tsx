@@ -1,6 +1,8 @@
+import { auth } from "@clerk/nextjs/server";
+
 import type { FirebaseChurch } from "@/types/firebase-church";
 
-import { getPublishedShortsCached } from "@/lib/cached-shorts-data";
+import { getPublishedShortsForViewer } from "@/lib/cached-shorts-data";
 import { getWorshipCatalogCached } from "@/lib/cached-worship-data";
 import { splitEventsBySchedule } from "@/lib/event-firestore";
 import type { TenantScope } from "@/lib/organization/tenant-scope";
@@ -18,10 +20,15 @@ type HomeFeedProps = {
 
 export async function HomeFeed({ scope, church }: HomeFeedProps) {
   const showEvents = church?.settings?.showEvents !== false;
+  const session = await auth();
 
   const [catalog, shorts] = await Promise.all([
     getWorshipCatalogCached(scope),
-    getPublishedShortsCached(scope, "church"),
+    getPublishedShortsForViewer(scope, "church", {
+      clerkId: session.userId ?? null,
+      email: session.sessionClaims?.email as string | undefined,
+      limit: 5,
+    }),
   ]);
 
   const upcomingEvents = showEvents

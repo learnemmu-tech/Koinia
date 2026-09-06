@@ -39,7 +39,7 @@ export function HomeEventCard({ event, className }: HomeEventCardProps) {
   return (
     <article
       className={cn(
-        "app-interactive app-interactive-lift group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 text-left",
+        "app-interactive app-interactive-lift app-mobile-card group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 text-left",
         className
       )}
     >

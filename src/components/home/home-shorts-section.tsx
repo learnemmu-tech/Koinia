@@ -7,7 +7,7 @@ import { ImageWithFallback } from "@/components/image-with-fallback";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { cn } from "@/lib/utils";
 
-import { HomeCollectionRail, homeRailItemClass } from "./home-collection-rail";
+import { HomeCollectionRail, homeRailItemClass, HOME_RAIL_PORTRAIT } from "./home-collection-rail";
 import { HomeEmptyState } from "./home-empty-state";
 import { HomeSectionHeader } from "./home-section-header";
 
@@ -33,7 +33,7 @@ function HomeShortCard({ short }: { short: VideoShort }) {
     >
       <div
         className={cn(
-          "relative aspect-[9/16] overflow-hidden rounded-xl bg-muted",
+          "app-mobile-card relative aspect-[9/16] overflow-hidden rounded-xl bg-muted",
           "transition-transform duration-200 hover-hover:hover:scale-[1.02] active:scale-[0.99]"
         )}
       >
@@ -89,7 +89,7 @@ export function HomeShortsSection({ shorts }: HomeShortsSectionProps) {
   const visible = shorts.filter((short) => short.videoUrl).slice(0, 5);
 
   return (
-    <section aria-labelledby="home-shorts-heading" className="space-y-3">
+    <section aria-labelledby="home-shorts-heading" className="space-y-2.5">
       <HomeSectionHeader
         id="home-shorts-heading"
         title="Short Videos"
@@ -101,11 +101,11 @@ export function HomeShortsSection({ shorts }: HomeShortsSectionProps) {
           title="Short videos coming soon"
           description="Share encouragement, worship, and moments from your church community."
         />
-      : <HomeCollectionRail>
+      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-4 md:items-start md:overflow-visible md:px-0 lg:grid-cols-5">
           {visible.map((short) => (
             <div
               key={short.id}
-              className={homeRailItemClass("w-[42vw] max-w-[11.5rem] sm:w-[11.25rem] md:w-[12.25rem]")}
+              className={cn(homeRailItemClass(HOME_RAIL_PORTRAIT), "min-w-0")}
             >
               <HomeShortCard short={short} />
             </div>

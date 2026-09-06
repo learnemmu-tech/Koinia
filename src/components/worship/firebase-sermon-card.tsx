@@ -29,7 +29,7 @@ export const FirebaseSermonCard = React.memo(function FirebaseSermonCard({
   return (
     <article
       className={cn(
-        "app-interactive app-interactive-lift group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 text-left",
+        "app-interactive app-interactive-lift app-mobile-card group flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 text-left",
         className
       )}
     >
@@ -71,23 +71,19 @@ export const FirebaseSermonCard = React.memo(function FirebaseSermonCard({
         href={href}
         className="flex flex-1 flex-col gap-2 p-4 text-left"
       >
-        <h3 className="line-clamp-2 text-left text-base font-semibold leading-snug text-foreground">
+        <h3 className="line-clamp-2 min-h-[2.75rem] text-left text-base font-semibold leading-snug text-foreground">
           {sermon.title}
         </h3>
 
-        {sermon.speaker ?
-          <p className="text-left text-xs font-medium text-muted-foreground">
-            {sermon.speaker}
-          </p>
-        : null}
+        <p className="line-clamp-1 min-h-4 text-left text-xs font-medium text-muted-foreground">
+          {sermon.speaker || "\u00a0"}
+        </p>
 
-        {excerpt ?
-          <p className="line-clamp-2 text-left text-sm leading-relaxed text-muted-foreground">
-            {excerpt}
-          </p>
-        : null}
+        <p className="line-clamp-2 min-h-[2.5rem] text-left text-sm leading-relaxed text-muted-foreground">
+          {excerpt || "\u00a0"}
+        </p>
 
-        <div className="mt-auto flex items-center gap-2 pt-3 text-left">
+        <div className="mt-auto flex min-h-5 items-center gap-2 pt-3 text-left">
           <time
             dateTime={new Date(sermon.dateCreated).toISOString()}
             className="shrink-0 text-xs text-muted-foreground/80"

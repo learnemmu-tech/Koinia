@@ -19,7 +19,7 @@ export function HomePrayerCard({ request }: HomePrayerCardProps) {
   const excerpt = request.request.replace(/\s+/g, " ").trim();
 
   return (
-    <article className="app-interactive flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-3.5">
+    <article className="app-interactive app-mobile-card flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-3.5">
       <ProtectedContentLink
         href={href}
         requireAuth

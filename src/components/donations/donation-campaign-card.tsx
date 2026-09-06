@@ -30,7 +30,7 @@ export function DonationCampaignCard({
   return (
     <article
       className={cn(
-        "app-interactive flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 shadow-sm",
+        "app-interactive app-mobile-card flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 shadow-sm",
         className
       )}
     >

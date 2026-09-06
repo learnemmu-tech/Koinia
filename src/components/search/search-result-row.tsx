@@ -30,7 +30,7 @@ export function SearchResultRow({
     <ProtectedContentLink
       href={href}
       className={cn(
-        "group relative flex w-full flex-shrink-0 items-center gap-3 overflow-hidden rounded-lg border border-border/50 bg-card/40 px-3 py-2.5 transition-all duration-200",
+        "app-mobile-card group relative flex w-full flex-shrink-0 items-center gap-3 overflow-hidden rounded-lg border border-border/50 bg-card/40 px-3 py-2.5 transition-all duration-200",
         "hover:border-border/80 hover:bg-card/60 hover:shadow-sm",
       )}
     >

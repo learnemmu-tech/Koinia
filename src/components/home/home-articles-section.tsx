@@ -2,7 +2,7 @@ import type { FirebaseArticle } from "@/types/firebase-article";
 
 import { FirebaseArticleCard } from "@/components/worship/firebase-article-card";
 
-import { HomeCollectionRail, homeRailItemClass } from "./home-collection-rail";
+import { HomeCollectionRail, homeRailItemClass, HOME_RAIL_LANDSCAPE } from "./home-collection-rail";
 import { HomeEmptyState } from "./home-empty-state";
 import { HomeSectionHeader } from "./home-section-header";
 
@@ -31,13 +31,13 @@ export function HomeArticlesSection({ articles }: HomeArticlesSectionProps) {
           title="No articles yet"
           description="Check back soon for new writing from the community."
         />
-      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:overflow-visible md:px-0">
+      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:items-stretch md:overflow-visible md:px-0">
           {visible.map((article) => (
             <div
               key={article.id}
-              className={homeRailItemClass("w-[16rem] md:w-auto md:max-w-sm")}
+              className={homeRailItemClass(HOME_RAIL_LANDSCAPE)}
             >
-              <FirebaseArticleCard article={article} />
+              <FirebaseArticleCard article={article} className="h-full w-full" />
             </div>
           ))}
         </HomeCollectionRail>

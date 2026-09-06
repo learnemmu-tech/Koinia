@@ -179,7 +179,7 @@ export function ShortCommentsSheet({
     "flex flex-col gap-0 border-border bg-background p-0 shadow-xl transition duration-300",
     isDesktop ?
       "fixed inset-y-0 right-0 z-50 h-full w-[min(100vw,400px)] max-w-[440px] border-l"
-    : "fixed inset-x-0 bottom-0 z-50 h-[min(78vh,560px)] rounded-t-2xl border-t"
+    : "fixed inset-x-0 bottom-0 z-50 h-[min(70vh,640px)] rounded-t-2xl border-t"
   );
 
   return (
@@ -189,7 +189,7 @@ export function ShortCommentsSheet({
         className={cn(
           panelClass,
           "[&>button.absolute]:hidden",
-          !isDesktop && "h-[min(78vh,560px)] rounded-t-2xl"
+          !isDesktop && "h-[min(70vh,640px)] rounded-t-2xl"
         )}
       >
         <SheetHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-border/60 px-4 py-3">
@@ -213,7 +213,7 @@ export function ShortCommentsSheet({
             <div className="py-8 text-center">
               <p className="text-sm font-medium text-foreground">No comments yet</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Be the first to encourage this creator.
+                Be the first to encourage the community.
               </p>
             </div>
           : <ul className="space-y-4 pb-2">

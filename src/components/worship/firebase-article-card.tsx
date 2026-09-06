@@ -35,7 +35,7 @@ export const FirebaseArticleCard = React.memo(function FirebaseArticleCard({
   return (
     <article
       className={cn(
-        "app-interactive app-interactive-lift group flex flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 text-left",
+        "app-interactive app-interactive-lift app-mobile-card group flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 text-left",
         className
       )}
     >
@@ -84,17 +84,15 @@ export const FirebaseArticleCard = React.memo(function FirebaseArticleCard({
         href={href}
         className="flex flex-1 flex-col gap-2 p-4 text-left"
       >
-        <h3 className="line-clamp-2 text-left text-base font-semibold leading-snug text-foreground">
+        <h3 className="line-clamp-2 min-h-[2.75rem] text-left text-base font-semibold leading-snug text-foreground">
           {article.title}
         </h3>
 
-        {article.shortDescription ?
-          <p className="line-clamp-2 text-left text-sm leading-relaxed text-muted-foreground">
-            {article.shortDescription}
-          </p>
-        : null}
+        <p className="line-clamp-2 min-h-[2.5rem] text-left text-sm leading-relaxed text-muted-foreground">
+          {article.shortDescription || "\u00a0"}
+        </p>
 
-        <div className="mt-auto flex items-center gap-2 pt-3 text-left">
+        <div className="mt-auto flex min-h-6 items-center gap-2 pt-3 text-left">
           {article.author ?
             <>
               <span
