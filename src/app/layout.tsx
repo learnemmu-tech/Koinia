@@ -7,6 +7,7 @@ import Script from "next/script";
 import type { Metadata, Viewport } from "next";
 import type { ThemeConfig } from "@/types";
 
+import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/react";
 
