@@ -4,7 +4,6 @@
 
 import Link from "next/link";
 
-import { useRouter } from "next/navigation";
 
 import {
 
@@ -204,8 +203,6 @@ export function AuthNav() {
 
   const { setTheme } = useTheme();
 
-  const router = useRouter();
-
   const mounted = useMounted();
 
 
@@ -253,10 +250,6 @@ export function AuthNav() {
       await signOut();
 
       toast.success("Signed out successfully.");
-
-      router.push("/");
-
-      router.refresh();
 
     } catch {
 

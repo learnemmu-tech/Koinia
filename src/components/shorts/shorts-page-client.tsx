@@ -64,6 +64,7 @@ export function ShortsPageClient({
   const [globalMuted, setGlobalMuted] = React.useState(true);
   const deepLinkHandledRef = React.useRef(false);
   const observerRef = React.useRef<IntersectionObserver | null>(null);
+  const feedRef = React.useRef<HTMLDivElement | null>(null);
   const itemRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const authSyncedRef = React.useRef(false);
   const activeIdRef = React.useRef(activeId);
@@ -216,7 +217,11 @@ export function ShortsPageClient({
         const id = visible?.target.getAttribute("data-short-id");
         if (id) setActiveId(id);
       },
-      { threshold: [0.35, 0.55, 0.75], rootMargin: "-8% 0px" }
+      {
+        root: feedRef.current,
+        threshold: [0.35, 0.55, 0.75],
+        rootMargin: "0px",
+      }
     );
 
     for (const node of itemRefs.current.values()) {
@@ -469,7 +474,10 @@ export function ShortsPageClient({
             </>
           }
         </div>
-      : <div className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth">
+      : <div
+          ref={feedRef}
+          className="flex min-h-0 flex-1 flex-col snap-y snap-mandatory overflow-y-auto overscroll-y-contain scroll-smooth"
+        >
           {shorts.map((short, index) => (
             <ShortFeedItem
               key={short.id}

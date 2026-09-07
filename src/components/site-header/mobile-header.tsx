@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   BookOpen,
   CalendarDays,
@@ -164,7 +164,6 @@ function NavRow({
 
 export function MobileHeader() {
   const pathname = usePathname();
-  const router = useRouter();
   const { authUser, profile, isAdmin, loading, signOut } = useFirebaseAuth();
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
@@ -176,8 +175,6 @@ export function MobileHeader() {
     try {
       await signOut();
       toast.success("Signed out successfully.");
-      router.push("/");
-      router.refresh();
     } catch {
       toast.error("Failed to sign out.");
     }

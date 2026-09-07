@@ -99,8 +99,6 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
       return;
     }
 
-    const alreadyReady = video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
-
     if (active) {
       // Each Short renders mobile + desktop players; only the visible one may play.
       if (!isVideoVisible(video)) {
@@ -110,7 +108,12 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
         return;
       }
 
-      if (!alreadyReady) setLoading(true);
+      const alreadyReady = video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
+      if (!alreadyReady) {
+        setLoading(true);
+        // preload=none / a newly attached src will not fetch until load() or play().
+        video.load();
+      }
       applyMuted(mutedRef.current);
       void video
         .play()
@@ -194,8 +197,9 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
           src={playableSrc}
           poster={poster ?? undefined}
           playsInline
+          muted={muted}
           loop
-          preload={active ? "auto" : "none"}
+          preload={active ? "auto" : "metadata"}
           className="size-full object-cover"
           onLoadedMetadata={(event) => {
             const duration = event.currentTarget.duration;

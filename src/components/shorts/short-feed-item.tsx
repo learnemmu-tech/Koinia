@@ -167,7 +167,7 @@ function ShortFeedItemComponent({
     <article
       ref={itemRef}
       data-short-id={short.id}
-      className="h-full snap-start snap-always"
+      className="h-full min-h-full shrink-0 snap-start snap-always"
     >
       <div className="relative h-full w-full overflow-hidden bg-black md:hidden">
         <ShortVideoPlayer

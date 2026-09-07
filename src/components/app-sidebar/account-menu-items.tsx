@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Bell,
   CircleHelp,
@@ -28,14 +27,11 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 
 export function useAccountMenuActions() {
   const { signOut } = useFirebaseAuth();
-  const router = useRouter();
 
   async function handleSignOut() {
     try {
       await signOut();
       toast.success("Signed out successfully.");
-      router.push("/");
-      router.refresh();
     } catch {
       toast.error("Failed to sign out.");
     }

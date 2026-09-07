@@ -265,6 +265,10 @@ export function FirebaseAuthProvider({
     setProfile(null);
     setIsAdmin(false);
     setAuthSession(false);
+    // Server (root) layout chooses public vs workspace chrome from Clerk.
+    // Soft router.refresh() can keep the authenticated RSC shell until a
+    // full document load; navigate hard so signed-out UI is immediate.
+    window.location.assign("/");
   }, []);
 
   const refreshProfile = React.useCallback(

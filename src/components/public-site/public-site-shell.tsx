@@ -9,9 +9,9 @@ import { PublicHeader } from "./public-header";
 
 export function PublicSiteShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-svh min-w-0 flex-col bg-background">
+    <div className="flex min-h-svh min-w-0 flex-col bg-background has-[[data-page-fullbleed]]:h-svh has-[[data-page-fullbleed]]:max-h-svh has-[[data-page-fullbleed]]:min-h-0 has-[[data-page-fullbleed]]:overflow-hidden">
       <PublicHeader />
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden has-[[data-page-fullbleed]]:overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden has-[[data-page-fullbleed]]:min-h-0 has-[[data-page-fullbleed]]:overflow-hidden">
         <div
           className={cn(
             pageShellClass,

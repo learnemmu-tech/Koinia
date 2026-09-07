@@ -124,6 +124,22 @@
     font-size: var(--text-base);
   }
 
+  /*
+    overflow-x: hidden on html/body computes overflow-y to auto, which creates
+    a document scrollbar. Full-bleed Shorts already has its own feed scroller;
+    lock the document to the viewport so only that feed scrolls.
+  */
+  html:has([data-page-fullbleed]),
+  html:has([data-page-fullbleed]) body {
+    height: 100svh;
+    max-height: 100svh;
+    overflow: hidden;
+  }
+
+  html:has([data-page-fullbleed]) body {
+    min-height: 0;
+  }
+
   html.dark {
     @apply bg-background;
   }
