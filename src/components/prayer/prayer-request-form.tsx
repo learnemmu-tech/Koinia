@@ -138,22 +138,24 @@ export function PrayerRequestForm({
       );
 
       if (user) {
-        try {
-          const token = await user.getIdToken();
-          await fetch("/api/email/prayer-submitted", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              prayerId,
-              prayerTitle: values.title.trim(),
-            }),
+        void user
+          .getIdToken()
+          .then((token) =>
+            fetch("/api/email/prayer-submitted", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                prayerId,
+                prayerTitle: values.title.trim(),
+              }),
+            })
+          )
+          .catch(() => {
+            // Email failure must not block submission success
           });
-        } catch {
-          // Email failure must not block submission success
-        }
       }
 
       setSubmitted(true);

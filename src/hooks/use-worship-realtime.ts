@@ -26,8 +26,10 @@ function useContentListQuery<T>(input: {
   queryKey: string;
   collectionName: string;
   initialData: T[];
+  clientSync?: boolean;
 }): RealtimeCollectionState<T> {
   const scope = useContentTenantScope();
+  const clientSync = input.clientSync !== false;
   const blocked = scope.blocked;
 
   const result = useInfiniteQuery({
@@ -36,7 +38,7 @@ function useContentListQuery<T>(input: {
       scope.churchId ?? "",
       scope.organizationId ?? "",
     ] as const,
-    enabled: !blocked,
+    enabled: clientSync && !blocked,
     initialPageParam: 0,
     initialData: {
       pages: [
@@ -69,39 +71,45 @@ function useContentListQuery<T>(input: {
 
   return {
     data,
-    syncing: !blocked && result.isLoading && data.length === 0,
+    syncing: clientSync && !blocked && result.isLoading && data.length === 0,
     loadMore: result.fetchNextPage,
-    hasMore: Boolean(result.hasNextPage),
+    hasMore: clientSync && Boolean(result.hasNextPage),
     loadingMore: result.isFetchingNextPage,
   };
 }
 
 export function useRealtimeSongs(
-  initialSongs: FirebaseSong[]
+  initialSongs: FirebaseSong[],
+  options?: { clientSync?: boolean }
 ): RealtimeCollectionState<FirebaseSong> {
   return useContentListQuery({
     queryKey: "content-songs",
     collectionName: "songs",
     initialData: initialSongs,
+    clientSync: options?.clientSync,
   });
 }
 
 export function useRealtimeSermons(
-  initialSermons: FirebaseSermon[]
+  initialSermons: FirebaseSermon[],
+  options?: { clientSync?: boolean }
 ): RealtimeCollectionState<FirebaseSermon> {
   return useContentListQuery({
     queryKey: "content-sermons",
     collectionName: "sermons",
     initialData: initialSermons,
+    clientSync: options?.clientSync,
   });
 }
 
 export function useRealtimeArticles(
-  initialArticles: FirebaseArticle[]
+  initialArticles: FirebaseArticle[],
+  options?: { clientSync?: boolean }
 ): RealtimeCollectionState<FirebaseArticle> {
   return useContentListQuery({
     queryKey: "content-articles",
     collectionName: "articles",
     initialData: initialArticles,
+    clientSync: options?.clientSync,
   });
 }

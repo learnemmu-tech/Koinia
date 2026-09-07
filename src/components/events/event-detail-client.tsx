@@ -16,14 +16,17 @@ import type { FirebaseEvent } from "@/types/firebase-event";
 import { AddToCalendarButton } from "@/components/events/add-to-calendar-button";
 import { RegisterForEventButton } from "@/components/events/register-for-event-button";
 import { ShareEventButton } from "@/components/events/share-event-button";
+import { HomeEventScheduleBadge } from "@/components/home/home-event-schedule-badge";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { useEventDetailQuery } from "@/hooks/use-event-detail-query";
+import { useEventScheduleNow } from "@/hooks/use-event-schedule-now";
 import {
   formatEventDate,
   formatEventDateTime,
 } from "@/lib/event-firestore";
+import { getEventScheduleInfo } from "@/lib/event-schedule";
 import { getSongCoverUrl } from "@/lib/utils";
 import { pageDetailClass, typePageTitleClass } from "@/lib/responsive-classes";
 
@@ -37,6 +40,7 @@ export function EventDetailClient({
   initialEvent,
 }: EventDetailClientProps) {
   const { data: event, isLoading } = useEventDetailQuery(eventId, initialEvent);
+  const now = useEventScheduleNow();
 
   if (isLoading && !event) {
     return (
@@ -63,6 +67,7 @@ export function EventDetailClient({
   }
 
   const coverUrl = getSongCoverUrl(event.bannerImage);
+  const schedule = getEventScheduleInfo(event, now);
 
   return (
     <article className={`${pageDetailClass} space-y-6 pt-2`}>
@@ -85,6 +90,12 @@ export function EventDetailClient({
             className="object-cover"
             priority
           />
+          {schedule.label ?
+            <HomeEventScheduleBadge
+              schedule={schedule}
+              className="pointer-events-none absolute right-3 top-3 z-10"
+            />
+          : null}
         </div>
 
         <div className="space-y-6 p-6 sm:p-8">

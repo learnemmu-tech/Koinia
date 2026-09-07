@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -11,6 +12,7 @@ import {
   subscriptions,
   users,
 } from "@/db/schema";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { slugifyChurchSlug } from "@/lib/church-scope";
 import { isPostgresUuid } from "@/lib/postgres/uuid";
 import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
@@ -47,19 +49,9 @@ import type {
   FirebaseOrganization,
   UpdateOrganizationInput,
 } from "@/types/organization";
+import type { OrganizationSnapshot } from "@/types/organization-snapshot";
 
-export type OrganizationSnapshot = {
-  organization: FirebaseOrganization;
-  membership: FirebaseMembership | null;
-  branchMembership: FirebaseBranchMembership | null;
-  branchMemberships: FirebaseBranchMembership[];
-  churches: FirebaseChurch[];
-  branchesByChurch: Record<string, FirebaseBranch[]>;
-  userProfile?: {
-    activeBranchId?: string;
-    churchId?: string;
-  };
-};
+export type { OrganizationSnapshot };
 
 async function uniqueJoinSlug(base: string): Promise<string> {
   const slugBase = slugifyChurchSlug(base) || "church";
@@ -95,6 +87,14 @@ export async function getOrganizationsForUser(
 ): Promise<FirebaseOrganization[]> {
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return [];
+
+  if (isPlatformSuperAdmin(appUser.platformRole)) {
+    const rows = await db.select({ id: organizations.id }).from(organizations);
+    const results = await Promise.all(
+      rows.map((row) => getOrganizationById(row.id))
+    );
+    return results.filter((org): org is FirebaseOrganization => org !== null);
+  }
 
   const [orgRows, churchRows] = await Promise.all([
     db
@@ -152,9 +152,9 @@ export async function getChurchesByOrganization(
   return rows.map(mapChurch);
 }
 
-export async function getChurchById(
+export const getChurchById = cache(async (
   churchId: string
-): Promise<FirebaseChurch | null> {
+): Promise<FirebaseChurch | null> => {
   const trimmed = churchId.trim();
   if (!isPostgresUuid(trimmed)) return null;
   const [row] = await db
@@ -163,9 +163,9 @@ export async function getChurchById(
     .where(eq(churches.id, trimmed))
     .limit(1);
   return row ? mapChurch(row) : null;
-}
+});
 
-export async function getChurchRowById(churchId: string) {
+export const getChurchRowById = cache(async (churchId: string) => {
   const trimmed = churchId.trim();
   if (!isPostgresUuid(trimmed)) return null;
   const [row] = await db
@@ -174,7 +174,7 @@ export async function getChurchRowById(churchId: string) {
     .where(eq(churches.id, trimmed))
     .limit(1);
   return row ?? null;
-}
+});
 
 export async function getActiveChurches(): Promise<FirebaseChurch[]> {
   const rows = await db
@@ -300,7 +300,7 @@ export async function updateOrganization(
   if (input.description !== undefined) {
     patch.description = input.description.trim() || null;
   }
-  if (input.status !== undefined) patch.status = input.status;
+  // Organization access (`status`) is SuperAdmin-only. Do not apply it here.
   if (input.settings !== undefined) {
     const [existing] = await db
       .select({ settings: organizations.settings, workspaceType: organizations.workspaceType })

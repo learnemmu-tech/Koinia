@@ -42,12 +42,16 @@ function SongsPageGridSkeleton() {
 
 type SongsTabContentProps = {
   initialSongs: FirebaseSong[];
+  isPlatformPublic?: boolean;
 };
 
-export function SongsTabContent({ initialSongs }: SongsTabContentProps) {
+export function SongsTabContent({
+  initialSongs,
+  isPlatformPublic = false,
+}: SongsTabContentProps) {
   const scope = useContentTenantScope();
   const { data: songs, syncing, loadMore, hasMore, loadingMore } =
-    useRealtimeSongs(initialSongs);
+    useRealtimeSongs(initialSongs, { clientSync: !isPlatformPublic });
   const visibleSongs = useMemo(() => filterPublishedSongs(songs), [songs]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -70,7 +74,7 @@ export function SongsTabContent({ initialSongs }: SongsTabContentProps) {
     });
   }, [visibleSongs, search, category]);
 
-  if (scope.blocked) {
+  if (!isPlatformPublic && scope.blocked) {
     return <WorkspaceChurchRequiredNotice />;
   }
 

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { resolveIsAdmin } from "@/lib/admin-access";
 import { roleMeetsMinimum } from "@/types/membership";
+import { isOrganizationAccessSuspended } from "@/lib/auth/organization-workspace-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import {
   ensureOrganizationForUser,
   getOrganizationSnapshot,
   getOrganizationsForUser,
 } from "@/lib/organization/organization-server";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { timed } from "@/lib/perf";
 
@@ -21,18 +23,14 @@ export async function GET(request: Request) {
 
   try {
     const userId = decoded.uid;
+    const appUser = await getAppUserByClerkId(userId);
+    const isSuperAdmin = isPlatformSuperAdmin(appUser?.platformRole);
 
     let targetOrgId = organizationId;
     if (!targetOrgId) {
       const orgs = await getOrganizationsForUser(userId);
       if (orgs[0]) {
         targetOrgId = orgs[0].id;
-      } else if (resolveIsAdmin(decoded.email)) {
-        const ensured = await ensureOrganizationForUser(
-          userId,
-          "FaithConnectHub"
-        );
-        targetOrgId = ensured.id;
       }
     }
 
@@ -61,7 +59,6 @@ export async function GET(request: Request) {
       });
     }
 
-    const isAdmin = resolveIsAdmin(decoded.email);
     const hasActiveOrgMembership = snapshot.membership?.status === "active";
     const hasActiveBranchMembership = snapshot.branchMemberships.some(
       (m) => m.status === "active"
@@ -74,7 +71,7 @@ export async function GET(request: Request) {
         m.status === "active" && roleMeetsMinimum(m.role, "church_admin")
     );
     const canAccess =
-      isAdmin ||
+      isSuperAdmin ||
       hasActiveOrgMembership ||
       hasActiveBranchMembership ||
       hasPendingBranchMembership ||
@@ -82,6 +79,16 @@ export async function GET(request: Request) {
 
     if (!canAccess) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (
+      !isSuperAdmin &&
+      isOrganizationAccessSuspended(snapshot.organization.status)
+    ) {
+      return NextResponse.json(
+        { error: "organization_suspended" },
+        { status: 403 }
+      );
     }
 
     return NextResponse.json(snapshot);

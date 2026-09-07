@@ -12,8 +12,10 @@ import {
   isInvitePath,
   isJoinPath,
   isOnboardingPath,
+  isSuperAdminPath,
   isWaitingApprovalPath,
   MEMBERSHIP_REMOVED_PATH,
+  ORGANIZATION_SUSPENDED_PATH,
   WAITING_APPROVAL_PATH,
 } from "@/lib/auth/auth-paths";
 
@@ -28,9 +30,11 @@ function isExemptMembershipPath(pathname: string): boolean {
   if (isOnboardingPath(pathname)) return true;
   if (isJoinPath(pathname)) return true;
   if (isInvitePath(pathname)) return true;
+  if (isSuperAdminPath(pathname)) return true;
   if (pathname === ACCESS_DENIED_PATH) return true;
   if (pathname === MEMBERSHIP_REMOVED_PATH) return true;
   if (pathname === ACCOUNT_SUSPENDED_PATH) return true;
+  if (pathname === ORGANIZATION_SUSPENDED_PATH) return true;
   return false;
 }
 
@@ -83,6 +87,11 @@ export function MembershipStatusGuard() {
         router.replace(ACCOUNT_SUSPENDED_PATH);
         return;
       }
+      if (status === "org_suspended") {
+        redirectingRef.current = true;
+        router.replace(ORGANIZATION_SUSPENDED_PATH);
+        return;
+      }
     }
 
     if (status === "rejected" && pathname !== ACCESS_DENIED_PATH) {
@@ -100,6 +109,12 @@ export function MembershipStatusGuard() {
     if (status === "suspended" && pathname !== ACCOUNT_SUSPENDED_PATH) {
       redirectingRef.current = true;
       router.replace(ACCOUNT_SUSPENDED_PATH);
+      return;
+    }
+
+    if (status === "org_suspended" && pathname !== ORGANIZATION_SUSPENDED_PATH) {
+      redirectingRef.current = true;
+      router.replace(ORGANIZATION_SUSPENDED_PATH);
     }
   }, [
     authUser,

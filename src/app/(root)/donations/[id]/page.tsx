@@ -4,7 +4,7 @@ import {
   DonationCampaignDetailClient,
 } from "@/components/donations/donation-campaign-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getDonationCampaignByIdCached } from "@/lib/cached-donation-data";
 import { buildBreadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 
@@ -18,8 +18,8 @@ export async function generateMetadata({
   params,
 }: DonationCampaignPageProps): Promise<Metadata> {
   const { id } = await params;
-  const { scope } = await getPageTenantContext();
-  const campaign = await getDonationCampaignByIdCached(scope, id);
+  const { contentQuery } = await resolvePageContentQuery();
+  const campaign = await getDonationCampaignByIdCached(contentQuery, id);
 
   if (!campaign || campaign.status !== "active") {
     return { title: "Campaign Not Found" };
@@ -39,8 +39,8 @@ export default async function DonationCampaignPage({
   params,
 }: DonationCampaignPageProps) {
   const { id } = await params;
-  const { scope } = await getPageTenantContext();
-  const campaign = await getDonationCampaignByIdCached(scope, id);
+  const { contentQuery } = await resolvePageContentQuery();
+  const campaign = await getDonationCampaignByIdCached(contentQuery, id);
   const path = `/donations/${encodeURIComponent(id)}`;
 
   return (

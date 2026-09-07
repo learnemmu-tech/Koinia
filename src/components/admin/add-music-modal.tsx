@@ -46,6 +46,7 @@ type AddMusicModalProps = {
   onSave: () => void;
   initialSong?: FirebaseSong | null;
   churchId: string;
+  contentScope?: "platform_public" | "organization";
 };
 
 type SongFormData = {
@@ -151,6 +152,7 @@ export function AddMusicModal({
   onSave,
   initialSong,
   churchId,
+  contentScope = "organization",
 }: AddMusicModalProps) {
   const { user } = useFirebaseAuth();
   const { invalidateSongs } = useInvalidateAdminQueries();
@@ -337,14 +339,19 @@ export function AddMusicModal({
 
         toast.success("Song updated successfully");
       } else {
-        const songId = await addSong(tenantFields.churchId ?? churchId, {
-          ...payload,
-          imageUrl: "",
-          audioUrl: "",
-        }, {
-          branchId: tenantFields.branchId,
-          organizationIdFallback: tenantFields.organizationId,
-        });
+        const songId = await addSong(
+          contentScope === "platform_public" ? "" : (tenantFields.churchId ?? churchId),
+          {
+            ...payload,
+            contentScope,
+            imageUrl: "",
+            audioUrl: "",
+          },
+          {
+            branchId: tenantFields.branchId,
+            organizationIdFallback: tenantFields.organizationId,
+          }
+        );
 
         const mediaUpdates: { imageUrl?: string; audioUrl?: string } = {};
         if (files.cover) {

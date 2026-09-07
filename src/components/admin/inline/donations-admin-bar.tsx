@@ -6,6 +6,8 @@ import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useIsPlatformSuperAdmin } from "@/hooks/use-admin-church-id";
+import { useWorkspaceTenantScope } from "@/hooks/use-workspace-tenant-scope";
 
 const AddDonationCampaignModal = dynamic(
   () =>
@@ -15,11 +17,28 @@ const AddDonationCampaignModal = dynamic(
   { ssr: false }
 );
 
-export function DonationsAdminBar({ churchId }: { churchId: string }) {
+type DonationsAdminBarProps = {
+  contentScope?: "platform_public" | "organization";
+};
+
+export function DonationsAdminBar({
+  contentScope = "organization",
+}: DonationsAdminBarProps) {
   const isAdmin = useIsAdmin();
+  const isSuperAdmin = useIsPlatformSuperAdmin();
+  const workspace = useWorkspaceTenantScope();
   const [open, setOpen] = useState(false);
 
+  const effectiveScope =
+    contentScope === "platform_public" && isSuperAdmin
+      ? ("platform_public" as const)
+      : ("organization" as const);
+
+  const churchId =
+    effectiveScope === "platform_public" ? "" : (workspace.churchId ?? "");
+
   if (!isAdmin) return null;
+  if (effectiveScope === "organization" && !churchId) return null;
 
   return (
     <>
@@ -39,6 +58,7 @@ export function DonationsAdminBar({ churchId }: { churchId: string }) {
           onClose={() => setOpen(false)}
           onSave={() => setOpen(false)}
           churchId={churchId}
+          contentScope={effectiveScope}
         />
       ) : null}
     </>

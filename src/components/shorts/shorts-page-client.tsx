@@ -20,6 +20,8 @@ type ShortsPageClientProps = {
   churchName?: string;
   canPost: boolean;
   initialShortId?: string;
+  createContentScope?: "organization" | "platform_public";
+  createChurchId?: string;
 };
 
 export function ShortsPageClient({
@@ -27,6 +29,8 @@ export function ShortsPageClient({
   churchName,
   canPost,
   initialShortId,
+  createContentScope = "organization",
+  createChurchId = "",
 }: ShortsPageClientProps) {
   const { user } = useFirebaseAuth();
   const { openDialog } = useContentAuthDialog();
@@ -513,6 +517,8 @@ export function ShortsPageClient({
         onOpenChange={setCreateOpen}
         getToken={getToken}
         onPublished={() => void reloadFeed(filter, query.trim())}
+        contentScope={createContentScope}
+        churchId={createChurchId}
       />
     </div>
   );

@@ -21,6 +21,7 @@ export function HomeSongsSection({ songs }: HomeSongsSectionProps) {
         title="Worship Songs"
         description="Listen, worship, and discover songs from the community."
         href="/songs"
+        viewAllLabel="View All Songs"
       />
       {visible.length === 0 ?
         <HomeEmptyState

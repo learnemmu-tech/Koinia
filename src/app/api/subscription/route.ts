@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { resolveIsAdmin } from "@/lib/admin-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { getOrganizationsForUser } from "@/lib/organization/organization-server";
 import { resolveTenantScopeForChurch } from "@/lib/organization/resolve-tenant-scope";
 import {
@@ -55,10 +55,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
-    const isAdmin =
-      resolveIsAdmin(decoded.email) || appUser.platformRole === "admin";
+    const isSuperAdmin = isPlatformSuperAdmin(appUser.platformRole);
 
-    if (!isAdmin) {
+    if (!isSuperAdmin) {
       if (churchIdParam) {
         const canAccess = await userCanAccessChurchContent(
           decoded.uid,

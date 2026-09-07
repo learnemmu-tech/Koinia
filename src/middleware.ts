@@ -1,7 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isOnboardingPath } from "@/lib/auth/auth-paths";
+import { isOnboardingPath, isSuperAdminPath } from "@/lib/auth/auth-paths";
 import { isWorkspaceRoute } from "@/lib/dashboard-routes";
 
 const AUTH_ONLY_PATHS = ["/signin", "/signup", "/forgot-password", "/sso-callback"];
@@ -74,7 +74,7 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  if (isWorkspaceRoute(pathname)) {
+  if (isWorkspaceRoute(pathname) || isSuperAdminPath(pathname)) {
     if (!isAuthenticated) {
       return NextResponse.redirect(
         buildSignInUrl(req, `${pathname}${req.nextUrl.search}`)

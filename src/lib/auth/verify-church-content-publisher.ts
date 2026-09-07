@@ -1,6 +1,7 @@
 import "server-only";
 
-import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import {
   getAppUserByClerkId,
   mapAppUserToProfile,
@@ -16,12 +17,17 @@ import {
 
 export async function verifyChurchContentPublisher(
   uid: string,
-  email: string | undefined
+  _email: string | undefined
 ): Promise<boolean> {
-  if (isPlatformSuperAdmin(email)) return true;
-
   const appUser = await getAppUserByClerkId(uid);
   if (!appUser) return false;
+  if (isPlatformSuperAdmin(appUser.platformRole)) return true;
+
+  const orgAllowed = await organizationAllowsWorkspaceAccess(
+    appUser.organizationId,
+    appUser.platformRole
+  );
+  if (!orgAllowed) return false;
 
   const profile = mapAppUserToProfile(appUser);
   const membership = profile.organizationId

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { DonationsListClient } from "@/components/donations/donations-list-client";
 import { DonationsAdminBar } from "@/components/admin/inline/donations-admin-bar";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getActiveDonationCampaignsCached } from "@/lib/cached-donation-data";
 import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
@@ -18,8 +18,8 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function DonationsPage() {
-  const { scope } = await getPageTenantContext();
-  const campaigns = await getActiveDonationCampaignsCached(scope);
+  const { contentQuery, isPlatformPublic } = await resolvePageContentQuery();
+  const campaigns = await getActiveDonationCampaignsCached(contentQuery);
 
   return (
     <section
@@ -38,10 +38,15 @@ export default async function DonationsPage() {
             Support active ministry campaigns with secure, transparent giving.
           </p>
         </div>
-        <DonationsAdminBar churchId={scope.churchId ?? ""} />
+        <DonationsAdminBar
+          contentScope={isPlatformPublic ? "platform_public" : "organization"}
+        />
       </header>
 
-      <DonationsListClient initialCampaigns={campaigns} />
+      <DonationsListClient
+        initialCampaigns={campaigns}
+        isPlatformPublic={isPlatformPublic}
+      />
     </section>
   );
 }

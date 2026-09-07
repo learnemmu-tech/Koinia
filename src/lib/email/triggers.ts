@@ -27,7 +27,7 @@ import {
   canSendPreferenceEmail,
   normalizeEmailPreferences,
 } from "./preferences";
-import type { EmailPreferenceKey } from "./types";
+import type { EmailPreferenceKey, SendEmailResult } from "./types";
 
 export type ContentPublishEmailType =
   | "song"
@@ -494,6 +494,8 @@ export async function triggerShortPublishedEmails(
     const short = await getShortById(shortId);
     if (!short?.publishedAt || !short.videoUrl) return;
 
+    if (!short.churchId || short.contentScope === "platform_public") return;
+
     const recipients = await listEligibleChurchEmailRecipients({
       churchId: short.churchId,
       excludeClerkId,
@@ -517,34 +519,30 @@ export async function triggerShortPublishedEmails(
   }
 }
 
-export function triggerContactEmails(input: {
+export async function triggerContactEmails(input: {
   name: string;
   email: string;
   subject: string;
   message: string;
-}): void {
-  dispatchEmail("contact-confirmation", () =>
-    EmailService.sendContactConfirmation({
-      to: input.email,
-      name: input.name,
-      subject: input.subject,
-    })
-  );
+}): Promise<SendEmailResult> {
+  const inboxResult = await EmailService.sendContactUsInbox({
+    name: input.name,
+    email: input.email,
+    subject: input.subject,
+    message: input.message,
+  });
 
-  dispatchEmail("admin-contact", () =>
-    EmailService.notifyAdmin({
-      type: "contact_form",
-      title: "New contact form submission",
-      summary: "Someone submitted the contact form.",
-      details: {
-        Name: input.name,
-        Email: input.email,
-        Subject: input.subject,
-        Message: input.message.slice(0, 500),
-      },
-      actionUrl: `mailto:${input.email}`,
-    })
-  );
+  if (inboxResult.success) {
+    dispatchEmail("contact-confirmation", () =>
+      EmailService.sendContactConfirmation({
+        to: input.email,
+        name: input.name,
+        subject: input.subject,
+      })
+    );
+  }
+
+  return inboxResult;
 }
 
 export function triggerJoinRequestNotification(input: {

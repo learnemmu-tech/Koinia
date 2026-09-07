@@ -6,6 +6,8 @@ export const WAITING_APPROVAL_PATH = "/waiting-approval";
 export const ACCESS_DENIED_PATH = "/access-denied";
 export const MEMBERSHIP_REMOVED_PATH = "/membership-removed";
 export const ACCOUNT_SUSPENDED_PATH = "/account-suspended";
+export const ORGANIZATION_SUSPENDED_PATH = "/organization-suspended";
+export const SUPER_ADMIN_BASE = "/super-admin";
 
 const JOIN_PATH_PATTERN = /^\/join\/([^/?#]+)/;
 const INVITE_PATH_PATTERN = /^\/invite\/([^/?#]+)/;
@@ -88,11 +90,19 @@ export function isWaitingApprovalPath(pathname: string): boolean {
   );
 }
 
+export function isSuperAdminPath(pathname: string): boolean {
+  return (
+    pathname === SUPER_ADMIN_BASE ||
+    pathname.startsWith(`${SUPER_ADMIN_BASE}/`)
+  );
+}
+
 export function isMembershipStatusPath(pathname: string): boolean {
   return (
     isWaitingApprovalPath(pathname) ||
     pathname === ACCESS_DENIED_PATH ||
     pathname === MEMBERSHIP_REMOVED_PATH ||
-    pathname === ACCOUNT_SUSPENDED_PATH
+    pathname === ACCOUNT_SUSPENDED_PATH ||
+    pathname === ORGANIZATION_SUSPENDED_PATH
   );
 }

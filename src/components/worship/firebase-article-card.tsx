@@ -3,7 +3,7 @@ import React from "react";
 import type { FirebaseArticle } from "@/types/firebase-article";
 
 import { ProtectedContentLink } from "@/components/auth/protected-content-link";
-import { AdminQuickEditButton } from "@/components/admin/admin-quick-edit-button";
+import { PlatformContentQuickEdit } from "@/components/admin/inline/platform-content-quick-edit";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
@@ -73,8 +73,10 @@ export const FirebaseArticleCard = React.memo(function FirebaseArticleCard({
           className="absolute right-3 top-3 z-10"
         />
 
-        <AdminQuickEditButton
-          href={`/dashboard/content?tab=articles&edit=${encodeURIComponent(article.id)}`}
+        <PlatformContentQuickEdit
+          kind="article"
+          record={article}
+          tenantEditHref={`/dashboard/content?tab=articles&edit=${encodeURIComponent(article.id)}`}
           label="Edit article"
           className="absolute bottom-3 right-3 z-10 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         />

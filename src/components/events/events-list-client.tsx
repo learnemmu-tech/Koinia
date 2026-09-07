@@ -23,6 +23,7 @@ import { contentCardGridClassName } from "@/lib/responsive-classes";
 type EventsListClientProps = {
   initialUpcoming: FirebaseEvent[];
   initialPast: FirebaseEvent[];
+  isPlatformPublic?: boolean;
 };
 
 function matchesSearch(event: FirebaseEvent, query: string): boolean {
@@ -33,13 +34,14 @@ function matchesSearch(event: FirebaseEvent, query: string): boolean {
 export function EventsListClient({
   initialUpcoming,
   initialPast,
+  isPlatformPublic = false,
 }: EventsListClientProps) {
   const initialCombined = useMemo(
     () => [...initialUpcoming, ...initialPast],
     [initialUpcoming, initialPast]
   );
   const { grouped, loading, loadMore, hasMore, loadingMore } =
-    usePublishedEvents(initialCombined);
+    usePublishedEvents(initialCombined, { clientSync: !isPlatformPublic });
   const tenantScope = useContentTenantScope();
   const { upcoming, past } = grouped;
 
@@ -57,7 +59,7 @@ export function EventsListClient({
     [past, query]
   );
 
-  if (tenantScope.blocked) {
+  if (!isPlatformPublic && tenantScope.blocked) {
     return <WorkspaceChurchRequiredNotice />;
   }
 

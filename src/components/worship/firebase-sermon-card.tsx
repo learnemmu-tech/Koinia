@@ -1,7 +1,7 @@
 import React from "react";
 
 import { ProtectedContentLink } from "@/components/auth/protected-content-link";
-import { AdminQuickEditButton } from "@/components/admin/admin-quick-edit-button";
+import { PlatformContentQuickEdit } from "@/components/admin/inline/platform-content-quick-edit";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import type { FirebaseSermon } from "@/types/firebase-sermon";
 import { ImageWithFallback } from "@/components/image-with-fallback";
@@ -60,8 +60,10 @@ export const FirebaseSermonCard = React.memo(function FirebaseSermonCard({
           className="absolute right-3 top-3 z-10"
         />
 
-        <AdminQuickEditButton
-          href={`/dashboard/content?tab=sermons&edit=${encodeURIComponent(sermon.id)}`}
+        <PlatformContentQuickEdit
+          kind="sermon"
+          record={sermon}
+          tenantEditHref={`/dashboard/content?tab=sermons&edit=${encodeURIComponent(sermon.id)}`}
           label="Edit sermon"
           className="absolute bottom-3 right-3 z-10 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         />

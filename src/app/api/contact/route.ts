@@ -19,12 +19,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    triggerContactEmails({
+    const result = await triggerContactEmails({
       name: parsed.data.name,
       email: parsed.data.email,
       subject: parsed.data.subject,
       message: parsed.data.message,
     });
+
+    if (!result.success) {
+      console.error("[api/contact] Resend did not accept the Contact Us email:", result.error);
+      return NextResponse.json(
+        {
+          error:
+            "We couldn't send your message right now. Please try again in a moment.",
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

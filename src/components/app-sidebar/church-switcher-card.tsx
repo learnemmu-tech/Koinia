@@ -21,6 +21,8 @@ import { isMultiChurchOrgWorkspace } from "@/lib/organization/workspace-type";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
 
+import { ChurchBrand } from "./church-brand";
+
 function getInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return "?";
@@ -100,7 +102,16 @@ export function SidebarWorkspaceHeader() {
   }
 
   if (!organizationCtx?.organization) {
-    return null;
+    return (
+      <div
+        className={cn(
+          workspaceTriggerClass,
+          isCollapsed && "justify-center px-1.5"
+        )}
+      >
+        <ChurchBrand />
+      </div>
+    );
   }
 
   const { organization, churches } = organizationCtx;

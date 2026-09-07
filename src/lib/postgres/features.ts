@@ -68,6 +68,13 @@ import type {
 } from "@/types/firebase-sermon";
 import type { CreateSongInput, FirebaseSong, UpdateSongInput } from "@/types/firebase-song";
 import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
+import {
+  contentScopeWhere,
+  resolveContentQuery,
+} from "@/lib/content/content-scope";
+import { requirePlatformSuperAdmin } from "@/lib/auth/require-platform-super-admin";
+import type { ContentScope } from "@/db/schema/enums";
 import type { SubscriptionUsage } from "@/types/subscription";
 import { EMPTY_USAGE } from "@/lib/subscription/limits";
 
@@ -122,22 +129,78 @@ async function requireChurch(churchId: string) {
   return church;
 }
 
-function scopeChurchId(scope: Partial<TenantScope>): string {
-  return (
-    postgresUuidOrEmpty(scope.churchId) ||
-    postgresUuidOrEmpty(scope.branchId)
-  );
+function resolveListQuery(scope: ContentQueryInput) {
+  return resolveContentQuery(scope);
 }
 
-export async function listSongs(scope: Partial<TenantScope>): Promise<FirebaseSong[]> {
-  const churchId = scopeChurchId(scope);
-  if (!churchId) return [];
-  const rows = await db
-    .select()
+export type ContentListOptions = {
+  publishedOnly?: boolean;
+  limit?: number;
+  offset?: number;
+};
+
+async function assertPlatformContentCreator() {
+  await requirePlatformSuperAdmin();
+}
+
+export async function listSongs(
+  scope: ContentQueryInput,
+  options: ContentListOptions = {}
+): Promise<FirebaseSong[]> {
+  const query = resolveListQuery(scope);
+  const filters = [
+    contentScopeWhere(
+      {
+        contentScope: songs.contentScope,
+        organizationId: songs.organizationId,
+        churchId: songs.churchId,
+      },
+      query
+    ),
+  ];
+  if (options.publishedOnly) {
+    filters.push(eq(songs.published, true));
+  }
+
+  const rowsQuery = db
+    .select({
+      id: songs.id,
+      contentScope: songs.contentScope,
+      organizationId: songs.organizationId,
+      churchId: songs.churchId,
+      songTitle: songs.songTitle,
+      alternateTitle: songs.alternateTitle,
+      artist: songs.artist,
+      category: songs.category,
+      scriptureReference: songs.scriptureReference,
+      tags: songs.tags,
+      featured: songs.featured,
+      published: songs.published,
+      imageUrl: songs.imageUrl,
+      audioUrl: songs.audioUrl,
+      youtubeUrl: songs.youtubeUrl,
+      createdBy: songs.createdBy,
+      createdAt: songs.createdAt,
+      updatedAt: songs.updatedAt,
+      playCount: songs.playCount,
+    })
     .from(songs)
-    .where(eq(songs.churchId, churchId))
+    .where(and(...filters))
     .orderBy(desc(songs.createdAt));
-  return rows.map(mapSong);
+
+  const rows = await (options.limit != null
+    ? rowsQuery.limit(options.limit).offset(options.offset ?? 0)
+    : options.offset != null
+      ? rowsQuery.offset(options.offset)
+      : rowsQuery);
+
+  return rows.map((row) =>
+    mapSong({
+      ...row,
+      originalLyrics: "",
+      translationLyrics: null,
+    })
+  );
 }
 
 export async function getSongById(songId: string): Promise<FirebaseSong | null> {
@@ -161,10 +224,40 @@ export async function addSong(
   churchId: string,
   input: CreateSongInput
 ): Promise<string> {
+  const contentScope: ContentScope = input.contentScope ?? "organization";
+
+  if (contentScope === "platform_public") {
+    await assertPlatformContentCreator();
+    const [row] = await db
+      .insert(songs)
+      .values({
+        contentScope: "platform_public",
+        organizationId: null,
+        churchId: null,
+        songTitle: input.songTitle.trim(),
+        alternateTitle: input.alternateTitle?.trim() || null,
+        artist: input.artist?.trim() || null,
+        category: input.category ?? "Worship",
+        originalLyrics: input.originalLyrics ?? "",
+        translationLyrics: input.translationLyrics?.trim() || null,
+        scriptureReference: input.scriptureReference?.trim() || null,
+        tags: input.tags ?? [],
+        featured: input.featured ?? false,
+        published: input.published ?? true,
+        imageUrl: input.imageUrl?.trim() || null,
+        audioUrl: input.audioUrl?.trim() || null,
+        youtubeUrl: input.youtubeUrl?.trim() || null,
+      })
+      .returning({ id: songs.id });
+    if (!row) throw new Error("Failed to create song");
+    return row.id;
+  }
+
   const church = await requireChurch(churchId);
   const [row] = await db
     .insert(songs)
     .values({
+      contentScope: "organization",
       organizationId: church.organizationId,
       churchId: church.id,
       songTitle: input.songTitle.trim(),
@@ -223,19 +316,63 @@ export async function incrementPlayCount(songId: string): Promise<void> {
     .where(eq(songs.id, songId));
 }
 
-export async function listSermons(scope: Partial<TenantScope>): Promise<FirebaseSermon[]> {
-  const churchId = scopeChurchId(scope);
-  if (!churchId) return [];
-  const rows = await db
-    .select()
+export async function listSermons(
+  scope: ContentQueryInput,
+  options: ContentListOptions = {}
+): Promise<FirebaseSermon[]> {
+  const query = resolveListQuery(scope);
+  const filters = [
+    contentScopeWhere(
+      {
+        contentScope: sermons.contentScope,
+        organizationId: sermons.organizationId,
+        churchId: sermons.churchId,
+      },
+      query
+    ),
+  ];
+  if (options.publishedOnly) {
+    filters.push(eq(sermons.isPublished, true));
+  }
+
+  const rowsQuery = db
+    .select({
+      id: sermons.id,
+      contentScope: sermons.contentScope,
+      organizationId: sermons.organizationId,
+      churchId: sermons.churchId,
+      title: sermons.title,
+      subtitle: sermons.subtitle,
+      scriptureReference: sermons.scriptureReference,
+      speaker: sermons.speaker,
+      shortDescription: sermons.shortDescription,
+      tags: sermons.tags,
+      youtubeUrl: sermons.youtubeUrl,
+      audioUrl: sermons.audioUrl,
+      coverImage: sermons.coverImage,
+      createdBy: sermons.createdBy,
+      isPublished: sermons.isPublished,
+      createdAt: sermons.createdAt,
+      updatedAt: sermons.updatedAt,
+    })
     .from(sermons)
-    .where(eq(sermons.churchId, churchId))
+    .where(and(...filters))
     .orderBy(desc(sermons.createdAt));
+
+  const rows = await (options.limit != null
+    ? rowsQuery.limit(options.limit).offset(options.offset ?? 0)
+    : options.offset != null
+      ? rowsQuery.offset(options.offset)
+      : rowsQuery);
+
   const clerkIds = await getClerkIdsByUserIds(
     rows.map((row) => row.createdBy).filter((id): id is string => Boolean(id))
   );
   return rows.map((row) =>
-    mapSermon(row, row.createdBy ? clerkIds.get(row.createdBy) ?? "" : "")
+    mapSermon(
+      { ...row, content: "" },
+      row.createdBy ? clerkIds.get(row.createdBy) ?? "" : ""
+    )
   );
 }
 
@@ -259,11 +396,41 @@ export async function getSermonsByIds(ids: string[]): Promise<FirebaseSermon[]> 
 }
 
 export async function createSermon(input: CreateSermonInput): Promise<string> {
+  const contentScope: ContentScope = input.contentScope ?? "organization";
+
+  if (contentScope === "platform_public") {
+    await assertPlatformContentCreator();
+    const creator = input.createdBy ? await getAppUserByClerkId(input.createdBy) : null;
+    const [row] = await db
+      .insert(sermons)
+      .values({
+        contentScope: "platform_public",
+        organizationId: null,
+        churchId: null,
+        title: input.title.trim(),
+        subtitle: input.subtitle?.trim() || null,
+        scriptureReference: input.scriptureReference ?? "",
+        speaker: input.speaker ?? "",
+        shortDescription: input.shortDescription ?? "",
+        content: input.content ?? "",
+        tags: input.tags ?? [],
+        youtubeUrl: input.youtubeUrl?.trim() || null,
+        audioUrl: input.audioUrl?.trim() || null,
+        coverImage: input.coverImage?.trim() || null,
+        createdBy: creator?.id ?? null,
+        isPublished: input.isPublished,
+      })
+      .returning({ id: sermons.id });
+    if (!row) throw new Error("Failed to create sermon");
+    return row.id;
+  }
+
   const church = await requireChurch(input.churchId);
   const creator = input.createdBy ? await getAppUserByClerkId(input.createdBy) : null;
   const [row] = await db
     .insert(sermons)
     .values({
+      contentScope: "organization",
       organizationId: church.organizationId,
       churchId: church.id,
       title: input.title.trim(),
@@ -308,19 +475,64 @@ export async function deleteSermon(sermonId: string): Promise<void> {
   await db.delete(sermons).where(eq(sermons.id, sermonId));
 }
 
-export async function listArticles(scope: Partial<TenantScope>): Promise<FirebaseArticle[]> {
-  const churchId = scopeChurchId(scope);
-  if (!churchId) return [];
-  const rows = await db
-    .select()
+export async function listArticles(
+  scope: ContentQueryInput,
+  options: ContentListOptions = {}
+): Promise<FirebaseArticle[]> {
+  const query = resolveListQuery(scope);
+  const filters = [
+    contentScopeWhere(
+      {
+        contentScope: articles.contentScope,
+        organizationId: articles.organizationId,
+        churchId: articles.churchId,
+      },
+      query
+    ),
+  ];
+  if (options.publishedOnly) {
+    filters.push(eq(articles.isPublished, true));
+  }
+
+  const rowsQuery = db
+    .select({
+      id: articles.id,
+      contentScope: articles.contentScope,
+      organizationId: articles.organizationId,
+      churchId: articles.churchId,
+      title: articles.title,
+      category: articles.category,
+      shortDescription: articles.shortDescription,
+      scriptureReference: articles.scriptureReference,
+      coverImage: articles.coverImage,
+      author: articles.author,
+      authorImage: articles.authorImage,
+      tags: articles.tags,
+      youtubeUrl: articles.youtubeUrl,
+      featured: articles.featured,
+      createdBy: articles.createdBy,
+      isPublished: articles.isPublished,
+      createdAt: articles.createdAt,
+      updatedAt: articles.updatedAt,
+    })
     .from(articles)
-    .where(eq(articles.churchId, churchId))
+    .where(and(...filters))
     .orderBy(desc(articles.createdAt));
+
+  const rows = await (options.limit != null
+    ? rowsQuery.limit(options.limit).offset(options.offset ?? 0)
+    : options.offset != null
+      ? rowsQuery.offset(options.offset)
+      : rowsQuery);
+
   const clerkIds = await getClerkIdsByUserIds(
     rows.map((row) => row.createdBy).filter((id): id is string => Boolean(id))
   );
   return rows.map((row) =>
-    mapArticle(row, row.createdBy ? clerkIds.get(row.createdBy) ?? "" : "")
+    mapArticle(
+      { ...row, content: "" },
+      row.createdBy ? clerkIds.get(row.createdBy) ?? "" : ""
+    )
   );
 }
 
@@ -344,11 +556,41 @@ export async function getArticlesByIds(ids: string[]): Promise<FirebaseArticle[]
 }
 
 export async function createArticle(input: CreateArticleInput): Promise<string> {
+  const contentScope: ContentScope = input.contentScope ?? "organization";
+
+  if (contentScope === "platform_public") {
+    await assertPlatformContentCreator();
+    const creator = input.createdBy ? await getAppUserByClerkId(input.createdBy) : null;
+    const [row] = await db
+      .insert(articles)
+      .values({
+        contentScope: "platform_public",
+        organizationId: null,
+        churchId: null,
+        title: input.title.trim(),
+        category: input.category || "Christian Living",
+        shortDescription: input.shortDescription ?? "",
+        scriptureReference: input.scriptureReference?.trim() || null,
+        content: input.content ?? "",
+        coverImage: input.coverImage?.trim() || null,
+        author: input.author ?? "",
+        tags: input.tags ?? [],
+        youtubeUrl: input.youtubeUrl?.trim() || null,
+        featured: input.featured ?? false,
+        createdBy: creator?.id ?? null,
+        isPublished: input.isPublished,
+      })
+      .returning({ id: articles.id });
+    if (!row) throw new Error("Failed to create article");
+    return row.id;
+  }
+
   const church = await requireChurch(input.churchId);
   const creator = input.createdBy ? await getAppUserByClerkId(input.createdBy) : null;
   const [row] = await db
     .insert(articles)
     .values({
+      contentScope: "organization",
       organizationId: church.organizationId,
       churchId: church.id,
       title: input.title.trim(),
@@ -393,14 +635,37 @@ export async function deleteArticle(articleId: string): Promise<void> {
   await db.delete(articles).where(eq(articles.id, articleId));
 }
 
-export async function listEvents(scope: Partial<TenantScope>): Promise<FirebaseEvent[]> {
-  const churchId = scopeChurchId(scope);
-  if (!churchId) return [];
-  const rows = await db
+export async function listEvents(
+  scope: ContentQueryInput,
+  options: ContentListOptions = {}
+): Promise<FirebaseEvent[]> {
+  const query = resolveListQuery(scope);
+  const filters = [
+    contentScopeWhere(
+      {
+        contentScope: events.contentScope,
+        organizationId: events.organizationId,
+        churchId: events.churchId,
+      },
+      query
+    ),
+  ];
+  if (options.publishedOnly) {
+    filters.push(eq(events.status, "published"));
+  }
+
+  const rowsQuery = db
     .select()
     .from(events)
-    .where(eq(events.churchId, churchId))
+    .where(and(...filters))
     .orderBy(desc(events.eventDate));
+
+  const rows = await (options.limit != null
+    ? rowsQuery.limit(options.limit).offset(options.offset ?? 0)
+    : options.offset != null
+      ? rowsQuery.offset(options.offset)
+      : rowsQuery);
+
   return rows.map(mapEvent);
 }
 
@@ -417,10 +682,36 @@ export async function getEventsByIds(ids: string[]): Promise<FirebaseEvent[]> {
 }
 
 export async function createEvent(input: CreateEventInput): Promise<string> {
+  const contentScope: ContentScope = input.contentScope ?? "organization";
+
+  if (contentScope === "platform_public") {
+    await assertPlatformContentCreator();
+    const [row] = await db
+      .insert(events)
+      .values({
+        contentScope: "platform_public",
+        organizationId: null,
+        churchId: null,
+        title: input.title.trim(),
+        description: input.description ?? "",
+        bannerImage: input.bannerImage?.trim() || null,
+        eventType: input.eventType,
+        speakerName: input.speakerName ?? "",
+        eventDate: input.eventDate,
+        eventTime: input.eventTime ?? "",
+        location: input.location ?? "",
+        status: input.status,
+      })
+      .returning({ id: events.id });
+    if (!row) throw new Error("Failed to create event");
+    return row.id;
+  }
+
   const church = await requireChurch(input.churchId);
   const [row] = await db
     .insert(events)
     .values({
+      contentScope: "organization",
       organizationId: church.organizationId,
       churchId: church.id,
       title: input.title.trim(),
@@ -497,14 +788,22 @@ export async function registerUserForEvent(input: {
 }
 
 export async function listPrayerRequests(
-  scope: Partial<TenantScope>
+  scope: ContentQueryInput
 ): Promise<FirebasePrayerRequest[]> {
-  const churchId = scopeChurchId(scope);
-  if (!churchId) return [];
+  const query = resolveListQuery(scope);
   const rows = await db
     .select()
     .from(prayerRequests)
-    .where(eq(prayerRequests.churchId, churchId))
+    .where(
+      contentScopeWhere(
+        {
+          contentScope: prayerRequests.contentScope,
+          organizationId: prayerRequests.organizationId,
+          churchId: prayerRequests.churchId,
+        },
+        query
+      )
+    )
     .orderBy(desc(prayerRequests.createdAt));
   const clerkIds = await getClerkIdsByUserIds(
     rows.map((row) => row.userId).filter((id): id is string => Boolean(id))
@@ -528,11 +827,16 @@ export async function getPrayerRequestById(
 }
 
 export async function createPrayerRequest(input: CreatePrayerRequestInput): Promise<string> {
+  if (input.contentScope === "platform_public") {
+    throw new Error("Prayer requests cannot be platform public content.");
+  }
+
   const church = await requireChurch(input.churchId);
   const appUser = input.userId ? await getAppUserByClerkId(input.userId) : null;
   const [row] = await db
     .insert(prayerRequests)
     .values({
+      contentScope: "organization",
       organizationId: church.organizationId,
       churchId: church.id,
       userId: appUser?.id ?? null,
@@ -617,15 +921,36 @@ export async function listUserIntercessions(
 }
 
 export async function listDonationCampaigns(
-  scope: Partial<TenantScope>
+  scope: ContentQueryInput,
+  options: ContentListOptions = {}
 ): Promise<FirebaseDonationCampaign[]> {
-  const churchId = scopeChurchId(scope);
-  if (!churchId) return [];
-  const rows = await db
+  const query = resolveListQuery(scope);
+  const filters = [
+    contentScopeWhere(
+      {
+        contentScope: donationCampaigns.contentScope,
+        organizationId: donationCampaigns.organizationId,
+        churchId: donationCampaigns.churchId,
+      },
+      query
+    ),
+  ];
+  if (options.publishedOnly) {
+    filters.push(eq(donationCampaigns.status, "active"));
+  }
+
+  const rowsQuery = db
     .select()
     .from(donationCampaigns)
-    .where(eq(donationCampaigns.churchId, churchId))
+    .where(and(...filters))
     .orderBy(desc(donationCampaigns.createdAt));
+
+  const rows = await (options.limit != null
+    ? rowsQuery.limit(options.limit).offset(options.offset ?? 0)
+    : options.offset != null
+      ? rowsQuery.offset(options.offset)
+      : rowsQuery);
+
   return rows.map(mapDonationCampaign);
 }
 
@@ -643,10 +968,33 @@ export async function getDonationCampaignById(
 export async function createDonationCampaign(
   input: CreateDonationCampaignInput
 ): Promise<string> {
+  const contentScope: ContentScope = input.contentScope ?? "organization";
+
+  if (contentScope === "platform_public") {
+    await assertPlatformContentCreator();
+    const [row] = await db
+      .insert(donationCampaigns)
+      .values({
+        contentScope: "platform_public",
+        organizationId: null,
+        churchId: null,
+        title: input.title.trim(),
+        description: input.description ?? "",
+        bannerImage: input.bannerImage?.trim() || null,
+        targetAmount: String(input.targetAmount ?? 0),
+        currency: input.currency,
+        status: input.status,
+      })
+      .returning({ id: donationCampaigns.id });
+    if (!row) throw new Error("Failed to create campaign");
+    return row.id;
+  }
+
   const church = await requireChurch(input.churchId);
   const [row] = await db
     .insert(donationCampaigns)
     .values({
+      contentScope: "organization",
       organizationId: church.organizationId,
       churchId: church.id,
       title: input.title.trim(),
@@ -681,13 +1029,21 @@ export async function deleteDonationCampaign(campaignId: string): Promise<void> 
   await db.delete(donationCampaigns).where(eq(donationCampaigns.id, campaignId));
 }
 
-export async function listDonations(scope: Partial<TenantScope>): Promise<FirebaseDonation[]> {
-  const churchId = scopeChurchId(scope);
-  if (!churchId) return [];
+export async function listDonations(scope: ContentQueryInput): Promise<FirebaseDonation[]> {
+  const query = resolveListQuery(scope);
   const rows = await db
     .select()
     .from(donations)
-    .where(eq(donations.churchId, churchId))
+    .where(
+      contentScopeWhere(
+        {
+          contentScope: donations.contentScope,
+          organizationId: donations.organizationId,
+          churchId: donations.churchId,
+        },
+        query
+      )
+    )
     .orderBy(desc(donations.createdAt));
   return rows.map(mapDonation);
 }
@@ -709,10 +1065,34 @@ export async function listDonationsByEmail(email: string): Promise<FirebaseDonat
 export async function createPendingDonation(input: PendingDonationInput): Promise<string> {
   const campaign = await getDonationCampaignById(input.campaignId);
   if (!campaign) throw new Error("Campaign not found");
+
+  if (campaign.contentScope === "platform_public") {
+    const [row] = await db
+      .insert(donations)
+      .values({
+        contentScope: "platform_public",
+        organizationId: null,
+        churchId: null,
+        campaignId: campaign.id,
+        donorName: input.donorName.trim(),
+        donorEmail: input.donorEmail.trim().toLowerCase(),
+        amount: String(input.amount),
+        currency: input.currency,
+        paymentStatus: "pending",
+        paymentProvider: input.paymentProvider,
+        transactionId: input.idempotencyKey?.trim() || `pending_${Date.now()}`,
+        isAnonymous: input.isAnonymous,
+      })
+      .returning({ id: donations.id });
+    if (!row) throw new Error("Failed to create donation");
+    return row.id;
+  }
+
   const church = await requireChurch(campaign.churchId);
   const [row] = await db
     .insert(donations)
     .values({
+      contentScope: "organization",
       organizationId: church.organizationId,
       churchId: church.id,
       campaignId: campaign.id,

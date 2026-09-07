@@ -9,15 +9,18 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { shortCategoryEnum, shortVisibilityEnum } from "./enums";
+import { contentScopeEnum, shortCategoryEnum, shortVisibilityEnum } from "./enums";
 import { churches, users } from "./tenants";
 
 export const videoShorts = pgTable(
   "video_shorts",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    contentScope: contentScopeEnum("content_scope")
+      .notNull()
+      .default("organization"),
+    organizationId: uuid("organization_id"),
+    churchId: uuid("church_id"),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -59,6 +62,7 @@ export const videoShorts = pgTable(
     index("video_shorts_user_id_idx").on(table.userId),
     index("video_shorts_visibility_idx").on(table.visibility),
     index("video_shorts_created_at_idx").on(table.createdAt),
+    index("video_shorts_content_scope_idx").on(table.contentScope),
   ]
 );
 

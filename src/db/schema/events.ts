@@ -9,21 +9,24 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { eventStatusEnum, eventTypeEnum } from "./enums";
+import { contentScopeEnum, eventStatusEnum, eventTypeEnum } from "./enums";
 import { churches, users } from "./tenants";
 
 export const events = pgTable(
   "events",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    contentScope: contentScopeEnum("content_scope")
+      .notNull()
+      .default("organization"),
+    organizationId: uuid("organization_id"),
+    churchId: uuid("church_id"),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
     bannerImage: text("banner_image"),
     eventType: eventTypeEnum("event_type").notNull().default("Other"),
     speakerName: text("speaker_name").notNull().default(""),
-    eventDate: date("event_date").notNull(),
+    eventDate: date("event_date", { mode: "string" }).notNull(),
     eventTime: text("event_time").notNull().default(""),
     location: text("location").notNull().default(""),
     status: eventStatusEnum("status").notNull().default("draft"),
@@ -51,6 +54,7 @@ export const events = pgTable(
       table.organizationId,
       table.churchId
     ),
+    index("events_content_scope_idx").on(table.contentScope),
   ]
 );
 

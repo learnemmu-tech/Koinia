@@ -15,7 +15,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useGlobalAudioPlayer } from "react-use-audio-player";
+import { useAudioPlayerContext } from "react-use-audio-player";
 
 import {
   useCurrentSongIndex,
@@ -51,12 +51,13 @@ export function Player() {
   const [currentIndex] = useCurrentSongIndex();
   const [isPlayerInit] = useIsPlayerInit();
   const showPlayer = shouldShowPlayer(queue, currentIndex, isPlayerInit);
+  const engine = usePlayerEngine();
 
   if (!showPlayer) {
     return null;
   }
 
-  return <PlayerControls />;
+  return <PlayerControls engine={engine} />;
 }
 
 function usePlayerEngine() {
@@ -86,7 +87,7 @@ function usePlayerEngine() {
     setVolume,
     seek,
     isReady,
-  } = useGlobalAudioPlayer();
+  } = useAudioPlayerContext();
 
   React.useEffect(() => {
     return registerPlaybackBridge({
@@ -282,8 +283,7 @@ function usePlayerEngine() {
   };
 }
 
-function PlayerControls() {
-  const engine = usePlayerEngine();
+function PlayerControls({ engine }: { engine: Engine }) {
   const [mobileExpanded, setMobileExpanded] = React.useState(false);
   const currentSong = engine.queue[engine.currentIndex];
 

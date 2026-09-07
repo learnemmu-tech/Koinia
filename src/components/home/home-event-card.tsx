@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight, CalendarDays, Clock3, MapPin, UserRound } from "lucide-react";
 
 import type { FirebaseEvent } from "@/types/firebase-event";
 import { ImageWithFallback } from "@/components/image-with-fallback";
-import { Badge } from "@/components/ui/badge";
 import { formatEventDate, getEventDateStartMs } from "@/lib/event-firestore";
 import {
   getEventScheduleInfo,
@@ -48,14 +48,15 @@ export function HomeEventCard({
   const { month, day } = eventDayParts(event.eventDate);
   const dateLabel = formatEventDate(event.eventDate);
   const description = event.description?.trim();
-  const meta = [event.eventTime, event.location].filter(Boolean).join(" · ");
+  const location = event.location?.trim();
+  const speaker = event.speakerName?.trim();
+  const eventTime = event.eventTime?.trim();
   const scheduleInfo = schedule ?? getEventScheduleInfo(event, now);
-  const showSchedule = highlight && scheduleInfo.label;
 
   return (
     <article
       className={cn(
-        "app-interactive app-interactive-lift app-mobile-card group flex flex-col overflow-hidden rounded-xl border bg-card/40 text-left",
+        "app-interactive app-interactive-lift app-mobile-card group flex h-full flex-col overflow-hidden rounded-xl border bg-card/40 text-left",
         highlight
           ? "border-primary/35 shadow-sm shadow-primary/5 ring-1 ring-primary/10"
           : "border-border/50",
@@ -89,26 +90,23 @@ export function HomeEventCard({
         </Link>
 
         {event.eventType ?
-          <Badge
-            variant="secondary"
-            className="pointer-events-none absolute left-3 top-3 rounded-md border-0 bg-background/85 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-sm"
-          >
+          <span className="pointer-events-none absolute left-3 top-3 z-10 max-w-[calc(50%-0.75rem)] truncate rounded-md bg-black px-2 py-1 text-[10px] font-medium text-white">
             {event.eventType}
-          </Badge>
+          </span>
         : null}
 
-        {showSchedule ?
+        {scheduleInfo.label ?
           <HomeEventScheduleBadge
             schedule={scheduleInfo}
-            className="pointer-events-none absolute right-3 top-3 z-10 max-w-[calc(100%-5.5rem)] whitespace-nowrap shadow-sm backdrop-blur-sm"
+            className="pointer-events-none absolute right-3 top-3 z-10 max-w-[calc(50%-0.75rem)]"
           />
         : null}
       </div>
 
-      <Link href={href} className="flex flex-1 flex-col gap-2 p-4 text-left">
+      <Link href={href} className="flex min-w-0 flex-1 flex-col p-4 text-left">
         <h3
           className={cn(
-            "line-clamp-2 text-left font-semibold leading-snug text-foreground",
+            "line-clamp-2 font-semibold leading-snug text-foreground",
             highlight ? "text-base sm:text-[1.05rem]" : "text-base"
           )}
         >
@@ -116,46 +114,49 @@ export function HomeEventCard({
         </h3>
 
         {description ?
-          <p className="line-clamp-2 text-left text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
             {description}
-          </p>
-        : meta ?
-          <p className="line-clamp-2 text-left text-sm leading-relaxed text-muted-foreground">
-            {meta}
           </p>
         : null}
 
-        <div className="mt-auto space-y-2 pt-3 text-left">
-          <div className="flex items-center gap-2">
-            <time className="shrink-0 text-xs text-muted-foreground/80">
-              {dateLabel}
-            </time>
-            {event.eventTime ?
-              <>
-                <span
-                  aria-hidden
-                  className="shrink-0 text-xs text-muted-foreground/50"
-                >
-                  ·
+        <div className="mt-auto min-w-0 space-y-3 pt-3">
+          <div className="grid min-w-0 gap-1.5 text-xs text-muted-foreground">
+            <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-4">
+              <span className="inline-flex min-w-0 items-start gap-1.5">
+                <CalendarDays className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <time className="min-w-0 break-words leading-snug">{dateLabel}</time>
+              </span>
+              {eventTime ?
+                <span className="inline-flex min-w-0 items-start gap-1.5">
+                  <Clock3 className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                  <span className="min-w-0 break-words leading-snug">
+                    {eventTime}
+                  </span>
                 </span>
-                <span className="truncate text-xs text-muted-foreground/80">
-                  {event.eventTime}
+              : null}
+            </div>
+            {location ?
+              <span className="inline-flex min-w-0 items-start gap-1.5">
+                <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <span className="min-w-0 break-words leading-snug [overflow-wrap:anywhere]">
+                  {location}
                 </span>
-              </>
+              </span>
+            : null}
+            {speaker ?
+              <span className="inline-flex min-w-0 items-start gap-1.5">
+                <UserRound className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                <span className="min-w-0 break-words leading-snug">
+                  {speaker}
+                </span>
+              </span>
             : null}
           </div>
 
-          {highlight && scheduleInfo.countdownLabel ?
-            <p className="text-xs font-medium text-foreground/80">
-              {scheduleInfo.countdownLabel}
-            </p>
-          : null}
-
-          {highlight ?
-            <span className="inline-flex text-xs font-semibold text-primary">
-              View Event
-            </span>
-          : null}
+          <span className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-primary">
+            View Event
+            <ArrowRight className="size-3.5" aria-hidden />
+          </span>
         </div>
       </Link>
     </article>

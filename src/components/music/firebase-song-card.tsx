@@ -5,7 +5,7 @@ import { Pause, Play } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 import { ProtectedContentLink } from "@/components/auth/protected-content-link";
-import { AdminQuickEditButton } from "@/components/admin/admin-quick-edit-button";
+import { PlatformContentQuickEdit } from "@/components/admin/inline/platform-content-quick-edit";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import type { FirebaseSong } from "@/types/firebase-song";
 import { ImageWithFallback } from "@/components/image-with-fallback";
@@ -155,8 +155,10 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
           className="absolute left-2 top-2 z-20"
         />
 
-        <AdminQuickEditButton
-          href={`/dashboard/content?tab=songs&edit=${encodeURIComponent(song.id)}`}
+        <PlatformContentQuickEdit
+          kind="song"
+          record={song}
+          tenantEditHref={`/dashboard/content?tab=songs&edit=${encodeURIComponent(song.id)}`}
           label="Edit song"
           className="absolute right-2 top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         />
@@ -165,15 +167,17 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
       <ProtectedContentLink
         href={songHref}
         aria-label={`View ${linkLabel}`}
-        className="mt-3 block min-h-[3.75rem] min-w-0 flex-1 px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="mt-2 block min-w-0 px-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        <h3 className="line-clamp-2 min-h-[2.25rem] text-[15px] font-bold leading-[1.2] tracking-tight text-foreground">
+        <h3 className="line-clamp-2 text-[15px] font-bold leading-snug tracking-tight text-foreground">
           {displayTitle}
         </h3>
 
-        <p className="mt-0.5 line-clamp-2 min-h-[1.625rem] text-[13px] font-normal leading-[1.25] text-muted-foreground">
-          {artistLine || "\u00a0"}
-        </p>
+        {artistLine ?
+          <p className="mt-1 line-clamp-2 text-[13px] font-normal leading-snug text-muted-foreground">
+            {artistLine}
+          </p>
+        : null}
       </ProtectedContentLink>
     </article>
   );

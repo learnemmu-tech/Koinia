@@ -6,17 +6,36 @@ import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useIsPlatformSuperAdmin } from "@/hooks/use-admin-church-id";
+import { useWorkspaceTenantScope } from "@/hooks/use-workspace-tenant-scope";
 
 const AddEventModal = dynamic(
   () => import("@/components/admin/add-event-modal").then((m) => m.AddEventModal),
   { ssr: false }
 );
 
-export function EventsAdminBar({ churchId }: { churchId: string }) {
+type EventsAdminBarProps = {
+  contentScope?: "platform_public" | "organization";
+};
+
+export function EventsAdminBar({
+  contentScope = "organization",
+}: EventsAdminBarProps) {
   const isAdmin = useIsAdmin();
+  const isSuperAdmin = useIsPlatformSuperAdmin();
+  const workspace = useWorkspaceTenantScope();
   const [open, setOpen] = useState(false);
 
+  const effectiveScope =
+    contentScope === "platform_public" && isSuperAdmin
+      ? ("platform_public" as const)
+      : ("organization" as const);
+
+  const churchId =
+    effectiveScope === "platform_public" ? "" : (workspace.churchId ?? "");
+
   if (!isAdmin) return null;
+  if (effectiveScope === "organization" && !churchId) return null;
 
   return (
     <>
@@ -27,7 +46,7 @@ export function EventsAdminBar({ churchId }: { churchId: string }) {
         className="shrink-0 gap-1.5 rounded-full"
       >
         <Plus className="size-4" aria-hidden />
-        Create Event
+        Add Event
       </Button>
 
       {open ? (
@@ -36,6 +55,7 @@ export function EventsAdminBar({ churchId }: { churchId: string }) {
           onClose={() => setOpen(false)}
           onSave={() => setOpen(false)}
           churchId={churchId}
+          contentScope={effectiveScope}
         />
       ) : null}
     </>

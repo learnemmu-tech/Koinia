@@ -55,6 +55,7 @@ type AddEventModalProps = {
   onSave: () => void;
   initialEvent?: FirebaseEvent | null;
   churchId: string;
+  contentScope?: "platform_public" | "organization";
 };
 
 export function AddEventModal({
@@ -63,6 +64,7 @@ export function AddEventModal({
   onSave,
   initialEvent,
   churchId,
+  contentScope = "organization",
 }: AddEventModalProps) {
   const { user } = useFirebaseAuth();
   const { invalidateEvents } = useInvalidateAdminQueries();
@@ -191,7 +193,11 @@ export function AddEventModal({
 
         toast.success("Event updated successfully");
       } else {
-        const eventId = await createEvent({ ...payload, churchId });
+        const eventId = await createEvent({
+          ...payload,
+          contentScope,
+          churchId: contentScope === "platform_public" ? "" : churchId,
+        });
 
         let bannerImageUrl = payload.bannerImage;
         if (bannerFile) {

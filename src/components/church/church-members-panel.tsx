@@ -2,11 +2,42 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Loader2, UserCheck, UserX } from "lucide-react";
+import { Loader2, MoreHorizontal, UserCheck, UserX } from "lucide-react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -17,6 +48,12 @@ import {
 import { useOrganization } from "@/context/organization-context";
 import { firebaseAuth } from "@/lib/firebase-auth-service";
 import type { FirebaseBranchMembership } from "@/types/branch-membership";
+import {
+  ASSIGNABLE_CHURCH_ROLES,
+  formatMembershipRoleLabel,
+  isAssignableChurchRole,
+  type AssignableChurchRole,
+} from "@/types/membership";
 
 type BranchMembersResponse = {
   pending: FirebaseBranchMembership[];
@@ -30,6 +67,7 @@ type BranchMembersResponse = {
       photoURL?: string;
     }
   >;
+  canManageMembers?: boolean;
 };
 
 type ChurchMembersPanelProps = {
@@ -72,6 +110,12 @@ export function ChurchMembersPanel({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [roleMember, setRoleMember] = useState<FirebaseBranchMembership | null>(
+    null
+  );
+  const [nextRole, setNextRole] = useState<AssignableChurchRole>("member");
+  const [removeMember, setRemoveMember] =
+    useState<FirebaseBranchMembership | null>(null);
 
   const load = useCallback(async () => {
     if (!organization) return;
@@ -104,6 +148,7 @@ export function ChurchMembersPanel({
   const pending = data?.pending ?? [];
   const active = data?.active ?? [];
   const usersById = data?.usersById ?? {};
+  const canManageMembers = Boolean(data?.canManageMembers);
 
   const allPendingSelected = useMemo(
     () => pending.length > 0 && pending.every((m) => selectedIds.has(m.id)),
@@ -173,6 +218,76 @@ export function ChurchMembersPanel({
     }
   }
 
+  async function saveRole() {
+    if (!organization || !roleMember) return;
+    const user = firebaseAuth.currentUser;
+    if (!user) return;
+
+    setBusy(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/memberships/role", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationId: organization.id,
+          membershipId: roleMember.id,
+          role: nextRole,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to update role");
+      }
+      toast.success("Role updated");
+      setRoleMember(null);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update role");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmRemove() {
+    if (!organization || !removeMember) return;
+    const user = firebaseAuth.currentUser;
+    if (!user) return;
+
+    setBusy(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/memberships/pending", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organizationId: organization.id,
+          membershipIds: [removeMember.id],
+          action: "remove",
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to remove member");
+      }
+      toast.success("Member removed");
+      setRemoveMember(null);
+      await load();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to remove member"
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function renderMemberRow(
     member: FirebaseBranchMembership,
     options?: { showActions?: boolean; selectable?: boolean }
@@ -211,7 +326,7 @@ export function ChurchMembersPanel({
             </p>
           </div>
         </div>
-        {options?.showActions ?
+        {options?.showActions && canManageMembers ?
           <div className="flex shrink-0 gap-2 sm:ml-auto">
             <Button
               size="sm"
@@ -262,42 +377,44 @@ export function ChurchMembersPanel({
         <CardContent className="space-y-4">
           {pending.length > 0 ?
             <>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={toggleSelectAllPending}
-                >
-                  {allPendingSelected ? "Clear selection" : "Select all"}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={busy || selectedIds.size === 0}
-                  onClick={() =>
-                    void review(Array.from(selectedIds), "approve")
-                  }
-                >
-                  Bulk approve
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={busy || selectedIds.size === 0}
-                  onClick={() =>
-                    void review(Array.from(selectedIds), "reject")
-                  }
-                >
-                  Bulk reject
-                </Button>
-              </div>
+              {canManageMembers ?
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={toggleSelectAllPending}
+                  >
+                    {allPendingSelected ? "Clear selection" : "Select all"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy || selectedIds.size === 0}
+                    onClick={() =>
+                      void review(Array.from(selectedIds), "approve")
+                    }
+                  >
+                    Bulk approve
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy || selectedIds.size === 0}
+                    onClick={() =>
+                      void review(Array.from(selectedIds), "reject")
+                    }
+                  >
+                    Bulk reject
+                  </Button>
+                </div>
+              : null}
               <ul className="space-y-3">
                 {pending.map((member) =>
                   renderMemberRow(member, {
-                    showActions: true,
-                    selectable: true,
+                    showActions: canManageMembers,
+                    selectable: canManageMembers,
                   })
                 )}
               </ul>
@@ -333,12 +450,50 @@ export function ChurchMembersPanel({
                       : null}
                       <AvatarFallback>{memberInitials(user)}</AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{name}</p>
                       <p className="truncate text-sm text-muted-foreground">
                         {user?.email ?? "—"}
                       </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatMembershipRoleLabel(member.role)}
+                      </p>
                     </div>
+                    {canManageMembers ?
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 shrink-0"
+                            aria-label={`Actions for ${name}`}
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              setRoleMember(member);
+                              setNextRole(
+                                isAssignableChurchRole(member.role)
+                                  ? member.role
+                                  : "member"
+                              );
+                            }}
+                          >
+                            Edit Role
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setRemoveMember(member)}
+                          >
+                            Remove Member
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    : null}
                   </li>
                 );
               })}
@@ -349,6 +504,108 @@ export function ChurchMembersPanel({
           }
         </CardContent>
       </Card>
+
+      <Dialog
+        open={Boolean(roleMember)}
+        onOpenChange={(open) => {
+          if (!open) setRoleMember(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Role</DialogTitle>
+            <DialogDescription>
+              Change this member&apos;s church role. Organization Admin and
+              SuperAdmin cannot be assigned here.
+            </DialogDescription>
+          </DialogHeader>
+          {roleMember ?
+            <div className="space-y-4">
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">
+                  {memberName(roleMember.userId, usersById)}
+                </p>
+                <p className="text-muted-foreground">
+                  {usersById[roleMember.userId]?.email ?? "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Current role: {formatMembershipRoleLabel(roleMember.role)}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Role</p>
+                <Select
+                  value={nextRole}
+                  onValueChange={(value) => {
+                    if (isAssignableChurchRole(value)) setNextRole(value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSIGNABLE_CHURCH_ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {formatMembershipRoleLabel(role)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRoleMember(null)}
+              disabled={busy}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void saveRole()} disabled={busy}>
+              {busy ?
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+              : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(removeMember)}
+        onOpenChange={(open) => {
+          if (!open) setRemoveMember(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove{" "}
+              {removeMember
+                ? memberName(removeMember.userId, usersById)
+                : "this person"}{" "}
+              from {churchName ?? "this church"}. Their FaithConnectHub account
+              will not be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={busy}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmRemove();
+              }}
+            >
+              Remove Member
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

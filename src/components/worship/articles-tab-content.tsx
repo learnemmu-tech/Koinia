@@ -15,11 +15,15 @@ import { useRealtimeArticles } from "@/hooks/use-worship-realtime";
 
 type ArticlesTabContentProps = {
   initialArticles: FirebaseArticle[];
+  isPlatformPublic?: boolean;
 };
 
-export function ArticlesTabContent({ initialArticles }: ArticlesTabContentProps) {
+export function ArticlesTabContent({
+  initialArticles,
+  isPlatformPublic = false,
+}: ArticlesTabContentProps) {
   const { data: liveArticles, syncing, loadMore, hasMore, loadingMore } =
-    useRealtimeArticles(initialArticles);
+    useRealtimeArticles(initialArticles, { clientSync: !isPlatformPublic });
   const articles = useMemo(
     () => liveArticles.filter((article) => article.isPublished),
     [liveArticles]

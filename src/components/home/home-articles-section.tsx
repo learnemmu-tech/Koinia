@@ -16,7 +16,7 @@ export function HomeArticlesSection({ articles }: HomeArticlesSectionProps) {
       if (a.featured !== b.featured) return a.featured ? -1 : 1;
       return b.dateCreated - a.dateCreated;
     })
-    .slice(0, 3);
+    .slice(0, 4);
 
   return (
     <section aria-labelledby="home-articles-heading" className="space-y-3">
@@ -25,13 +25,14 @@ export function HomeArticlesSection({ articles }: HomeArticlesSectionProps) {
         title="Latest Articles"
         description="Read faith, ministry, and community insights."
         href="/articles"
+        viewAllLabel="View All Articles"
       />
       {visible.length === 0 ?
         <HomeEmptyState
           title="No articles yet"
           description="Check back soon for new writing from the community."
         />
-      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:items-stretch md:overflow-visible md:px-0">
+      : <HomeCollectionRail className="md:mx-0 md:grid md:grid-cols-2 md:items-stretch md:overflow-visible md:px-0 lg:grid-cols-4">
           {visible.map((article) => (
             <div
               key={article.id}

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -9,7 +10,8 @@ import {
   organizationMemberships,
   users,
 } from "@/db/schema";
-import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
+import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
 import {
   getAppUserByClerkId,
   mapAppUserToProfile,
@@ -75,7 +77,7 @@ export async function getUsersByIds(userIds: string[]) {
   return db.select().from(users).where(inArray(users.id, ids));
 }
 
-export async function getOrgMembershipRow(userId: string, organizationId: string) {
+export const getOrgMembershipRow = cache(async function getOrgMembershipRow(userId: string, organizationId: string) {
   const [row] = await db
     .select()
     .from(organizationMemberships)
@@ -87,9 +89,9 @@ export async function getOrgMembershipRow(userId: string, organizationId: string
     )
     .limit(1);
   return row ?? null;
-}
+});
 
-export async function getChurchMembershipRow(userId: string, churchId: string) {
+export const getChurchMembershipRow = cache(async function getChurchMembershipRow(userId: string, churchId: string) {
   const [row] = await db
     .select()
     .from(churchMemberships)
@@ -101,7 +103,7 @@ export async function getChurchMembershipRow(userId: string, churchId: string) {
     )
     .limit(1);
   return row ?? null;
-}
+});
 
 export async function listChurchMembershipsForUser(userId: string) {
   return db
@@ -209,14 +211,14 @@ export async function getBranchMembershipsForClerkUser(
  */
 export async function userCanReviewChurchMemberships(
   clerkId: string,
-  email: string | undefined,
+  _email: string | undefined,
   churchId: string
 ): Promise<boolean> {
   if (!isPostgresUuid(churchId)) return false;
-  if (isPlatformSuperAdmin(email)) return true;
 
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return false;
+  if (isPlatformSuperAdmin(appUser.platformRole)) return true;
 
   const [church] = await db
     .select()
@@ -224,6 +226,15 @@ export async function userCanReviewChurchMemberships(
     .where(eq(churches.id, churchId))
     .limit(1);
   if (!church) return false;
+
+  if (
+    !(await organizationAllowsWorkspaceAccess(
+      church.organizationId,
+      appUser.platformRole
+    ))
+  ) {
+    return false;
+  }
 
   const orgRow = await getOrgMembershipRow(appUser.id, church.organizationId);
   if (
@@ -238,16 +249,16 @@ export async function userCanReviewChurchMemberships(
   return roleMeetsMinimum(churchRow.role as MembershipRole, "church_admin");
 }
 
-export async function userCanManageChurch(
+export const userCanManageChurch = cache(async function userCanManageChurch(
   clerkId: string,
-  email: string | undefined,
+  _email: string | undefined,
   churchId: string
 ): Promise<boolean> {
   if (!isPostgresUuid(churchId)) return false;
-  if (isPlatformSuperAdmin(email)) return true;
 
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return false;
+  if (isPlatformSuperAdmin(appUser.platformRole)) return true;
 
   const [church] = await db
     .select()
@@ -255,6 +266,15 @@ export async function userCanManageChurch(
     .where(eq(churches.id, churchId))
     .limit(1);
   if (!church) return false;
+
+  if (
+    !(await organizationAllowsWorkspaceAccess(
+      church.organizationId,
+      appUser.platformRole
+    ))
+  ) {
+    return false;
+  }
 
   const orgRow = await getOrgMembershipRow(appUser.id, church.organizationId);
   if (orgRow?.status === "active") return true;
@@ -262,18 +282,18 @@ export async function userCanManageChurch(
   const churchRow = await getChurchMembershipRow(appUser.id, churchId);
   if (!churchRow || churchRow.status !== "active") return false;
   return roleMeetsMinimum(churchRow.role as MembershipRole, "editor");
-}
+});
 
-export async function userCanAccessChurchContent(
+export const userCanAccessChurchContent = cache(async function userCanAccessChurchContent(
   clerkId: string,
-  email: string | undefined,
+  _email: string | undefined,
   churchId: string
 ): Promise<boolean> {
   if (!isPostgresUuid(churchId)) return false;
-  if (isPlatformSuperAdmin(email)) return true;
 
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return false;
+  if (isPlatformSuperAdmin(appUser.platformRole)) return true;
 
   const [church] = await db
     .select()
@@ -282,12 +302,48 @@ export async function userCanAccessChurchContent(
     .limit(1);
   if (!church) return false;
 
+  if (
+    !(await organizationAllowsWorkspaceAccess(
+      church.organizationId,
+      appUser.platformRole
+    ))
+  ) {
+    return false;
+  }
+
   const orgRow = await getOrgMembershipRow(appUser.id, church.organizationId);
   if (orgRow?.status === "active") return true;
 
   const churchRow = await getChurchMembershipRow(appUser.id, churchId);
   return churchRow?.status === "active";
-}
+});
+
+/** Organization-level administration (owner / org_admin). Church Admin does not qualify. */
+export const userCanManageOrganization = cache(async function userCanManageOrganization(
+  clerkId: string,
+  organizationId: string
+): Promise<boolean> {
+  if (!isPostgresUuid(organizationId)) return false;
+
+  const appUser = await getAppUserByClerkId(clerkId);
+  if (!appUser) return false;
+  if (isPlatformSuperAdmin(appUser.platformRole)) return true;
+
+  if (
+    !(await organizationAllowsWorkspaceAccess(
+      organizationId,
+      appUser.platformRole
+    ))
+  ) {
+    return false;
+  }
+
+  const orgRow = await getOrgMembershipRow(appUser.id, organizationId);
+  return (
+    orgRow?.status === "active" &&
+    roleMeetsMinimum(orgRow.role as MembershipRole, "org_admin")
+  );
+});
 
 export async function assertCanManageChurch(
   clerkId: string,

@@ -8,20 +8,22 @@ import {
   listSongs,
   updateSong as saveSong,
 } from "@/lib/postgres/features";
-import { filterPublishedSongs } from "@/lib/song-firestore";
-import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
 import type {
   CreateSongInput,
   FirebaseSong,
   UpdateSongInput,
 } from "@/types/firebase-song";
 
-export async function getAllSongs(scope: TenantScope): Promise<FirebaseSong[]> {
+export async function getAllSongs(scope: ContentQueryInput): Promise<FirebaseSong[]> {
   return listSongs(scope);
 }
 
-export async function getPublishedSongs(scope: TenantScope): Promise<FirebaseSong[]> {
-  return filterPublishedSongs(await listSongs(scope));
+export async function getPublishedSongs(
+  scope: ContentQueryInput,
+  options?: { limit?: number }
+): Promise<FirebaseSong[]> {
+  return listSongs(scope, { publishedOnly: true, limit: options?.limit });
 }
 
 export async function getSongById(songId: string): Promise<FirebaseSong | null> {
@@ -33,7 +35,7 @@ export async function getSongsByIds(ids: string[]): Promise<FirebaseSong[]> {
 }
 
 export async function searchSongs(
-  scope: TenantScope,
+  scope: ContentQueryInput,
   searchQuery: string
 ): Promise<FirebaseSong[]> {
   const normalized = searchQuery.trim().toLowerCase();

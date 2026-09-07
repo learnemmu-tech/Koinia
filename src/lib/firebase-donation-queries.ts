@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 
 import { db } from "@/db";
 import { donations } from "@/db/schema";
@@ -11,24 +11,28 @@ import {
   listDonations,
 } from "@/lib/postgres/features";
 import { mapDonation } from "@/lib/postgres/mappers";
-import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
+import { PUBLIC_PLATFORM_CONTENT_QUERY } from "@/lib/content/content-scope";
+import { contentScopeWhere, resolveContentQuery } from "@/lib/content/content-scope";
 import type {
   FirebaseDonation,
   FirebaseDonationCampaign,
 } from "@/types/firebase-donation";
 
 export async function getDonationCampaigns(
-  scope: TenantScope
+  scope: ContentQueryInput
 ): Promise<FirebaseDonationCampaign[]> {
   return listDonationCampaigns(scope);
 }
 
 export async function getActiveDonationCampaigns(
-  scope: TenantScope
+  scope: ContentQueryInput,
+  options?: { limit?: number }
 ): Promise<FirebaseDonationCampaign[]> {
-  return (await listDonationCampaigns(scope)).filter(
-    (campaign) => campaign.status === "active"
-  );
+  return listDonationCampaigns(scope, {
+    publishedOnly: true,
+    limit: options?.limit,
+  });
 }
 
 export async function getDonationCampaignById(
@@ -43,6 +47,16 @@ export async function getRecentDonations(
   const rows = await db
     .select()
     .from(donations)
+    .where(
+      contentScopeWhere(
+        {
+          contentScope: donations.contentScope,
+          organizationId: donations.organizationId,
+          churchId: donations.churchId,
+        },
+        resolveContentQuery(PUBLIC_PLATFORM_CONTENT_QUERY)
+      )
+    )
     .orderBy(desc(donations.createdAt))
     .limit(limit);
   return rows.map(mapDonation);
@@ -55,7 +69,19 @@ export async function getCompletedDonationStats(): Promise<{
   const rows = await db
     .select()
     .from(donations)
-    .where(eq(donations.paymentStatus, "completed"));
+    .where(
+      and(
+        eq(donations.paymentStatus, "completed"),
+        contentScopeWhere(
+          {
+            contentScope: donations.contentScope,
+            organizationId: donations.organizationId,
+            churchId: donations.churchId,
+          },
+          resolveContentQuery(PUBLIC_PLATFORM_CONTENT_QUERY)
+        )
+      )
+    );
   return {
     totalDonations: rows.length,
     amountRaised: rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0),
@@ -69,7 +95,7 @@ export async function getDonationById(
 }
 
 export async function getChurchDonations(
-  scope: TenantScope
+  scope: ContentQueryInput
 ): Promise<FirebaseDonation[]> {
   return listDonations(scope);
 }

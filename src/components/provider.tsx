@@ -25,6 +25,8 @@ import { FavoritesProvider } from "@/context/favorites-context";
 import { RecentlyViewedProvider } from "@/context/recently-viewed-context";
 import { ContentAuthDialogProvider } from "@/context/content-auth-dialog-context";
 import { SubscriptionShell } from "@/components/subscription/subscription-shell";
+import { AudioPlayerProvider } from "react-use-audio-player";
+
 import { GlobalAudioPlayerShell } from "./global-audio-player-shell";
 import { Toaster } from "./ui/sonner";
 import { TooltipProvider } from "./ui/tooltip";
@@ -81,9 +83,11 @@ export default function Providers({
                       <ContentAuthDialogProvider>
                         <SubscriptionShell>
                           <TooltipProvider>
-                            <GlobalAudioPlayerShell>
-                              {children}
-                            </GlobalAudioPlayerShell>
+                            <AudioPlayerProvider>
+                              <GlobalAudioPlayerShell>
+                                {children}
+                              </GlobalAudioPlayerShell>
+                            </AudioPlayerProvider>
                           </TooltipProvider>
                         </SubscriptionShell>
                       </ContentAuthDialogProvider>

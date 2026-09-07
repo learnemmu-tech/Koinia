@@ -72,22 +72,22 @@ export function AdminContentManagementClient() {
         </TabsList>
 
         <TabsContent value="songs" className="mt-0">
-          {activeTab === "songs" ? <AdminSongsPageClient embedded /> : null}
+          <AdminSongsPageClient embedded />
         </TabsContent>
         <TabsContent value="sermons" className="mt-0">
-          {activeTab === "sermons" ? <AdminSermonsPageClient embedded /> : null}
+          <AdminSermonsPageClient embedded />
         </TabsContent>
         <TabsContent value="articles" className="mt-0">
-          {activeTab === "articles" ? <AdminArticlesPageClient embedded /> : null}
+          <AdminArticlesPageClient embedded />
         </TabsContent>
         <TabsContent value="events" className="mt-0">
-          {activeTab === "events" ? <AdminEventsPageClient embedded /> : null}
+          <AdminEventsPageClient embedded />
         </TabsContent>
         <TabsContent value="donations" className="mt-0">
-          {activeTab === "donations" ? <AdminDonationsPageClient embedded /> : null}
+          <AdminDonationsPageClient embedded />
         </TabsContent>
         <TabsContent value="prayers" className="mt-0">
-          {activeTab === "prayers" ? <AdminPrayersPageClient embedded /> : null}
+          <AdminPrayersPageClient embedded />
         </TabsContent>
       </Tabs>
     </div>

@@ -85,6 +85,7 @@ type AddSermonModalProps = {
   onSave: () => void;
   initialSermon?: FirebaseSermon | null;
   churchId: string;
+  contentScope?: "platform_public" | "organization";
 };
 
 function parseTags(tagsInput?: string): string[] {
@@ -120,6 +121,7 @@ export function AddSermonModal({
   onSave,
   initialSermon,
   churchId,
+  contentScope = "organization",
 }: AddSermonModalProps) {
   const { user, authUser } = useFirebaseAuth();
   const { invalidateSermons } = useInvalidateAdminQueries();
@@ -252,7 +254,8 @@ export function AddSermonModal({
       } else {
         const sermonId = await createSermon({
           ...payload,
-          churchId,
+          contentScope,
+          churchId: contentScope === "platform_public" ? "" : churchId,
           coverImage: "",
           createdBy,
         });

@@ -3,7 +3,8 @@ import type { FirebaseBranchMembership } from "@/types/branch-membership";
 import type { FirebaseMembership, MembershipRole } from "@/types/membership";
 import { roleMeetsMinimum } from "@/types/membership";
 
-import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { isOrganizationAccessSuspended } from "@/lib/auth/organization-workspace-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 
 import { resolveAccountType as resolveAccountTypeInternal } from "./account-type";
 
@@ -16,6 +17,8 @@ export type WorkspaceAccessInput = {
   /** Branches (user-facing churches) in the organization. */
   branchesCount?: number;
   workspaceType?: "independent_church" | "multi_church_org";
+  /** `organizations.status` — platform access, not subscription status. */
+  organizationStatus?: string | null;
 };
 
 const ADMIN_MEMBERSHIP_ROLES: MembershipRole[] = [
@@ -100,6 +103,7 @@ export function isOnboardingComplete({
   workspaceType,
 }: WorkspaceAccessInput): boolean {
   if (!profile) return false;
+  if (isPlatformSuperAdmin(profile.platformRole)) return true;
   if (profile.needsChurchOnboarding === true) return false;
   if (profile.organizationId?.trim()) return true;
   if (isOrgOnlyWorkspaceComplete(profile)) return true;
@@ -120,6 +124,7 @@ export function isOnboardingComplete({
 export function needsChurchOnboarding(input: WorkspaceAccessInput): boolean {
   const { profile, churchesCount = 0, workspaceType } = input;
   if (!profile) return false;
+  if (isPlatformSuperAdmin(profile.platformRole)) return false;
 
   if (isMembershipPending(profile)) return false;
 
@@ -158,7 +163,8 @@ export function isMembershipPending(profile: FirestoreUser | null): boolean {
 export function canAccessWorkspace(input: WorkspaceAccessInput): boolean {
   const { profile, membership, branchMembership, workspaceType } = input;
   if (!profile) return false;
-  if (isPlatformSuperAdmin(profile.email)) return true;
+  if (isPlatformSuperAdmin(profile.platformRole)) return true;
+  if (isOrganizationAccessSuspended(input.organizationStatus)) return false;
   if (isMembershipPending(profile)) return false;
 
   if (membership?.status === "suspended") return false;
@@ -211,11 +217,26 @@ export function isChurchOwner(input: WorkspaceAccessInput): boolean {
   return resolveAccountType(input) === "church_owner";
 }
 
+/** Organization-level administration — owner/org_admin only. */
+export function canManageOrganizationWorkspace(
+  input: WorkspaceAccessInput
+): boolean {
+  const { profile, membership } = input;
+  if (!profile) return false;
+  if (isPlatformSuperAdmin(profile.platformRole)) return true;
+  if (isOrganizationAccessSuspended(input.organizationStatus)) return false;
+  return (
+    membership?.status === "active" &&
+    roleMeetsMinimum(membership.role, "org_admin")
+  );
+}
+
 /** Church Management nav — owner, org_admin, and church_admin (and platform super-admin). */
 export function canAccessChurchManagement(input: WorkspaceAccessInput): boolean {
   const { profile, membership, branchMembership } = input;
   if (!profile) return false;
-  if (isPlatformSuperAdmin(profile.email)) return true;
+  if (isPlatformSuperAdmin(profile.platformRole)) return true;
+  if (isOrganizationAccessSuspended(input.organizationStatus)) return false;
 
   const hasAdminOrgMembership =
     membership?.status === "active" &&

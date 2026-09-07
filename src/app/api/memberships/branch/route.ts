@@ -6,7 +6,10 @@ import {
 } from "@/lib/organization/branch-membership-server";
 import { getPublicUserDirectory } from "@/lib/postgres/memberships";
 import { getChurchById } from "@/lib/postgres/tenants";
-import { userCanReviewChurchMemberships } from "@/lib/postgres/session";
+import {
+  userCanManageOrganization,
+  userCanReviewChurchMemberships,
+} from "@/lib/postgres/session";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 export async function GET(request: Request) {
@@ -49,8 +52,12 @@ export async function GET(request: Request) {
     const usersById = await getPublicUserDirectory(
       [...pending, ...active].map((item) => item.userId)
     );
+    const canManageMembers = await userCanManageOrganization(
+      decoded.uid,
+      organizationId
+    );
 
-    return NextResponse.json({ pending, active, usersById });
+    return NextResponse.json({ pending, active, usersById, canManageMembers });
   } catch (error) {
     console.error("[api/memberships/branch]", error);
     return NextResponse.json(

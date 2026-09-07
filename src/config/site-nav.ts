@@ -8,7 +8,6 @@ import {
   Info,
   Lock,
   Mic2,
-  Sparkles,
   Tag,
 } from "lucide-react";
 
@@ -56,12 +55,6 @@ export const siteMinistryNav: SiteNavItem[] = [
     icon: BookOpen,
     match: (pathname) =>
       pathname === "/articles" || pathname.startsWith("/articles/"),
-  },
-  {
-    label: "Prayer Requests",
-    href: "/prayer-requests",
-    icon: Sparkles,
-    match: (pathname) => pathname.startsWith("/prayer-requests"),
   },
   {
     label: "Events",

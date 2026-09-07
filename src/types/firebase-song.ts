@@ -13,6 +13,7 @@ export type SongCategory = (typeof SONG_CATEGORIES)[number];
 export type FirebaseSong = {
   id: string;
   organizationId?: string;
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   branchId?: string | null;
   /** Primary display title */
@@ -44,6 +45,7 @@ export type FirebaseSong = {
 };
 
 export type CreateSongInput = {
+  contentScope?: "organization" | "platform_public";
   songTitle: string;
   alternateTitle?: string;
   artist?: string;

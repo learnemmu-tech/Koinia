@@ -8,21 +8,22 @@ import {
   listArticles,
   updateArticle as saveArticle,
 } from "@/lib/postgres/features";
-import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
 import type {
   CreateArticleInput,
   FirebaseArticle,
   UpdateArticleInput,
 } from "@/types/firebase-article";
 
-export async function getArticles(scope: TenantScope): Promise<FirebaseArticle[]> {
+export async function getArticles(scope: ContentQueryInput): Promise<FirebaseArticle[]> {
   return listArticles(scope);
 }
 
 export async function getPublishedArticles(
-  scope: TenantScope
+  scope: ContentQueryInput,
+  options?: { limit?: number }
 ): Promise<FirebaseArticle[]> {
-  return (await listArticles(scope)).filter((article) => article.isPublished);
+  return listArticles(scope, { publishedOnly: true, limit: options?.limit });
 }
 
 export async function getArticleById(
@@ -36,7 +37,7 @@ export async function getArticlesByIds(ids: string[]): Promise<FirebaseArticle[]
 }
 
 export async function searchArticles(
-  scope: TenantScope,
+  scope: ContentQueryInput,
   searchQuery: string
 ): Promise<FirebaseArticle[]> {
   const normalized = searchQuery.trim().toLowerCase();

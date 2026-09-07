@@ -7,6 +7,7 @@ import { Loader2, MapPin, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { RequireAdmin } from "@/components/auth/require-admin";
+import { RequireOrganizationAdmin } from "@/components/auth/require-organization-admin";
 import { AdminListPagination } from "@/components/admin/admin-list-pagination";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminToolbar } from "@/components/admin/admin-toolbar";
@@ -621,7 +622,9 @@ function OrganizationPageContent() {
 export function AdminOrganizationPageClient() {
   return (
     <RequireAdmin>
-      <OrganizationPageContent />
+      <RequireOrganizationAdmin>
+        <OrganizationPageContent />
+      </RequireOrganizationAdmin>
     </RequireAdmin>
   );
 }

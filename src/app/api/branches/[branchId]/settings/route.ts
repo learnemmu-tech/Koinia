@@ -8,11 +8,10 @@ import { churches } from "@/db/schema";
 import { slugifyChurchSlug } from "@/lib/church-scope";
 import { normalizeEnrollmentMode } from "@/lib/enrollment";
 import { updateBranch } from "@/lib/organization/organization-server";
-import { getMembershipForUser } from "@/lib/organization/organization-server";
 import { getChurchRowById } from "@/lib/postgres/tenants";
 import { virtualBranchFromChurch } from "@/lib/postgres/mappers";
+import { userCanManageOrganization } from "@/lib/postgres/session";
 import { ENROLLMENT_MODES } from "@/types/enrollment";
-import { roleMeetsMinimum } from "@/types/membership";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 type RouteContext = { params: Promise<{ branchId: string }> };
@@ -24,16 +23,12 @@ type PatchBody = {
   regenerateSlug?: boolean;
 };
 
-async function assertChurchAdmin(
+async function assertOrganizationAdmin(
   organizationId: string,
   userId: string
 ): Promise<void> {
-  const membership = await getMembershipForUser(organizationId, userId);
-  if (
-    !membership ||
-    membership.status !== "active" ||
-    !roleMeetsMinimum(membership.role, "church_admin")
-  ) {
+  const allowed = await userCanManageOrganization(userId, organizationId);
+  if (!allowed) {
     throw new Error("Forbidden");
   }
 }
@@ -71,7 +66,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    await assertChurchAdmin(organizationId, decoded.uid);
+    await assertOrganizationAdmin(organizationId, decoded.uid);
 
     const church = await getChurchRowById(branchId);
     if (!church || church.organizationId !== organizationId) {

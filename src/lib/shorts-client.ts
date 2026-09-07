@@ -42,6 +42,8 @@ export async function createShortDraft(
     caption: string;
     category: ShortCategory;
     visibility: ShortVisibility;
+    contentScope?: "organization" | "platform_public";
+    churchId?: string;
   },
   token: string
 ) {
@@ -53,7 +55,9 @@ export async function createShortDraft(
     },
     body: JSON.stringify(input),
   });
-  return parseJson<{ id: string; churchId: string }>(response);
+  return parseJson<{ id: string; churchId: string | null; contentScope?: string }>(
+    response
+  );
 }
 
 function putFileToSignedUrl(

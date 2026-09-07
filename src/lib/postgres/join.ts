@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { churchMemberships, churches, users } from "@/db/schema";
+import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
 import { getClerkIdentity } from "@/lib/email/verify-auth";
 import { triggerJoinRequestNotification } from "@/lib/email/triggers";
 import {
@@ -116,6 +117,14 @@ export async function joinUserToChurchBySlug(
   const church = await loadChurchByJoinSlug(slug);
   if (!church) {
     throw new Error("Church not found");
+  }
+
+  const orgAccessAllowed = await organizationAllowsWorkspaceAccess(
+    church.organizationId,
+    null
+  );
+  if (!orgAccessAllowed) {
+    throw new Error("This organization is not accepting join requests.");
   }
 
   const branch = virtualBranchFromChurch(church);

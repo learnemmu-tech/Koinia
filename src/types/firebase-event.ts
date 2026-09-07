@@ -14,6 +14,7 @@ export type EventStatus = "draft" | "published";
 
 export type FirebaseEvent = {
   id: string;
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   title: string;
   description: string;
@@ -29,6 +30,7 @@ export type FirebaseEvent = {
 };
 
 export type CreateEventInput = {
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   title: string;
   description: string;

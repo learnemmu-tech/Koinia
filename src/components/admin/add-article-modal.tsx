@@ -80,6 +80,7 @@ type AddArticleModalProps = {
   onSave: () => void;
   initialArticle?: FirebaseArticle | null;
   churchId: string;
+  contentScope?: "platform_public" | "organization";
 };
 
 function parseTags(tagsInput?: string): string[] {
@@ -115,6 +116,7 @@ export function AddArticleModal({
   onSave,
   initialArticle,
   churchId,
+  contentScope = "organization",
 }: AddArticleModalProps) {
   const { user, authUser } = useFirebaseAuth();
   const { invalidateArticles } = useInvalidateAdminQueries();
@@ -247,7 +249,8 @@ export function AddArticleModal({
       } else {
         const articleId = await createArticle({
           ...payload,
-          churchId,
+          contentScope,
+          churchId: contentScope === "platform_public" ? "" : churchId,
           coverImage: "",
           createdBy,
         });

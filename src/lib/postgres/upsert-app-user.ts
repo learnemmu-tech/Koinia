@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { shouldBootstrapPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import {
   mapAppUserToProfile,
   type AppUserRow,
@@ -90,8 +91,29 @@ function toResult(row: AppUserRow, created: boolean): AppUserSyncResult {
  * Idempotent identity sync: one PostgreSQL `users` row per Clerk user id.
  * If the email already exists (legacy row / recreated Clerk user), attach
  * the current `clerk_id` instead of inserting a second row.
- * Organization, church, membership, and role fields are not written here.
+ * Organization, church, and membership fields are not written here.
+ * `platform_role` is only written for one-time SuperAdmin bootstrap from a
+ * Clerk-verified primary email matching SUPER_ADMIN_EMAIL. Existing
+ * `super_admin` rows are never demoted.
  */
+function superAdminBootstrapFields(
+  email: string,
+  emailVerified: boolean,
+  existingRole?: AppUserRow["platformRole"]
+): {
+  platformRole?: "super_admin";
+  needsChurchOnboarding?: false;
+  onboardingCompletedAt?: Date;
+} {
+  if (existingRole === "super_admin") return {};
+  if (!shouldBootstrapPlatformSuperAdmin(email, emailVerified)) return {};
+  return {
+    platformRole: "super_admin",
+    needsChurchOnboarding: false,
+    onboardingCompletedAt: new Date(),
+  };
+}
+
 export async function upsertAppUserFromClerk(
   input: AppUserIdentityInput
 ): Promise<AppUserSyncResult> {
@@ -122,6 +144,11 @@ export async function upsertAppUserFromClerk(
           lastName: input.lastName,
           emailVerifiedAt: verifiedAt ?? existing.emailVerifiedAt,
           updatedAt: now,
+          ...superAdminBootstrapFields(
+            email,
+            input.emailVerified,
+            existing.platformRole
+          ),
         })
         .where(eq(users.id, existing.id))
         .returning();
@@ -140,6 +167,7 @@ export async function upsertAppUserFromClerk(
           lastName: input.lastName,
           emailVerifiedAt: verifiedAt,
           needsChurchOnboarding: true,
+          ...superAdminBootstrapFields(email, input.emailVerified),
         })
         .returning();
 
@@ -163,6 +191,11 @@ export async function upsertAppUserFromClerk(
             lastName: input.lastName,
             emailVerifiedAt: verifiedAt ?? concurrent.emailVerifiedAt,
             updatedAt: now,
+            ...superAdminBootstrapFields(
+              email,
+              input.emailVerified,
+              concurrent.platformRole
+            ),
           })
           .where(eq(users.id, concurrent.id))
           .returning();

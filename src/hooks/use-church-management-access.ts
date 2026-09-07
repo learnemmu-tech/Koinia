@@ -7,6 +7,7 @@ import { useOrganization } from "@/context/organization-context";
 import { getWorkspaceType } from "@/lib/organization/workspace-type";
 import {
   canAccessChurchManagement,
+  canManageOrganizationWorkspace,
   resolvePrimaryBranchMembership,
   type WorkspaceAccessInput,
 } from "@/lib/auth/workspace-access";
@@ -52,5 +53,6 @@ export function useChurchManagementAccess() {
   return {
     loading,
     canAccessChurchManagement: canAccessChurchManagement(input),
+    canManageOrganization: canManageOrganizationWorkspace(input),
   };
 }

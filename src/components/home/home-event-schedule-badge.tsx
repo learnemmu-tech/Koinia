@@ -8,13 +8,6 @@ type HomeEventScheduleBadgeProps = {
   className?: string;
 };
 
-const toneClasses: Record<EventScheduleInfo["tone"], string> = {
-  urgent: "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-300",
-  soon: "border-orange-500/25 bg-orange-500/10 text-orange-800 dark:text-orange-300",
-  week: "border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  normal: "border-border/50 bg-muted/50 text-muted-foreground",
-};
-
 export function HomeEventScheduleBadge({
   schedule,
   className,
@@ -24,8 +17,7 @@ export function HomeEventScheduleBadge({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]",
-        toneClasses[schedule.tone],
+        "inline-flex max-w-full items-center gap-1.5 rounded-md bg-black px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white",
         className
       )}
     >
@@ -45,7 +37,7 @@ export function HomeEventScheduleBadge({
           aria-hidden
         />
       : null}
-      <span>{schedule.label}</span>
+      <span className="truncate">{schedule.label}</span>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 export type FirebaseSermon = {
   id: string;
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   title: string;
   subtitle?: string;
@@ -17,6 +18,7 @@ export type FirebaseSermon = {
 };
 
 export type CreateSermonInput = {
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   title: string;
   subtitle?: string;

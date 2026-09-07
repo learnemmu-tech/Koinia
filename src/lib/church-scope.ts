@@ -35,7 +35,6 @@ export function documentBelongsToChurch(
   data: Record<string, unknown>,
   churchId: string
 ): boolean {
-  if (!MULTI_CHURCH_ENABLED) return true;
   if (!churchId.trim()) return false;
   const docChurchId = resolveDocumentChurchId(data);
   if (!docChurchId) return false;
@@ -47,7 +46,7 @@ export function filterRecordsByChurch<T extends { churchId?: string }>(
   churchId: string
 ): T[] {
   const scopedId = churchId.trim();
-  if (!scopedId) return records;
+  if (!scopedId) return [];
 
   return records.filter((record) => record.churchId?.trim() === scopedId);
 }
@@ -71,8 +70,7 @@ export function recordMatchesChurchScope<T extends { churchId?: string }>(
   churchId: string
 ): record is T {
   if (!record) return false;
-  if (!MULTI_CHURCH_ENABLED || !churchId.trim()) return true;
-  const legacyId = getLegacyDefaultChurchId();
-  const recordChurchId = record.churchId?.trim() || legacyId;
+  if (!churchId.trim()) return false;
+  const recordChurchId = record.churchId?.trim() || getLegacyDefaultChurchId();
   return recordChurchId === churchId;
 }

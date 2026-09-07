@@ -5,14 +5,16 @@ import { Clapperboard, Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 
 import {
-  SHORT_CATEGORIES,
   MAX_SHORT_DURATION_SECONDS,
   MAX_SHORT_SOURCE_THUMBNAIL_BYTES,
   MAX_SHORT_SOURCE_VIDEO_BYTES,
   SHORT_VIDEO_COMPRESS_THRESHOLD_BYTES,
-  type ShortCategory,
   type ShortVisibility,
 } from "@/types/video-short";
+import {
+  buildShortCaption,
+  resolveShortCategory,
+} from "@/lib/short-caption";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +52,8 @@ type CreateShortSheetProps = {
   onOpenChange: (open: boolean) => void;
   getToken: (forceRefresh?: boolean) => Promise<string | null>;
   onPublished?: () => void;
+  contentScope?: "organization" | "platform_public";
+  churchId?: string;
 };
 
 type FieldErrors = {
@@ -65,37 +69,6 @@ const fieldInputClass =
 
 const fieldLabelClass = "text-xs font-medium text-muted-foreground";
 
-function resolveCategory(topic: string): ShortCategory {
-  const trimmed = topic.trim();
-  if (!trimmed) return "Other";
-  const match = SHORT_CATEGORIES.find(
-    (item) => item.toLowerCase() === trimmed.toLowerCase()
-  );
-  return match ?? "Other";
-}
-
-/** Maps Title + Description (+ custom topic) into the existing caption API field. */
-function buildCaption(title: string, description: string, topic: string): string {
-  const titleText = title.trim();
-  const descriptionText = description.trim();
-  const topicText = topic.trim();
-  const parts: string[] = [];
-
-  if (titleText) parts.push(titleText);
-  if (descriptionText) parts.push(descriptionText);
-
-  let caption = parts.join("\n\n");
-
-  if (
-    topicText &&
-    !SHORT_CATEGORIES.some((item) => item.toLowerCase() === topicText.toLowerCase())
-  ) {
-    caption = caption ? `${caption}\n\n— ${topicText}` : topicText;
-  }
-
-  return caption.slice(0, 500);
-}
-
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/80">
@@ -109,11 +82,15 @@ export function CreateShortSheet({
   onOpenChange,
   getToken,
   onPublished,
+  contentScope = "organization",
+  churchId = "",
 }: CreateShortSheetProps) {
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [topic, setTopic] = React.useState("");
-  const [visibility, setVisibility] = React.useState<ShortVisibility>("church");
+  const [visibility, setVisibility] = React.useState<ShortVisibility>(
+    contentScope === "platform_public" ? "public" : "church"
+  );
   const [videoFile, setVideoFile] = React.useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [duration, setDuration] = React.useState<number | null>(null);
@@ -298,8 +275,8 @@ export function CreateShortSheet({
       return next;
     };
 
-    const caption = buildCaption(title, description, topic);
-    const category = resolveCategory(topic);
+    const caption = buildShortCaption(title, description, topic);
+    const category = resolveShortCategory(topic);
 
     setPosting(true);
     setUploadProgress(5);
@@ -326,7 +303,13 @@ export function CreateShortSheet({
         usedCustomCover ? null : extractShortPosterFrame(fileToUpload);
 
       const draft = await createShortDraft(
-        { caption, category, visibility },
+        {
+          caption,
+          category,
+          visibility: contentScope === "platform_public" ? "public" : visibility,
+          contentScope,
+          churchId: contentScope === "organization" ? churchId : undefined,
+        },
         await requireToken()
       );
       setUploadProgress(25);

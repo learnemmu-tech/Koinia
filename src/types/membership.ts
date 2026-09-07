@@ -57,3 +57,33 @@ export function roleMeetsMinimum(
 ): boolean {
   return MEMBERSHIP_ROLE_RANK[role] >= MEMBERSHIP_ROLE_RANK[minimum];
 }
+
+/** Roles an Organization Admin may assign on a church membership. */
+export const ASSIGNABLE_CHURCH_ROLES = ["member", "church_admin"] as const;
+export type AssignableChurchRole = (typeof ASSIGNABLE_CHURCH_ROLES)[number];
+
+export function isAssignableChurchRole(
+  role: string
+): role is AssignableChurchRole {
+  return ASSIGNABLE_CHURCH_ROLES.includes(role as AssignableChurchRole);
+}
+
+export function formatMembershipRoleLabel(role: MembershipRole | string): string {
+  switch (role) {
+    case "owner":
+    case "org_admin":
+      return "Organization Admin";
+    case "church_admin":
+    case "branch_admin":
+      return "Church Admin";
+    case "leader":
+      return "Leader";
+    case "editor":
+      return "Editor";
+    case "volunteer":
+      return "Volunteer";
+    case "member":
+    default:
+      return "Member";
+  }
+}

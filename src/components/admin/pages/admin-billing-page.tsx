@@ -1,6 +1,7 @@
 "use client";
 
 import { RequireAdmin } from "@/components/auth/require-admin";
+import { RequireOrganizationAdmin } from "@/components/auth/require-organization-admin";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { BillingOverview } from "@/components/subscription/billing-overview";
 import { PlanBadge } from "@/components/subscription/plan-badge";
@@ -32,7 +33,9 @@ function AdminBillingContent() {
 export function AdminBillingPageClient() {
   return (
     <RequireAdmin>
-      <AdminBillingContent />
+      <RequireOrganizationAdmin>
+        <AdminBillingContent />
+      </RequireOrganizationAdmin>
     </RequireAdmin>
   );
 }

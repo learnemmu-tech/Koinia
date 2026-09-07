@@ -10,15 +10,18 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { songCategoryEnum } from "./enums";
+import { songCategoryEnum, contentScopeEnum } from "./enums";
 import { churches, users } from "./tenants";
 
 export const songs = pgTable(
   "songs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    contentScope: contentScopeEnum("content_scope")
+      .notNull()
+      .default("organization"),
+    organizationId: uuid("organization_id"),
+    churchId: uuid("church_id"),
     songTitle: text("song_title").notNull(),
     alternateTitle: text("alternate_title"),
     artist: text("artist"),
@@ -59,6 +62,7 @@ export const songs = pgTable(
       table.churchId
     ),
     index("songs_church_id_published_idx").on(table.churchId, table.published),
+    index("songs_content_scope_idx").on(table.contentScope),
   ]
 );
 
@@ -66,8 +70,11 @@ export const sermons = pgTable(
   "sermons",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    contentScope: contentScopeEnum("content_scope")
+      .notNull()
+      .default("organization"),
+    organizationId: uuid("organization_id"),
+    churchId: uuid("church_id"),
     title: text("title").notNull(),
     subtitle: text("subtitle"),
     scriptureReference: text("scripture_reference").notNull().default(""),
@@ -111,6 +118,7 @@ export const sermons = pgTable(
       table.churchId,
       table.isPublished
     ),
+    index("sermons_content_scope_idx").on(table.contentScope),
   ]
 );
 
@@ -118,8 +126,11 @@ export const articles = pgTable(
   "articles",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    contentScope: contentScopeEnum("content_scope")
+      .notNull()
+      .default("organization"),
+    organizationId: uuid("organization_id"),
+    churchId: uuid("church_id"),
     title: text("title").notNull(),
     category: text("category").notNull().default("Christian Living"),
     shortDescription: text("short_description").notNull().default(""),
@@ -164,5 +175,6 @@ export const articles = pgTable(
       table.churchId,
       table.isPublished
     ),
+    index("articles_content_scope_idx").on(table.contentScope),
   ]
 );

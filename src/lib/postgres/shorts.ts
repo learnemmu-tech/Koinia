@@ -12,7 +12,9 @@ import {
   videoShorts,
 } from "@/db/schema";
 import { deleteStoredMediaUrls } from "@/lib/supabase-storage";
-import type { TenantScope } from "@/lib/organization/tenant-scope";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
+import { contentScopeWhere, resolveContentQuery } from "@/lib/content/content-scope";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import {
   getUsersByIds,
@@ -30,6 +32,32 @@ import type {
 } from "@/types/video-short";
 
 type ShortRow = typeof videoShorts.$inferSelect;
+
+/** Supabase Storage path segment only — not database ownership. */
+export function shortStoragePathPrefix(short: {
+  contentScope?: string | null;
+  churchId?: string | null;
+}): string {
+  if (short.contentScope === "platform_public") return "platform";
+  const churchId = short.churchId?.trim();
+  if (!churchId) {
+    throw new Error("Missing church context for tenant Short storage.");
+  }
+  return churchId;
+}
+
+export async function userCanManageShortRecord(
+  clerkId: string,
+  email: string | undefined,
+  short: ShortRow
+): Promise<boolean> {
+  if (short.contentScope === "platform_public") {
+    const appUser = await getAppUserByClerkId(clerkId);
+    return isPlatformSuperAdmin(appUser?.platformRole);
+  }
+  if (!short.churchId) return false;
+  return userCanManageChurch(clerkId, email, short.churchId);
+}
 
 function mapCreator(
   user: typeof users.$inferSelect,
@@ -56,8 +84,8 @@ function mapShortRow(
 ): VideoShort {
   return {
     id: row.id,
-    organizationId: row.organizationId,
-    churchId: row.churchId,
+    organizationId: row.organizationId ?? "",
+    churchId: row.churchId ?? "",
     userId: row.userId,
     videoUrl: row.videoUrl,
     thumbnailUrl: row.thumbnailUrl,
@@ -104,8 +132,11 @@ export async function canViewShort(
   email: string | undefined
 ): Promise<boolean> {
   if (!short.videoUrl || !short.publishedAt) return false;
+  if (short.contentScope === "platform_public") {
+    return short.visibility === "public";
+  }
   if (short.visibility === "public") return true;
-  if (!clerkId) return false;
+  if (!clerkId || !short.churchId) return false;
   return userCanAccessChurchContent(clerkId, email, short.churchId);
 }
 
@@ -126,48 +157,74 @@ function escapeLikePattern(value: string) {
 }
 
 export async function listShortsForScope(input: {
-  scope: TenantScope;
+  query: ContentQueryInput;
   filter: ShortsFeedFilter;
-  query?: string | null;
+  queryText?: string | null;
   viewerClerkId?: string | null;
   viewerEmail?: string;
   limit?: number;
 }): Promise<VideoShort[]> {
-  const churchId = input.scope.churchId;
-  if (!churchId) return [];
+  const resolved = resolveContentQuery(input.query);
+  if (resolved.kind === "empty") return [];
 
   const limit = Math.min(input.limit ?? 30, 50);
   const viewerClerkId = input.viewerClerkId ?? null;
-  let canViewChurchOnly = false;
-  if (viewerClerkId) {
-    canViewChurchOnly = await userCanAccessChurchContent(
-      viewerClerkId,
-      input.viewerEmail,
-      churchId
+
+  let scopeCondition;
+  let churchId = "";
+  let organizationId = "";
+
+  if (resolved.kind === "platform_public") {
+    scopeCondition = and(
+      contentScopeWhere(
+        {
+          contentScope: videoShorts.contentScope,
+          organizationId: videoShorts.organizationId,
+          churchId: videoShorts.churchId,
+        },
+        resolved
+      ),
+      eq(videoShorts.visibility, "public")
     );
+  } else {
+    churchId = resolved.churchId;
+    organizationId = resolved.organizationId;
+
+    let canViewChurchOnly = false;
+    if (viewerClerkId) {
+      canViewChurchOnly = await userCanAccessChurchContent(
+        viewerClerkId,
+        input.viewerEmail,
+        churchId
+      );
+    }
+
+    const ownChurchVisibility = canViewChurchOnly
+      ? or(
+          eq(videoShorts.visibility, "public"),
+          eq(videoShorts.visibility, "church")
+        )
+      : eq(videoShorts.visibility, "public");
+
+    scopeCondition =
+      input.filter === "latest" && organizationId ?
+        and(
+          eq(videoShorts.contentScope, "organization"),
+          eq(videoShorts.organizationId, organizationId),
+          or(
+            eq(videoShorts.visibility, "public"),
+            and(eq(videoShorts.churchId, churchId), ownChurchVisibility)
+          )
+        )
+      : and(
+          eq(videoShorts.contentScope, "organization"),
+          eq(videoShorts.organizationId, organizationId),
+          eq(videoShorts.churchId, churchId),
+          ownChurchVisibility
+        );
   }
 
-  const ownChurchVisibility = canViewChurchOnly
-    ? or(
-        eq(videoShorts.visibility, "public"),
-        eq(videoShorts.visibility, "church")
-      )
-    : eq(videoShorts.visibility, "public");
-
-  // "My Church" stays inside the active church. "Latest" widens to everything
-  // published publicly across the organization, plus the viewer's own church.
-  const scopeCondition =
-    input.filter === "latest" && input.scope.organizationId ?
-      and(
-        eq(videoShorts.organizationId, input.scope.organizationId),
-        or(
-          eq(videoShorts.visibility, "public"),
-          and(eq(videoShorts.churchId, churchId), ownChurchVisibility)
-        )
-      )
-    : and(eq(videoShorts.churchId, churchId), ownChurchVisibility);
-
-  const search = input.query?.trim() ?? "";
+  const search = input.queryText?.trim() ?? "";
   const searchCondition =
     search ?
       (() => {
@@ -201,7 +258,10 @@ export async function listShortsForScope(input: {
 
   const rows = joined.map((row) => row.short);
   const churchNames = new Map(
-    joined.map((row) => [row.short.churchId, row.churchName ?? "Church"])
+    joined.map((row) => [
+      row.short.id,
+      row.churchName ?? (row.short.contentScope === "platform_public" ? "FaithConnectHub" : "Church"),
+    ])
   );
   const creators = await loadCreatorsMap(rows.map((row) => row.userId));
 
@@ -212,11 +272,13 @@ export async function listShortsForScope(input: {
     const appUser = await getAppUserByClerkId(viewerClerkId);
     if (appUser) {
       viewerUserId = appUser.id;
-      isAdmin = await userCanManageChurch(
-        viewerClerkId,
-        input.viewerEmail,
-        churchId
-      );
+      if (resolved.kind === "tenant" && churchId) {
+        isAdmin = await userCanManageChurch(
+          viewerClerkId,
+          input.viewerEmail,
+          churchId
+        );
+      }
       if (rows.length > 0) {
         const likes = await db
           .select({ shortId: videoShortLikes.shortId })
@@ -245,7 +307,7 @@ export async function listShortsForScope(input: {
         displayName: "Member",
         photoUrl: null,
       },
-      churchNames.get(row.churchId) ?? "Church",
+      churchNames.get(row.id) ?? "Church",
       likedIds.has(row.id),
       (isAdmin && row.churchId === churchId) || row.userId === viewerUserId
     )
@@ -255,33 +317,66 @@ export async function listShortsForScope(input: {
 export async function createShortDraft(input: {
   clerkId: string;
   email?: string;
-  churchId: string;
+  churchId?: string;
+  contentScope?: "organization" | "platform_public";
   caption: string;
   category: ShortCategory;
   visibility: ShortVisibility;
 }) {
-  const allowed = await userCanAccessChurchContent(
-    input.clerkId,
-    input.email,
-    input.churchId
-  );
-  if (!allowed) {
-    throw new Error("You must be an active church member to post Shorts.");
-  }
-
-  const church = await getChurchById(input.churchId);
-  if (!church?.organizationId) {
-    throw new Error("Church not found.");
-  }
-
+  const contentScope = input.contentScope ?? "organization";
   const appUser = await getAppUserByClerkId(input.clerkId);
   if (!appUser) {
     throw new Error("Application user not found.");
   }
 
+  if (contentScope === "platform_public") {
+    if (!isPlatformSuperAdmin(appUser.platformRole)) {
+      throw new Error("Forbidden");
+    }
+
+    const [inserted] = await db
+      .insert(videoShorts)
+      .values({
+        contentScope: "platform_public",
+        organizationId: null,
+        churchId: null,
+        userId: appUser.id,
+        caption: input.caption.trim(),
+        category: input.category,
+        visibility: "public",
+      })
+      .returning();
+
+    if (!inserted) {
+      throw new Error("Failed to create Short.");
+    }
+
+    return inserted;
+  }
+
+  const churchId = input.churchId?.trim() ?? "";
+  if (!churchId) {
+    throw new Error("No active church context");
+  }
+
+  const allowed = await userCanAccessChurchContent(
+    input.clerkId,
+    input.email,
+    churchId
+  );
+  if (!allowed) {
+    throw new Error("You must be an active church member to post Shorts.");
+  }
+
+  const church = await getChurchById(churchId);
+  if (!church?.organizationId) {
+    throw new Error("Church not found.");
+  }
+
   const [inserted] = await db
     .insert(videoShorts)
     .values({
+      contentScope: "organization",
       organizationId: church.organizationId,
       churchId: church.id,
       userId: appUser.id,
@@ -313,10 +408,10 @@ export async function publishShort(input: {
   if (!short) throw new Error("Short not found.");
 
   const isOwner = (await getAppUserByClerkId(input.clerkId))?.id === short.userId;
-  const isAdmin = await userCanManageChurch(
+  const isAdmin = await userCanManageShortRecord(
     input.clerkId,
     input.email,
-    short.churchId
+    short
   );
   if (!isOwner && !isAdmin) {
     throw new Error("Unauthorized");
@@ -355,10 +450,10 @@ export async function updateShortMetadata(input: {
 
   const appUser = await getAppUserByClerkId(input.clerkId);
   const isOwner = appUser?.id === short.userId;
-  const isAdmin = await userCanManageChurch(
+  const isAdmin = await userCanManageShortRecord(
     input.clerkId,
     input.email,
-    short.churchId
+    short
   );
   if (!isOwner && !isAdmin) throw new Error("Unauthorized");
 
@@ -387,10 +482,10 @@ export async function updateShortThumbnailUrl(input: {
 
   const appUser = await getAppUserByClerkId(input.clerkId);
   const isOwner = appUser?.id === short.userId;
-  const isAdmin = await userCanManageChurch(
+  const isAdmin = await userCanManageShortRecord(
     input.clerkId,
     input.email,
-    short.churchId
+    short
   );
   if (!isOwner && !isAdmin) throw new Error("Unauthorized");
 
@@ -436,10 +531,10 @@ export async function deleteShort(input: {
 
   const appUser = await getAppUserByClerkId(input.clerkId);
   const isOwner = appUser?.id === short.userId;
-  const isAdmin = await userCanManageChurch(
+  const isAdmin = await userCanManageShortRecord(
     input.clerkId,
     input.email,
-    short.churchId
+    short
   );
   if (!isOwner && !isAdmin) throw new Error("Unauthorized");
 
@@ -639,10 +734,10 @@ export async function deleteShortComment(input: {
 
   const appUser = await getAppUserByClerkId(input.clerkId);
   const isOwner = appUser?.id === comment.userId;
-  const isAdmin = await userCanManageChurch(
+  const isAdmin = await userCanManageShortRecord(
     input.clerkId,
     input.email,
-    short.churchId
+    short
   );
   if (!isOwner && !isAdmin) throw new Error("Unauthorized");
 
@@ -705,7 +800,10 @@ export async function getShortForViewer(
   const canView = await canViewShort(row, viewerClerkId ?? null, viewerEmail);
   if (!canView) return null;
 
-  const church = await getChurchById(row.churchId);
+  const churchName =
+    row.contentScope === "platform_public"
+      ? "FaithConnectHub"
+      : ((await getChurchById(row.churchId ?? ""))?.name ?? "Church");
   const creators = await loadCreatorsMap([row.userId]);
   let likedByMe = false;
   let canManage = false;
@@ -725,7 +823,7 @@ export async function getShortForViewer(
       likedByMe = Boolean(like);
       canManage =
         row.userId === appUser.id ||
-        (await userCanManageChurch(viewerClerkId, viewerEmail, row.churchId));
+        (await userCanManageShortRecord(viewerClerkId, viewerEmail, row));
     }
   }
 
@@ -738,7 +836,7 @@ export async function getShortForViewer(
       displayName: "Member",
       photoUrl: null,
     },
-    church?.name ?? "Church",
+    churchName,
     likedByMe,
     canManage
   );

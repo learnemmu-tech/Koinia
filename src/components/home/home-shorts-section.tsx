@@ -97,6 +97,7 @@ export function HomeShortsSection({ shorts }: HomeShortsSectionProps) {
         title="Short Videos"
         description="Quick moments of faith, encouragement, worship, and community."
         href="/shorts"
+        viewAllLabel="View All Shorts"
       />
       {visible.length === 0 ?
         <HomeEmptyState

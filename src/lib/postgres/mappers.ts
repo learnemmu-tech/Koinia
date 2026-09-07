@@ -74,6 +74,21 @@ function optionalText(value: string | null | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+/** PostgreSQL `date` values must stay calendar dates, never timezone-shifted Date strings. */
+function toDateOnlyString(value: unknown): string {
+  if (typeof value === "string") {
+    const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  return String(value ?? "").trim();
+}
+
 export function mapOrganization(
   row: OrganizationRow,
   ownerClerkId: string
@@ -197,9 +212,10 @@ export function mapSong(row: SongRow): FirebaseSong {
   const title = row.songTitle;
   return {
     id: row.id,
-    organizationId: row.organizationId,
-    churchId: row.churchId,
-    branchId: row.churchId,
+    contentScope: row.contentScope,
+    organizationId: row.organizationId ?? undefined,
+    churchId: row.churchId ?? "",
+    branchId: row.churchId ?? undefined,
     songTitle: title,
     alternateTitle: optionalText(row.alternateTitle),
     artist: optionalText(row.artist),
@@ -224,7 +240,8 @@ export function mapSong(row: SongRow): FirebaseSong {
 export function mapSermon(row: SermonRow, createdByClerkId: string): FirebaseSermon {
   return {
     id: row.id,
-    churchId: row.churchId,
+    contentScope: row.contentScope,
+    churchId: row.churchId ?? "",
     title: row.title,
     subtitle: optionalText(row.subtitle),
     scriptureReference: row.scriptureReference,
@@ -244,7 +261,8 @@ export function mapSermon(row: SermonRow, createdByClerkId: string): FirebaseSer
 export function mapArticle(row: ArticleRow, createdByClerkId: string): FirebaseArticle {
   return {
     id: row.id,
-    churchId: row.churchId,
+    contentScope: row.contentScope,
+    churchId: row.churchId ?? "",
     title: row.title,
     category: row.category,
     shortDescription: row.shortDescription,
@@ -265,13 +283,14 @@ export function mapArticle(row: ArticleRow, createdByClerkId: string): FirebaseA
 export function mapEvent(row: EventRow): FirebaseEvent {
   return {
     id: row.id,
-    churchId: row.churchId,
+    contentScope: row.contentScope,
+    churchId: row.churchId ?? "",
     title: row.title,
     description: row.description,
     bannerImage: optionalText(row.bannerImage),
     eventType: row.eventType,
     speakerName: row.speakerName,
-    eventDate: String(row.eventDate),
+    eventDate: toDateOnlyString(row.eventDate),
     eventTime: row.eventTime,
     location: row.location,
     status: row.status,
@@ -286,7 +305,8 @@ export function mapPrayerRequest(
 ): FirebasePrayerRequest {
   return {
     id: row.id,
-    churchId: row.churchId,
+    contentScope: row.contentScope,
+    churchId: row.churchId ?? "",
     userId: clerkUserId ?? undefined,
     name: row.name,
     email: optionalText(row.email),
@@ -319,9 +339,10 @@ export function mapPrayerIntercession(
 export function mapDonationCampaign(row: DonationCampaignRow): FirebaseDonationCampaign {
   return {
     id: row.id,
-    churchId: row.churchId,
-    organizationId: row.organizationId,
-    branchId: row.churchId,
+    contentScope: row.contentScope,
+    churchId: row.churchId ?? "",
+    organizationId: row.organizationId ?? undefined,
+    branchId: row.churchId ?? undefined,
     title: row.title,
     description: row.description,
     bannerImage: optionalText(row.bannerImage),
@@ -337,9 +358,9 @@ export function mapDonationCampaign(row: DonationCampaignRow): FirebaseDonationC
 export function mapDonation(row: DonationRow): FirebaseDonation {
   return {
     id: row.id,
-    churchId: row.churchId,
-    organizationId: row.organizationId,
-    branchId: row.churchId,
+    churchId: row.churchId ?? "",
+    organizationId: row.organizationId ?? undefined,
+    branchId: row.churchId ?? undefined,
     campaignId: row.campaignId,
     donorName: row.donorName,
     donorEmail: row.donorEmail,

@@ -1,6 +1,5 @@
 import "server-only";
 
-import { SUPER_ADMIN_EMAIL } from "@/lib/admin-access";
 import { siteConfig } from "@/config/site";
 
 import { resolveReplyToAddress, resolveResendFromAddress } from "./from-address";
@@ -25,7 +24,9 @@ export const emailConfig = {
     siteConfig.author.email
   ),
   adminEmail:
-    process.env.ADMIN_NOTIFICATION_EMAIL?.trim() ?? SUPER_ADMIN_EMAIL,
+    process.env.ADMIN_NOTIFICATION_EMAIL?.trim() ||
+    process.env.SUPER_ADMIN_EMAIL?.trim() ||
+    "",
   appUrl: getAppUrl(),
   appName: siteConfig.name,
   logoUrl: `${getAppUrl()}${siteConfig.image}`,

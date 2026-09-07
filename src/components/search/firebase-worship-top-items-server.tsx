@@ -1,4 +1,4 @@
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getWorshipCatalogCached } from "@/lib/cached-worship-data";
 
 import { WorshipCatalogProvider } from "@/context/worship-catalog-context";
@@ -6,8 +6,8 @@ import { WorshipCatalogProvider } from "@/context/worship-catalog-context";
 import { WorshipTopItemsClient } from "./firebase-worship-top-items";
 
 export async function FirebaseWorshipTopItems() {
-  const { scope } = await getPageTenantContext();
-  const catalog = await getWorshipCatalogCached(scope);
+  const { contentQuery } = await resolvePageContentQuery();
+  const catalog = await getWorshipCatalogCached(contentQuery);
 
   return (
     <WorshipCatalogProvider catalog={catalog}>

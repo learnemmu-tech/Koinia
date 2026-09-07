@@ -18,6 +18,7 @@ export const env = createEnv({
     SUPABASE_STORAGE_BUCKET: z.string().min(1).default("faithconnecthub"),
 
     UMAMI_WEBSITE_ID: z.string().optional(),
+    SUPER_ADMIN_EMAIL: z.string().email().optional(),
   },
 
   client: {

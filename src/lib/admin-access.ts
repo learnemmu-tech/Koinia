@@ -1,26 +1,11 @@
-import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import {
   LEGACY_WORKSPACE_BASE,
   WORKSPACE_BASE,
   WORKSPACE_ROUTE_PREFIXES,
 } from "@/lib/dashboard-routes";
 
-/**
- * Platform super-admin email for multi-church operations (optional feature flag).
- * Church workspace access uses membership cookies — see setAuthSession.
- */
-export const SUPER_ADMIN_EMAIL =
-  process.env.SUPER_ADMIN_EMAIL?.trim() || "futureblock07@gmail.com";
-
-export function isSuperAdminEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-}
-
-/** Platform-level super admin — not the same as church workspace access. */
-export function resolveIsAdmin(email: string | null | undefined): boolean {
-  return isSuperAdminEmail(email);
-}
+export { isPlatformSuperAdmin };
 
 /** @deprecated Use isWorkspaceRoute from @/lib/dashboard-routes */
 export const ADMIN_ROUTE_PREFIXES = WORKSPACE_ROUTE_PREFIXES;

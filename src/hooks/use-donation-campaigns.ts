@@ -16,13 +16,14 @@ import {
 
 type UseActiveDonationCampaignsOptions = {
   maxItems?: number;
+  clientSync?: boolean;
 };
 
 export function useActiveDonationCampaigns(
   initialData: FirebaseDonationCampaign[] = [],
   options: UseActiveDonationCampaignsOptions = {}
 ) {
-  const { maxItems } = options;
+  const { maxItems, clientSync = true } = options;
   const scope = useContentTenantScope();
   const pageSize = maxItems ?? DEFAULT_LIST_LIMIT;
 
@@ -33,7 +34,7 @@ export function useActiveDonationCampaigns(
       scope.organizationId,
       pageSize,
     ],
-    enabled: !scope.blocked,
+    enabled: clientSync && !scope.blocked,
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
     queryFn: async () => {

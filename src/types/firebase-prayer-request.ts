@@ -12,6 +12,7 @@ export type PrayerRequestCategory =
 
 export type FirebasePrayerRequest = {
   id: string;
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   userId?: string;
   name: string;
@@ -30,6 +31,7 @@ export type FirebasePrayerRequest = {
 };
 
 export type CreatePrayerRequestInput = {
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   userId: string;
   name: string;

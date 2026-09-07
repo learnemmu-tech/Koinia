@@ -4,7 +4,8 @@ import {
   getOrgMembershipRow,
 } from "@/lib/postgres/session";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
-import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { roleMeetsMinimum, type MembershipRole } from "@/types/membership";
 
@@ -30,19 +31,14 @@ export async function verifyAdminAnalyticsRequest(
   }
 
   const uid = verified.uid;
-  const email = verified.email;
-
-  if (!email) {
-    return { ok: false, status: 403, error: "Admin access required" };
-  }
+  const email = verified.email ?? "";
 
   const appUser = await getAppUserByClerkId(uid);
   if (!appUser) {
     return { ok: false, status: 403, error: "Admin access required" };
   }
 
-  const superAdmin =
-    isPlatformSuperAdmin(email) || appUser.platformRole === "admin";
+  const superAdmin = isPlatformSuperAdmin(appUser.platformRole);
 
   const churchRows = await listChurchMembershipsForUser(appUser.id);
   const managedFromMemberships = churchRows
@@ -70,6 +66,16 @@ export async function verifyAdminAnalyticsRequest(
 
   if (!superAdmin && !managedChurchId && !organizationId) {
     return { ok: false, status: 403, error: "Admin access required" };
+  }
+
+  if (
+    !superAdmin &&
+    !(await organizationAllowsWorkspaceAccess(
+      appUser.organizationId,
+      appUser.platformRole
+    ))
+  ) {
+    return { ok: false, status: 403, error: "Forbidden" };
   }
 
   const requestedChurch = requestedChurchId?.trim() || null;

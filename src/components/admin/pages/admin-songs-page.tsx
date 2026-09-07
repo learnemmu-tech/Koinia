@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 
+import { AddMusicModal } from "@/components/admin/add-music-modal";
 import { MusicList } from "@/components/admin/music-list";
 import { AdminChurchNotice } from "@/components/admin/admin-church-notice";
 import { WorkspaceChurchRequiredNotice } from "@/components/workspace/workspace-church-required-notice";
@@ -39,12 +39,6 @@ import {
   getSongAlternateTitle,
   getSongDisplayTitle,
 } from "@/lib/song-firestore";
-
-const AddMusicModal = dynamic(
-  () =>
-    import("@/components/admin/add-music-modal").then((mod) => mod.AddMusicModal),
-  { ssr: false }
-);
 
 export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean }) {
   const searchParams = useSearchParams();

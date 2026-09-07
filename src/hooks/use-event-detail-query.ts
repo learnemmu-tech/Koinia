@@ -17,12 +17,16 @@ export function useEventDetailQuery(
   return useQuery({
     queryKey: ["event-detail", eventId],
     queryFn: async () => {
-      const page = await fetchTenantContentPage<FirebaseEvent>({
-        collection: "events",
-        ids: [eventId],
-        limit: 1,
-      });
-      return page.items[0] ?? initialEvent;
+      try {
+        const page = await fetchTenantContentPage<FirebaseEvent>({
+          collection: "events",
+          ids: [eventId],
+          limit: 1,
+        });
+        return page.items[0] ?? initialEvent;
+      } catch {
+        return initialEvent;
+      }
     },
     initialData: initialEvent,
     staleTime: QUERY_STALE_TIME,

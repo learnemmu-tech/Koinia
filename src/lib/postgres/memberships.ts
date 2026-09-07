@@ -3,18 +3,27 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
-import { churchMemberships, churches, users } from "@/db/schema";
+import {
+  churchMemberships,
+  churches,
+  organizationMemberships,
+  users,
+} from "@/db/schema";
 import { triggerMembershipApprovedNotification } from "@/lib/email/triggers";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
-import { mapChurchMembership } from "@/lib/postgres/mappers";
+import { mapChurchMembership, mapOrgMembership } from "@/lib/postgres/mappers";
 import {
   getClerkIdByUserId,
   getClerkIdsByUserIds,
 } from "@/lib/postgres/session";
 import type { FirebaseBranchMembership } from "@/types/branch-membership";
-import type { FirebaseMembership } from "@/types/membership";
-import { organizationMemberships } from "@/db/schema";
-import { mapOrgMembership } from "@/lib/postgres/mappers";
+import {
+  isAssignableChurchRole,
+  roleMeetsMinimum,
+  type AssignableChurchRole,
+  type FirebaseMembership,
+  type MembershipRole,
+} from "@/types/membership";
 
 export async function listOrganizationMemberships(
   organizationId: string
@@ -223,6 +232,127 @@ export async function rejectBranchMembership(
     }
     await tx.update(users).set(patch).where(eq(users.id, row.userId));
   });
+}
+
+export async function countActiveOrganizationAdmins(
+  organizationId: string
+): Promise<number> {
+  const rows = await db
+    .select({
+      role: organizationMemberships.role,
+      status: organizationMemberships.status,
+    })
+    .from(organizationMemberships)
+    .where(eq(organizationMemberships.organizationId, organizationId));
+
+  return rows.filter(
+    (row) =>
+      row.status === "active" &&
+      roleMeetsMinimum(row.role as MembershipRole, "org_admin")
+  ).length;
+}
+
+export async function getOrganizationMembershipRoleForUser(
+  userId: string,
+  organizationId: string
+): Promise<MembershipRole | null> {
+  const [row] = await db
+    .select({
+      role: organizationMemberships.role,
+      status: organizationMemberships.status,
+    })
+    .from(organizationMemberships)
+    .where(
+      and(
+        eq(organizationMemberships.userId, userId),
+        eq(organizationMemberships.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+  if (!row || row.status !== "active") return null;
+  return row.role as MembershipRole;
+}
+
+export async function assertSafeChurchMemberMutation(
+  membershipId: string,
+  actorClerkId: string
+): Promise<{
+  row: NonNullable<Awaited<ReturnType<typeof getChurchMembershipRowById>>>;
+}> {
+  const row = await loadMembershipOrThrow(membershipId);
+  const orgRole = await getOrganizationMembershipRoleForUser(
+    row.userId,
+    row.organizationId
+  );
+
+  if (orgRole === "owner") {
+    throw new Error(
+      "This person is the organization owner and cannot be changed from here."
+    );
+  }
+
+  if (orgRole && roleMeetsMinimum(orgRole, "org_admin")) {
+    const adminCount = await countActiveOrganizationAdmins(row.organizationId);
+    if (adminCount <= 1) {
+      throw new Error(
+        "This is the last Organization Admin. Assign another Organization Admin before changing this membership."
+      );
+    }
+    throw new Error(
+      "Organization Admin roles cannot be changed from the church member list."
+    );
+  }
+
+  const actor = await getAppUserByClerkId(actorClerkId);
+  if (actor && actor.id === row.userId) {
+    const actorOrgRole = await getOrganizationMembershipRoleForUser(
+      actor.id,
+      row.organizationId
+    );
+    if (
+      actorOrgRole &&
+      roleMeetsMinimum(actorOrgRole, "org_admin") &&
+      (await countActiveOrganizationAdmins(row.organizationId)) <= 1
+    ) {
+      throw new Error(
+        "You cannot change your own membership while you are the last Organization Admin."
+      );
+    }
+  }
+
+  return { row };
+}
+
+export async function updateChurchMembershipRole(
+  membershipId: string,
+  role: AssignableChurchRole,
+  actorClerkId: string
+): Promise<FirebaseBranchMembership> {
+  if (!isAssignableChurchRole(role)) {
+    throw new Error("That role cannot be assigned.");
+  }
+
+  const { row } = await assertSafeChurchMemberMutation(
+    membershipId,
+    actorClerkId
+  );
+
+  if (row.status !== "active") {
+    throw new Error("Only approved members can have their role changed.");
+  }
+
+  const [updated] = await db
+    .update(churchMemberships)
+    .set({ role, updatedAt: new Date() })
+    .where(eq(churchMemberships.id, membershipId))
+    .returning();
+
+  if (!updated) {
+    throw new Error("Failed to update member role.");
+  }
+
+  const clerkId = await getClerkIdByUserId(updated.userId);
+  return mapChurchMembership(updated, clerkId ?? updated.userId);
 }
 
 export async function removeBranchMembership(

@@ -1,35 +1,34 @@
 import { unstable_cache } from "next/cache";
 
 import { listShortsForScope } from "@/lib/postgres/shorts";
-import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
+import { contentCacheKey } from "@/lib/content/content-scope";
 import type { ShortsFeedFilter } from "@/types/video-short";
 
 function cacheKey(
-  scope: TenantScope,
+  query: ContentQueryInput,
   filter: ShortsFeedFilter,
   audience: "guest" | "member" = "guest"
 ) {
-  return `shorts:${scope.organizationId ?? ""}:${scope.churchId ?? ""}:${filter}:${audience}`;
+  return `shorts:${contentCacheKey(query)}:${filter}:${audience}`;
 }
 
 /** Public-only Shorts feed (anonymous visitors). */
 export async function getPublishedShortsCached(
-  scope: TenantScope,
+  query: ContentQueryInput,
   filter: ShortsFeedFilter = "church",
   limit = 30
 ) {
-  if (!scope.churchId) return [];
-
   return unstable_cache(
     async () =>
       listShortsForScope({
-        scope,
+        query,
         filter,
         viewerClerkId: null,
         limit,
       }),
-    [cacheKey(scope, filter, "guest")],
-    { revalidate: 60, tags: [`shorts-${scope.churchId}`] }
+    [cacheKey(query, filter, "guest")],
+    { revalidate: 60, tags: [`shorts-${contentCacheKey(query)}`] }
   )();
 }
 
@@ -41,17 +40,15 @@ type ShortsViewerContext = {
 
 /** Respects visibility rules for the current viewer (church + public Shorts for members). */
 export async function getPublishedShortsForViewer(
-  scope: TenantScope,
+  query: ContentQueryInput,
   filter: ShortsFeedFilter = "church",
   viewer?: ShortsViewerContext
 ) {
-  if (!scope.churchId) return [];
-
   const limit = viewer?.limit ?? 30;
 
   if (viewer?.clerkId) {
     return listShortsForScope({
-      scope,
+      query,
       filter,
       viewerClerkId: viewer.clerkId,
       viewerEmail: viewer.email,
@@ -59,5 +56,5 @@ export async function getPublishedShortsForViewer(
     });
   }
 
-  return getPublishedShortsCached(scope, filter, limit);
+  return getPublishedShortsCached(query, filter, limit);
 }

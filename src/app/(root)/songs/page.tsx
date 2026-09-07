@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { SongsTabContent } from "@/components/worship/songs-tab-content";
 import { SongsAdminBar } from "@/components/admin/inline/songs-admin-bar";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getPublishedSongsCached } from "@/lib/cached-worship-data";
 import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
@@ -24,8 +24,8 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function SongsPage() {
-  const { scope } = await getPageTenantContext();
-  const songs = await getPublishedSongsCached(scope);
+  const { contentQuery, isPlatformPublic } = await resolvePageContentQuery();
+  const songs = await getPublishedSongsCached(contentQuery);
 
   return (
     <section
@@ -44,10 +44,15 @@ export default async function SongsPage() {
             Listen to Christian worship music and read Telugu and English lyrics.
           </p>
         </div>
-        <SongsAdminBar churchId={scope.churchId ?? ""} />
+        <SongsAdminBar
+          contentScope={isPlatformPublic ? "platform_public" : "organization"}
+        />
       </header>
 
-      <SongsTabContent initialSongs={songs} />
+      <SongsTabContent
+        initialSongs={songs}
+        isPlatformPublic={isPlatformPublic}
+      />
     </section>
   );
 }

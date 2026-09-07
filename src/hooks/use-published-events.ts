@@ -20,13 +20,19 @@ import {
 type UsePublishedEventsOptions = {
   maxItems?: number;
   upcomingOnly?: boolean;
+  /**
+   * Public platform pages already received the correct `platform_public` rows
+   * from the server. Client tenant refetch would replace them with empty
+   * organization-scoped results.
+   */
+  clientSync?: boolean;
 };
 
 export function usePublishedEvents(
   initialData: FirebaseEvent[] = [],
   options?: UsePublishedEventsOptions
 ) {
-  const { maxItems, upcomingOnly = false } = options ?? {};
+  const { maxItems, upcomingOnly = false, clientSync = true } = options ?? {};
   const scope = useContentTenantScope();
   const pageSize = maxItems ?? DEFAULT_LIST_LIMIT;
 
@@ -37,9 +43,20 @@ export function usePublishedEvents(
       scope.organizationId,
       upcomingOnly,
       pageSize,
+      clientSync,
     ],
-    enabled: !scope.blocked,
+    enabled: clientSync && !scope.blocked,
     initialPageParam: 0,
+    initialData: {
+      pages: [
+        {
+          items: initialData,
+          hasMore: clientSync && initialData.length >= pageSize,
+        },
+      ],
+      pageParams: [0],
+    },
+    initialDataUpdatedAt: Date.now(),
     queryFn: async ({ pageParam }) => {
       const page = await fetchTenantContentPage<FirebaseEvent>({
         collection: "events",
@@ -64,7 +81,9 @@ export function usePublishedEvents(
   });
 
   const events = result.data?.pages.flatMap((page) => page.items) ?? initialData;
-  const loading = scope.isLoading || (result.isLoading && !scope.blocked);
+  const loading =
+    clientSync &&
+    (scope.isLoading || (result.isLoading && !scope.blocked));
   const grouped = useMemo(() => splitEventsBySchedule(events), [events]);
 
   return {

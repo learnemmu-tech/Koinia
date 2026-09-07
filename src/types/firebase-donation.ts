@@ -21,6 +21,7 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export type FirebaseDonationCampaign = {
   id: string;
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   organizationId?: string;
   branchId?: string | null;
@@ -53,6 +54,7 @@ export type FirebaseDonation = {
 };
 
 export type CreateDonationCampaignInput = {
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   organizationId?: string;
   branchId?: string;

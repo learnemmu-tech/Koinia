@@ -60,6 +60,7 @@ export async function resolveUserMembershipRouting(
     churchesCount,
     branchesCount: churchesCount,
     workspaceType,
+    organizationStatus: organization?.status ?? null,
     callbackUrl,
   });
 }

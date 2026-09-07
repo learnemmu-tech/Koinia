@@ -9,7 +9,7 @@ import {
   getArticleNeighbors,
   getRelatedArticles,
 } from "@/lib/article-utils";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import {
   getArticleByIdCached,
   getPublishedArticlesCached,
@@ -30,8 +30,8 @@ type ArticlePageProps = {
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
-  const { scope } = await getPageTenantContext();
-  const article = await getArticleByIdCached(scope, decodedId);
+  const { contentQuery } = await resolvePageContentQuery();
+  const article = await getArticleByIdCached(contentQuery, decodedId);
 
   if (!article || !article.isPublished) {
     return { title: "Article Not Found" };
@@ -55,10 +55,10 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
-  const { scope } = await getPageTenantContext();
+  const { contentQuery } = await resolvePageContentQuery();
   const [article, allPublished] = await Promise.all([
-    getArticleByIdCached(scope, decodedId),
-    getPublishedArticlesCached(scope),
+    getArticleByIdCached(contentQuery, decodedId),
+    getPublishedArticlesCached(contentQuery),
   ]);
 
   if (!article || !article.isPublished) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   approveBranchMembership,
+  assertSafeChurchMemberMutation,
   bulkReviewBranchMemberships,
   listPendingBranchMemberships,
   rejectBranchMembership,
@@ -12,7 +13,10 @@ import {
   getPublicUserDirectory,
 } from "@/lib/postgres/memberships";
 import { getChurchById } from "@/lib/postgres/tenants";
-import { userCanReviewChurchMemberships } from "@/lib/postgres/session";
+import {
+  userCanManageOrganization,
+  userCanReviewChurchMemberships,
+} from "@/lib/postgres/session";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { timed } from "@/lib/perf";
 
@@ -100,10 +104,9 @@ export async function POST(request: Request) {
       if (target.organizationId !== organizationId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      const allowed = await userCanReviewChurchMemberships(
+      const allowed = await userCanManageOrganization(
         decoded.uid,
-        decoded.email,
-        target.churchId
+        target.organizationId
       );
       if (!allowed) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -116,12 +119,14 @@ export async function POST(request: Request) {
       } else if (action === "reject") {
         await rejectBranchMembership(membershipIds[0]!);
       } else if (action === "remove") {
+        await assertSafeChurchMemberMutation(membershipIds[0]!, decoded.uid);
         await removeBranchMembership(membershipIds[0]!, decoded.uid);
       } else {
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
       }
     } else if (action === "remove") {
       for (const id of membershipIds) {
+        await assertSafeChurchMemberMutation(id, decoded.uid);
         await removeBranchMembership(id, decoded.uid);
       }
     } else if (action === "approve" || action === "reject") {

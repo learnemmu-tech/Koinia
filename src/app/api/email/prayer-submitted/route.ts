@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
@@ -46,24 +46,32 @@ export async function POST(request: Request) {
 
     const church = await getChurchById(prayer.churchId);
     const memberName = getPrayerRequestDisplayName(prayer);
+    const prayerTitle = body.prayerTitle || prayer.title;
 
-    await triggerPrayerRequestSubmittedNotifications({
-      prayerId: prayer.id,
-      churchId: prayer.churchId,
-      organizationId: church?.organizationId,
-      branchId: prayer.churchId,
-      submitterUserId: authUser.uid,
-      memberName,
-      prayerTitle: body.prayerTitle || prayer.title,
-    });
-
-    triggerPrayerSubmittedEmails({
-      prayerId: prayer.id,
-      prayerTitle: body.prayerTitle || prayer.title,
-      userId: authUser.uid,
-      userEmail: userEmail.trim(),
-      userName: getPrayerRequestDisplayName(prayer),
-    });
+    after(() =>
+      Promise.all([
+        triggerPrayerRequestSubmittedNotifications({
+          prayerId: prayer.id,
+          churchId: prayer.churchId,
+          organizationId: church?.organizationId,
+          branchId: prayer.churchId,
+          submitterUserId: authUser.uid,
+          memberName,
+          prayerTitle,
+        }),
+        Promise.resolve(
+          triggerPrayerSubmittedEmails({
+            prayerId: prayer.id,
+            prayerTitle,
+            userId: authUser.uid,
+            userEmail: userEmail.trim(),
+            userName: memberName,
+          })
+        ),
+      ]).catch((error) => {
+        console.error("[api/email/prayer-submitted]", error);
+      })
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

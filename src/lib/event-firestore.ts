@@ -67,7 +67,7 @@ export function buildEventCreatePayload(input: CreateEventInput) {
 /** Start of local calendar day for an ISO date string (YYYY-MM-DD). */
 export function getEventDateStartMs(eventDate: string): number | null {
   const trimmed = eventDate.trim();
-  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return null;
 
   const year = Number(match[1]);
@@ -168,7 +168,10 @@ function normalizeTimeForParse(time: string): string {
 }
 
 export function formatEventDate(eventDate: string): string {
-  const timestamp = Date.parse(`${eventDate.trim()}T00:00:00`);
+  const ymd = eventDate.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const timestamp = Date.parse(
+    ymd ? `${ymd[1]}-${ymd[2]}-${ymd[3]}T00:00:00` : `${eventDate.trim()}T00:00:00`
+  );
   if (Number.isNaN(timestamp)) return eventDate;
 
   return new Intl.DateTimeFormat("en-US", {

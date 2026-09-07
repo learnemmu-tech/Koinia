@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { verifyBearerToken } from "@/lib/email/verify-auth";
-import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import {
   getArticlesByIds,
   getEventsByIds,
@@ -22,6 +22,7 @@ import {
   userCanManageChurch,
 } from "@/lib/postgres/session";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { tenantContentQuery } from "@/lib/content/content-scope";
 import { filterTenantContentByIds, filterTenantContentItems } from "@/lib/tenant-content-filters";
 import {
   isTenantContentCollection,
@@ -44,7 +45,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid collection" }, { status: 400 });
   }
 
-  const isAdmin = isPlatformSuperAdmin(decoded.email);
+  const appUser = await getAppUserByClerkId(decoded.uid);
+  const isAdmin = isPlatformSuperAdmin(appUser?.platformRole);
   const viewerClerkId = decoded.uid;
   const viewerEmail = decoded.email;
 
@@ -61,7 +63,6 @@ export async function GET(request: Request) {
     }
 
     if (collection === "users") {
-      const appUser = await getAppUserByClerkId(decoded.uid);
       const scopedChurchId = isAdmin ? churchId : appUser?.activeChurchId ?? churchId;
       if (!scopedChurchId) {
         return NextResponse.json({ items: [], hasMore: false });
@@ -203,31 +204,37 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const scope = {
+    const scope = tenantContentQuery({
       organizationId: church.organizationId ?? "",
       churchId,
       branchId: churchId,
+    });
+
+    const pageOptions = {
+      publishedOnly: !canManage,
+      limit: limit + 1,
+      offset,
     };
 
     let items: unknown[] = [];
     switch (collection) {
       case "songs":
-        items = await listSongs(scope);
+        items = await listSongs(scope, pageOptions);
         break;
       case "sermons":
-        items = await listSermons(scope);
+        items = await listSermons(scope, pageOptions);
         break;
       case "articles":
-        items = await listArticles(scope);
+        items = await listArticles(scope, pageOptions);
         break;
       case "events":
-        items = await listEvents(scope);
+        items = await listEvents(scope, pageOptions);
         break;
       case "prayerRequests":
         items = await listPrayerRequests(scope);
         break;
       case "donationCampaigns":
-        items = await listDonationCampaigns(scope);
+        items = await listDonationCampaigns(scope, pageOptions);
         break;
       case "donations":
         items = await listDonations(scope);
@@ -236,9 +243,16 @@ export async function GET(request: Request) {
 
     items = filterTenantContentItems(collection, items, canManage);
 
+    if (collection === "prayerRequests" || collection === "donations") {
+      return NextResponse.json({
+        items: items.slice(offset, offset + limit),
+        hasMore: items.length > offset + limit,
+      });
+    }
+
     return NextResponse.json({
-      items: items.slice(offset, offset + limit),
-      hasMore: items.length > offset + limit,
+      items: items.slice(0, limit),
+      hasMore: items.length > limit,
     });
   } catch (error) {
     console.error("[api/tenant-content]", error);

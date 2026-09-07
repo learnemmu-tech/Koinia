@@ -1,10 +1,11 @@
 import type { FirebaseMembership, MembershipRole } from "@/types/membership";
 
-import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { roleMeetsMinimum } from "@/types/membership";
 
 export type OrganizationAccessUser = {
   email: string | null | undefined;
+  platformRole?: string | null;
   userId?: string | null;
   membership?: FirebaseMembership | null;
   /** Legacy church fields — used when membership doc is absent */
@@ -27,7 +28,7 @@ export function canManageOrganization(
   organizationId: string
 ): boolean {
   if (!organizationId.trim()) return false;
-  if (isPlatformSuperAdmin(user.email)) return true;
+  if (isPlatformSuperAdmin(user.platformRole)) return true;
 
   const membership = user.membership;
   if (!membership || membership.organizationId !== organizationId) {
@@ -44,7 +45,7 @@ export function canManageChurchInOrganization(
   churchId: string
 ): boolean {
   if (!organizationId.trim() || !churchId.trim()) return false;
-  if (isPlatformSuperAdmin(user.email)) return true;
+  if (isPlatformSuperAdmin(user.platformRole)) return true;
 
   const membership = user.membership;
   if (membership?.organizationId === organizationId && membership.status === "active") {
@@ -80,7 +81,7 @@ export function isOrganizationOwner(
   user: OrganizationAccessUser,
   organizationId: string
 ): boolean {
-  if (isPlatformSuperAdmin(user.email)) return true;
+  if (isPlatformSuperAdmin(user.platformRole)) return true;
   return (
     user.membership?.organizationId === organizationId &&
     user.membership.role === "owner" &&

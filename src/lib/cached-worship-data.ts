@@ -2,340 +2,196 @@ import { cache } from "react";
 
 import { unstable_cache } from "next/cache";
 
-
-
 import type { FirebaseArticle } from "@/types/firebase-article";
-
 import type { FirebaseEvent } from "@/types/firebase-event";
-
 import type { FirebaseSermon } from "@/types/firebase-sermon";
-
 import type { FirebaseSong } from "@/types/firebase-song";
 
-
-
 import { getArticleById, getPublishedArticles } from "./firebase-article-queries";
-
 import { getPublishedEvents } from "./firebase-event-queries";
-
 import { getSermonById, getPublishedSermons } from "./firebase-sermon-queries";
-
 import { getPublishedSongs, getSongById } from "./firebase-queries";
-
 import { toArticleListItem } from "./article-firestore";
-
+import type { ContentQueryInput } from "@/lib/content/content-scope";
 import {
-
-  recordMatchesTenantScope,
-
-  type TenantScope,
-
-} from "./organization/tenant-scope";
-
+  contentCacheKey,
+  recordMatchesContentQuery,
+} from "@/lib/content/content-scope";
 import { toSermonListItem } from "./sermon-firestore";
-
 import { toSongListItem } from "./song-firestore";
-
-
 
 const REVALIDATE_SECONDS = 60;
 
-
-
-function tenantCacheKey(scope: TenantScope): string {
-
-  return `${scope.organizationId}:${scope.churchId}:${scope.branchId ?? ""}`;
-
+function queryCacheKey(query: ContentQueryInput): string {
+  return contentCacheKey(query);
 }
 
-
-
-export const getPublishedSongsCached = cache(async (scope: TenantScope) => {
-
-  const key = tenantCacheKey(scope);
-
+export const getPublishedSongsCached = cache(async (
+  query: ContentQueryInput,
+  limit?: number
+) => {
+  const key = queryCacheKey(query);
   try {
     return await unstable_cache(
-
       async (): Promise<FirebaseSong[]> => {
-
-        const songs = await getPublishedSongs(scope);
-
+        const songs = await getPublishedSongs(query, { limit });
         return songs.map(toSongListItem);
-
       },
-
-      ["worship-published-songs", key],
-
+      ["worship-published-songs", key, limit != null ? `limit-${limit}` : "all"],
       {
-
         revalidate: REVALIDATE_SECONDS,
-
-        tags: ["worship-songs", `tenant-${key}`],
-
+        tags: ["worship-songs", `content-${key}`],
       }
-
     )();
   } catch (error) {
     console.error("[worship] Failed to load published songs:", error);
     return [];
   }
-
 });
 
-
-
-export const getPublishedSermonsCached = cache(async (scope: TenantScope) => {
-
-  const key = tenantCacheKey(scope);
-
+export const getPublishedSermonsCached = cache(async (
+  query: ContentQueryInput,
+  limit?: number
+) => {
+  const key = queryCacheKey(query);
   try {
     return await unstable_cache(
-
       async (): Promise<FirebaseSermon[]> => {
-
-        const sermons = await getPublishedSermons(scope);
-
+        const sermons = await getPublishedSermons(query, { limit });
         return sermons.map(toSermonListItem);
-
       },
-
-      ["worship-published-sermons", key],
-
+      ["worship-published-sermons", key, limit != null ? `limit-${limit}` : "all"],
       {
-
         revalidate: REVALIDATE_SECONDS,
-
-        tags: ["worship-sermons", `tenant-${key}`],
-
+        tags: ["worship-sermons", `content-${key}`],
       }
-
     )();
   } catch (error) {
     console.error("[worship] Failed to load published sermons:", error);
     return [];
   }
-
 });
 
-
-
-export const getPublishedArticlesCached = cache(async (scope: TenantScope) => {
-
-  const key = tenantCacheKey(scope);
-
+export const getPublishedArticlesCached = cache(async (
+  query: ContentQueryInput,
+  limit?: number
+) => {
+  const key = queryCacheKey(query);
   try {
     return await unstable_cache(
-
       async (): Promise<FirebaseArticle[]> => {
-
-        const articles = await getPublishedArticles(scope);
-
+        const articles = await getPublishedArticles(query, { limit });
         return articles.map(toArticleListItem);
-
       },
-
-      ["worship-published-articles", key],
-
+      ["worship-published-articles", key, limit != null ? `limit-${limit}` : "all"],
       {
-
         revalidate: REVALIDATE_SECONDS,
-
-        tags: ["worship-articles", `tenant-${key}`],
-
+        tags: ["worship-articles", `content-${key}`],
       }
-
     )();
   } catch (error) {
     console.error("[worship] Failed to load published articles:", error);
     return [];
   }
-
 });
 
-
-
-export const getPublishedEventsCached = cache(async (scope: TenantScope) => {
-
-  const key = tenantCacheKey(scope);
-
+export const getPublishedEventsCached = cache(async (
+  query: ContentQueryInput,
+  limit?: number
+) => {
+  const key = queryCacheKey(query);
   try {
     return await unstable_cache(
-
       async (): Promise<FirebaseEvent[]> => {
-
-        return getPublishedEvents(scope);
-
+        return getPublishedEvents(query, { limit });
       },
-
-      ["worship-published-events", key],
-
-      { revalidate: REVALIDATE_SECONDS, tags: ["events", `tenant-${key}`] }
-
+      ["worship-published-events", key, limit != null ? `limit-${limit}` : "all"],
+      { revalidate: REVALIDATE_SECONDS, tags: ["events", `content-${key}`] }
     )();
   } catch (error) {
     console.error("[worship] Failed to load published events:", error);
     return [];
   }
-
 });
 
-
-
 export const getSongByIdCached = cache(
-
-  async (scope: TenantScope, songId: string) => {
-
-    const key = tenantCacheKey(scope);
-
+  async (query: ContentQueryInput, songId: string) => {
+    const key = queryCacheKey(query);
     return unstable_cache(
-
       async () => {
-
         const song = await getSongById(songId);
-
-        if (!recordMatchesTenantScope(song, scope, { allowLegacyBranchless: true, defaultBranchId: scope.branchId ?? null })) {
-
+        if (!recordMatchesContentQuery(song, query)) {
           return null;
-
         }
-
         return song;
-
       },
-
       ["worship-song-by-id", key, songId],
-
       {
-
         revalidate: REVALIDATE_SECONDS,
-
-        tags: [`worship-song-${songId}`, `tenant-${key}`],
-
+        tags: [`worship-song-${songId}`, `content-${key}`],
       }
-
     )();
-
   }
-
 );
-
-
 
 export const getSermonByIdCached = cache(
-
-  async (scope: TenantScope, sermonId: string) => {
-
-    const key = tenantCacheKey(scope);
-
+  async (query: ContentQueryInput, sermonId: string) => {
+    const key = queryCacheKey(query);
     return unstable_cache(
-
       async () => {
-
         const sermon = await getSermonById(sermonId);
-
-        if (!recordMatchesTenantScope(sermon, scope, { allowLegacyBranchless: true, defaultBranchId: scope.branchId ?? null })) {
-
+        if (!recordMatchesContentQuery(sermon, query)) {
           return null;
-
         }
-
         return sermon;
-
       },
-
       ["worship-sermon-by-id", key, sermonId],
-
       {
-
         revalidate: REVALIDATE_SECONDS,
-
-        tags: [`worship-sermon-${sermonId}`, `tenant-${key}`],
-
+        tags: [`worship-sermon-${sermonId}`, `content-${key}`],
       }
-
     )();
-
   }
-
 );
-
-
 
 export const getArticleByIdCached = cache(
-
-  async (scope: TenantScope, articleId: string) => {
-
-    const key = tenantCacheKey(scope);
-
+  async (query: ContentQueryInput, articleId: string) => {
+    const key = queryCacheKey(query);
     return unstable_cache(
-
       async () => {
-
         const article = await getArticleById(articleId);
-
-        if (!recordMatchesTenantScope(article, scope, { allowLegacyBranchless: true, defaultBranchId: scope.branchId ?? null })) {
-
+        if (!recordMatchesContentQuery(article, query)) {
           return null;
-
         }
-
         return article;
-
       },
-
       ["worship-article-by-id", key, articleId],
-
       {
-
         revalidate: REVALIDATE_SECONDS,
-
-        tags: [`worship-article-${articleId}`, `tenant-${key}`],
-
+        tags: [`worship-article-${articleId}`, `content-${key}`],
       }
-
     )();
-
   }
-
 );
-
-
 
 export type WorshipCatalog = {
-
   songs: FirebaseSong[];
-
   sermons: FirebaseSermon[];
-
   articles: FirebaseArticle[];
-
   events: FirebaseEvent[];
-
 };
 
-
+const HOME_PREVIEW_LIMIT = 6;
+const HOME_EVENT_PREVIEW_LIMIT = 12;
 
 export const getWorshipCatalogCached = cache(
-
-  async (scope: TenantScope): Promise<WorshipCatalog> => {
-
+  async (query: ContentQueryInput): Promise<WorshipCatalog> => {
     const [songs, sermons, articles, events] = await Promise.all([
-
-      getPublishedSongsCached(scope),
-
-      getPublishedSermonsCached(scope),
-
-      getPublishedArticlesCached(scope),
-
-      getPublishedEventsCached(scope),
-
+      getPublishedSongsCached(query, HOME_PREVIEW_LIMIT),
+      getPublishedSermonsCached(query, HOME_PREVIEW_LIMIT),
+      getPublishedArticlesCached(query, HOME_PREVIEW_LIMIT),
+      getPublishedEventsCached(query, HOME_EVENT_PREVIEW_LIMIT),
     ]);
-
     return { songs, sermons, articles, events };
-
   }
-
 );
-
-

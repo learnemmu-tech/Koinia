@@ -10,6 +10,7 @@ import {
   organizationMemberships,
   users,
 } from "@/db/schema";
+import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { mapInvitation } from "@/lib/postgres/mappers";
 import {
@@ -70,7 +71,7 @@ export async function createInvitation(
   if (
     !membership ||
     membership.status !== "active" ||
-    !roleMeetsMinimum(membership.role, "church_admin")
+    !roleMeetsMinimum(membership.role, "org_admin")
   ) {
     throw new Error("You do not have permission to send invitations");
   }
@@ -168,6 +169,14 @@ export async function acceptInvitation(
   if (!invitation) throw new Error("Invitation not found");
   if (invitation.status !== "pending") {
     throw new Error(`Invitation is ${invitation.status}`);
+  }
+
+  const orgAccessAllowed = await organizationAllowsWorkspaceAccess(
+    invitation.organizationId,
+    null
+  );
+  if (!orgAccessAllowed) {
+    throw new Error("This organization is not accepting invitations.");
   }
   if (
     invitation.email &&

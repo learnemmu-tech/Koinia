@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   BookOpen,
-  Bookmark,
   CalendarDays,
   Church,
   Clapperboard,
@@ -15,8 +14,11 @@ import {
   LayoutDashboard,
   Music,
   Settings2,
+  Shield,
   Users,
 } from "lucide-react";
+
+import { SUPER_ADMIN_BASE } from "@/lib/auth/auth-paths";
 
 import type { FirebaseChurch } from "@/types/firebase-church";
 import type { FirebaseOrganization } from "@/types/organization";
@@ -135,14 +137,20 @@ export const BROWSE_NAV_ITEMS: AppNavItem[] = [
     match: startsWith("/prayer-requests"),
     badgeKey: "pendingPrayers",
   },
-  {
-    label: "Library",
-    href: "/favorites",
-    icon: Bookmark,
-    match: startsWith("/favorites"),
-    authOnly: true,
-  },
 ];
+
+/** Public FaithConnectHub showcase browse links — no tenant-only features. */
+export const PUBLIC_BROWSE_NAV_ITEMS: AppNavItem[] = BROWSE_NAV_ITEMS.filter(
+  (item) => item.href !== "/prayer-requests"
+);
+
+export const SUPER_ADMIN_NAV_ITEM: AppNavItem = {
+  label: "Super Admin",
+  href: SUPER_ADMIN_BASE,
+  icon: Shield,
+  match: startsWith(SUPER_ADMIN_BASE),
+  superAdminOnly: true,
+};
 
 export const ADMIN_FOOTER_NAV_ITEMS: AppNavItem[] = [
   {
@@ -231,6 +239,30 @@ export function getMultiOrgAdminSidebarSections(
   ];
 }
 
+const ORGANIZATION_ADMIN_ONLY_HREFS = new Set([
+  `${ADMIN_BASE}/billing`,
+  `${ADMIN_BASE}/church-settings`,
+  `${ADMIN_BASE}/organization`,
+]);
+
+export function filterSidebarSectionsForRole(
+  sections: SidebarNavSection[],
+  options: { canManageOrganization: boolean }
+): SidebarNavSection[] {
+  if (options.canManageOrganization) return sections;
+
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (ORGANIZATION_ADMIN_ONLY_HREFS.has(item.href)) return false;
+        if (item.href.includes("createChurch=")) return false;
+        return true;
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 export function getAdminSidebarSections(
   organization?: FirebaseOrganization | null,
   churches: FirebaseChurch[] = []
@@ -239,6 +271,7 @@ export function getAdminSidebarSections(
     return [
       ...getMultiOrgAdminSidebarSections(organization, churches),
       { items: MULTI_ORG_SETTINGS_NAV_ITEMS },
+      { items: [SUPER_ADMIN_NAV_ITEM] },
     ];
   }
 
@@ -249,6 +282,27 @@ export function getAdminSidebarSections(
     { label: "Manage", items: manageItems },
     { label: "Browse", items: BROWSE_NAV_ITEMS },
     { items: ADMIN_FOOTER_NAV_ITEMS },
+    { items: [SUPER_ADMIN_NAV_ITEM] },
+  ];
+}
+
+export function getPublicSidebarSections(): SidebarNavSection[] {
+  return [
+    { items: [HOME_NAV_ITEM] },
+    { label: "Browse", items: PUBLIC_BROWSE_NAV_ITEMS },
+  ];
+}
+
+/**
+ * Platform SuperAdmins have no tenant workspace, so they get no `/dashboard`
+ * links. Platform showcase content is managed inline on the public browse pages
+ * under the `platform_public` scope.
+ */
+export function getSuperAdminSidebarSections(): SidebarNavSection[] {
+  return [
+    { items: [HOME_NAV_ITEM] },
+    { label: "Browse", items: PUBLIC_BROWSE_NAV_ITEMS },
+    { items: [SUPER_ADMIN_NAV_ITEM] },
   ];
 }
 
@@ -256,6 +310,7 @@ export function getMemberSidebarSections(): SidebarNavSection[] {
   return [
     { items: [HOME_NAV_ITEM] },
     { label: "Browse", items: BROWSE_NAV_ITEMS.map(({ badgeKey: _, ...item }) => item) },
+    { items: [SUPER_ADMIN_NAV_ITEM] },
   ];
 }
 
@@ -292,11 +347,7 @@ export function getAdminNavGroup() {
   return getWorkspaceNavGroup();
 }
 export function getLibraryNavGroup() {
-  const libraryItem = BROWSE_NAV_ITEMS.find((item) => item.label === "Library");
-  return {
-    label: "Library",
-    items: libraryItem ? [libraryItem] : [],
-  };
+  return { label: "Library", items: [] as AppNavItem[] };
 }
 
 export function getAllAppNavItems(): AppNavItem[] {

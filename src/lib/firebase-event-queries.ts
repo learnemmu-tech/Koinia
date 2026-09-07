@@ -6,36 +6,38 @@ import {
   listEvents,
 } from "@/lib/postgres/features";
 import {
-  filterPublishedEvents,
   splitEventsBySchedule,
 } from "@/lib/event-firestore";
-import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
 import type { FirebaseEvent } from "@/types/firebase-event";
 
-export async function getEvents(scope: TenantScope): Promise<FirebaseEvent[]> {
+export async function getEvents(scope: ContentQueryInput): Promise<FirebaseEvent[]> {
   return listEvents(scope);
 }
 
 export async function getPublishedEvents(
-  scope: TenantScope
+  scope: ContentQueryInput,
+  options?: { limit?: number }
 ): Promise<FirebaseEvent[]> {
-  return filterPublishedEvents(await listEvents(scope));
+  return listEvents(scope, { publishedOnly: true, limit: options?.limit });
 }
 
 export async function getUpcomingPublishedEvents(
-  scope: TenantScope,
+  scope: ContentQueryInput,
   limit = 3
 ): Promise<FirebaseEvent[]> {
-  const { upcoming } = splitEventsBySchedule(await getPublishedEvents(scope));
+  const { upcoming } = splitEventsBySchedule(
+    await getPublishedEvents(scope, { limit: Math.max(limit * 4, 12) })
+  );
   return upcoming.slice(0, limit);
 }
 
-export async function getPublishedEventsGrouped(scope: TenantScope) {
+export async function getPublishedEventsGrouped(scope: ContentQueryInput) {
   return splitEventsBySchedule(await getPublishedEvents(scope));
 }
 
 export async function searchEvents(
-  scope: TenantScope,
+  scope: ContentQueryInput,
   searchQuery: string
 ): Promise<FirebaseEvent[]> {
   const normalized = searchQuery.trim().toLowerCase();

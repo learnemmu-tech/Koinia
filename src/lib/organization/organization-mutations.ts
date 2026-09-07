@@ -5,7 +5,6 @@ import type { CreateChurchInput, UpdateChurchInput } from "@/types/firebase-chur
 import type { UpdateOrganizationInput } from "@/types/organization";
 
 import { updateChurch } from "@/lib/church-mutations";
-import { resolveIsAdmin } from "@/lib/admin-access";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { getManagedChurchIds } from "@/lib/postgres/session";
 
@@ -14,6 +13,7 @@ import {
   canManageOrganization,
   type OrganizationAccessUser,
 } from "./organization-access";
+import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
 import {
   createBranch,
   createChurchInOrganization,
@@ -38,6 +38,7 @@ async function getAccessUser(
 
   return {
     email,
+    platformRole: appUser?.platformRole,
     userId,
     membership,
     churchId: appUser?.activeChurchId ?? undefined,
@@ -46,15 +47,29 @@ async function getAccessUser(
   };
 }
 
+async function assertWorkspaceNotSuspended(
+  organizationId: string,
+  platformRole: string | null | undefined
+): Promise<void> {
+  const allowed = await organizationAllowsWorkspaceAccess(
+    organizationId,
+    platformRole
+  );
+  if (!allowed) {
+    throw new Error("Unauthorized");
+  }
+}
+
 async function assertOrgAccess(
   userId: string,
   email: string | null | undefined,
   organizationId: string
 ): Promise<OrganizationAccessUser> {
   const user = await getAccessUser(userId, email, organizationId);
-  if (!canManageOrganization(user, organizationId) && !resolveIsAdmin(email)) {
+  if (!canManageOrganization(user, organizationId)) {
     throw new Error("Unauthorized");
   }
+  await assertWorkspaceNotSuspended(organizationId, user.platformRole);
   return user;
 }
 
@@ -97,10 +112,8 @@ export async function updateChurchInOrganizationAction(
   input: UpdateChurchInput
 ): Promise<void> {
   const user = await getAccessUser(userId, email, organizationId);
-  if (
-    !canManageChurchInOrganization(user, organizationId, churchId) &&
-    !resolveIsAdmin(email)
-  ) {
+  await assertWorkspaceNotSuspended(organizationId, user.platformRole);
+  if (!canManageChurchInOrganization(user, organizationId, churchId)) {
     throw new Error("Unauthorized");
   }
   await updateChurch(churchId, input);
@@ -123,10 +136,8 @@ export async function createBranchAction(
   input: CreateBranchInput
 ): Promise<string> {
   const user = await getAccessUser(userId, email, organizationId);
-  if (
-    !canManageChurchInOrganization(user, organizationId, input.churchId) &&
-    !resolveIsAdmin(email)
-  ) {
+  await assertWorkspaceNotSuspended(organizationId, user.platformRole);
+  if (!canManageChurchInOrganization(user, organizationId, input.churchId)) {
     throw new Error("Unauthorized");
   }
   return createBranch({ ...input, organizationId });

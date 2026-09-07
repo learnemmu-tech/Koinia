@@ -3,8 +3,7 @@
 import { useActiveChurch } from "@/context/active-church-context";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useOrganizationOptional } from "@/context/organization-context";
-import { isPlatformSuperAdmin } from "@/lib/church-access";
-import { getLegacyDefaultChurchId } from "@/lib/church-scope";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { resolveEffectiveChurchId } from "@/lib/organization/resolve-effective-church";
 
 /**
@@ -12,7 +11,7 @@ import { resolveEffectiveChurchId } from "@/lib/organization/resolve-effective-c
  * Uses profile church pointer (Firestore) — not legacy churchRole fields.
  */
 export function useAdminChurchId(): string | null {
-  const { authUser, profile } = useFirebaseAuth();
+  const { profile } = useFirebaseAuth();
   const { activeChurchId } = useActiveChurch();
   const organization = useOrganizationOptional();
 
@@ -22,14 +21,14 @@ export function useAdminChurchId(): string | null {
     orgChurches: organization?.churches,
   });
 
-  if (isPlatformSuperAdmin(authUser?.email)) {
-    return resolved || getLegacyDefaultChurchId() || null;
+  if (isPlatformSuperAdmin(profile?.platformRole)) {
+    return resolved || null;
   }
 
   return resolved || null;
 }
 
 export function useIsPlatformSuperAdmin(): boolean {
-  const { authUser } = useFirebaseAuth();
-  return isPlatformSuperAdmin(authUser?.email);
+  const { profile } = useFirebaseAuth();
+  return isPlatformSuperAdmin(profile?.platformRole);
 }

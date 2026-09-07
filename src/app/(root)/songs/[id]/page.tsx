@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { SongDetailClient } from "@/components/music/song-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { DEFAULT_SONG_COVER } from "@/config/site";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getSongByIdCached } from "@/lib/cached-worship-data";
 import {
   buildBreadcrumbJsonLd,
@@ -28,8 +28,8 @@ export async function generateMetadata({
   params,
 }: SongDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const { scope } = await getPageTenantContext();
-  const song = await getSongByIdCached(scope, id);
+  const { contentQuery } = await resolvePageContentQuery();
+  const song = await getSongByIdCached(contentQuery, id);
 
   if (!song || !isSongPublished(song)) {
     return { title: "Song Not Found" };
@@ -64,8 +64,8 @@ export async function generateMetadata({
 
 export default async function SongDetailPage({ params }: SongDetailPageProps) {
   const { id } = await params;
-  const { scope } = await getPageTenantContext();
-  const song = await getSongByIdCached(scope, id);
+  const { contentQuery } = await resolvePageContentQuery();
+  const song = await getSongByIdCached(contentQuery, id);
 
   if (!song || !isSongPublished(song)) {
     notFound();

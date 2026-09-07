@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { ArticlesTabContent } from "@/components/worship/articles-tab-content";
 import { ArticlesAdminBar } from "@/components/admin/inline/articles-admin-bar";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getPublishedArticlesCached } from "@/lib/cached-worship-data";
 import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
@@ -18,8 +18,8 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function ArticlesPage() {
-  const { scope } = await getPageTenantContext();
-  const articles = await getPublishedArticlesCached(scope);
+  const { contentQuery, isPlatformPublic } = await resolvePageContentQuery();
+  const articles = await getPublishedArticlesCached(contentQuery);
 
   return (
     <section
@@ -38,10 +38,15 @@ export default async function ArticlesPage() {
             Devotional articles and reflections for daily encouragement.
           </p>
         </div>
-        <ArticlesAdminBar churchId={scope.churchId ?? ""} />
+        <ArticlesAdminBar
+          contentScope={isPlatformPublic ? "platform_public" : "organization"}
+        />
       </header>
 
-      <ArticlesTabContent initialArticles={articles} />
+      <ArticlesTabContent
+        initialArticles={articles}
+        isPlatformPublic={isPlatformPublic}
+      />
     </section>
   );
 }

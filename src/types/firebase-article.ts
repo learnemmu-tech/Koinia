@@ -1,5 +1,6 @@
 export type FirebaseArticle = {
   id: string;
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   title: string;
   category: string;
@@ -18,6 +19,7 @@ export type FirebaseArticle = {
 };
 
 export type CreateArticleInput = {
+  contentScope?: "organization" | "platform_public";
   churchId: string;
   title: string;
   category: string;

@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import {
+  contentScopeEnum,
   prayerRequestCategoryEnum,
   prayerRequestStatusEnum,
 } from "./enums";
@@ -20,8 +21,11 @@ export const prayerRequests = pgTable(
   "prayer_requests",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    contentScope: contentScopeEnum("content_scope")
+      .notNull()
+      .default("organization"),
+    organizationId: uuid("organization_id"),
+    churchId: uuid("church_id"),
     userId: uuid("user_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -72,6 +76,7 @@ export const prayerRequests = pgTable(
       table.organizationId,
       table.churchId
     ),
+    index("prayer_requests_content_scope_idx").on(table.contentScope),
   ]
 );
 

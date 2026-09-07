@@ -4,6 +4,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 
 import { triggerWelcomeEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { getSuperAdminBootstrapEmail } from "@/lib/auth/platform-role";
 import { getAppUserByClerkId, mapAppUserToProfile } from "@/lib/postgres/app-user";
 import { upsertAppUserFromClerk } from "@/lib/postgres/upsert-app-user";
 import { timed } from "@/lib/perf";
@@ -36,11 +37,11 @@ export async function POST(request: Request) {
   }
 
   const uid = verified.uid;
-  let email = verified.email;
-  let displayName: string | undefined;
+  let clerkEmail: string | undefined;
   let firstNameFromClerk = "";
   let lastNameFromClerk = "";
   let emailVerified = false;
+  let clerkIdentityLoaded = false;
 
   let body: SyncProfileBody = {};
 
@@ -54,8 +55,15 @@ export async function POST(request: Request) {
     getAppUserByClerkId(uid)
   );
 
+  const bootstrapEmail = getSuperAdminBootstrapEmail();
+  const mayNeedBootstrap =
+    Boolean(bootstrapEmail) &&
+    existing?.platformRole !== "super_admin" &&
+    (!existing || existing.email.trim().toLowerCase() === bootstrapEmail);
+
   const needsClerkRefresh =
     !existing ||
+    mayNeedBootstrap ||
     Boolean(body.firstName?.trim()) ||
     Boolean(body.lastName?.trim()) ||
     !existing.email;
@@ -66,36 +74,31 @@ export async function POST(request: Request) {
       const clerkUser = await timed("sync-profile.clerk-getUser", () =>
         client.users.getUser(uid)
       );
-      email = clerkUser.primaryEmailAddress?.emailAddress ?? email;
+      clerkEmail = clerkUser.primaryEmailAddress?.emailAddress;
       firstNameFromClerk = clerkUser.firstName ?? "";
       lastNameFromClerk = clerkUser.lastName ?? "";
-      displayName = [firstNameFromClerk, lastNameFromClerk]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
       emailVerified =
         clerkUser.primaryEmailAddress?.verification?.status === "verified";
+      clerkIdentityLoaded = true;
     } catch {
-      // Identity from the token is sufficient if Clerk user fetch fails.
+      // Identity from the session is sufficient if Clerk user fetch fails.
+      // Never bootstrap SuperAdmin without a Clerk-verified primary email.
     }
   }
 
-  if (existing && !needsClerkRefresh) {
+  if (existing && !mayNeedBootstrap && !needsClerkRefresh) {
     return NextResponse.json(mapAppUserToProfile(existing));
   }
 
-  const bodyEmail = body.email?.trim().toLowerCase() || undefined;
-  email = email || bodyEmail || existing?.email;
+  const email =
+    clerkEmail?.trim().toLowerCase() ||
+    existing?.email.trim().toLowerCase() ||
+    verified.email?.trim().toLowerCase();
 
-  const nameParts = (displayName ?? "").split(" ");
   const firstName =
-    body.firstName?.trim() || firstNameFromClerk || existing?.firstName || nameParts[0] || "";
+    body.firstName?.trim() || firstNameFromClerk || existing?.firstName || "";
   const lastName =
-    body.lastName?.trim() ||
-    lastNameFromClerk ||
-    existing?.lastName ||
-    nameParts.slice(1).join(" ") ||
-    "";
+    body.lastName?.trim() || lastNameFromClerk || existing?.lastName || "";
 
   if (!email) {
     if (existing) {
@@ -105,6 +108,10 @@ export async function POST(request: Request) {
       { error: "Unable to sync profile because no email was available." },
       { status: 400 }
     );
+  }
+
+  if (!clerkIdentityLoaded) {
+    emailVerified = false;
   }
 
   let syncResult;

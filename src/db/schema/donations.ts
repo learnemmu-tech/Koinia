@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import {
+  contentScopeEnum,
   donationCampaignStatusEnum,
   donationCurrencyEnum,
   paymentProviderEnum,
@@ -21,8 +22,11 @@ export const donationCampaigns = pgTable(
   "donation_campaigns",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    contentScope: contentScopeEnum("content_scope")
+      .notNull()
+      .default("organization"),
+    organizationId: uuid("organization_id"),
+    churchId: uuid("church_id"),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
     bannerImage: text("banner_image"),
@@ -61,6 +65,7 @@ export const donationCampaigns = pgTable(
       table.organizationId,
       table.churchId
     ),
+    index("donation_campaigns_content_scope_idx").on(table.contentScope),
   ]
 );
 
@@ -68,8 +73,11 @@ export const donations = pgTable(
   "donations",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    contentScope: contentScopeEnum("content_scope")
+      .notNull()
+      .default("organization"),
+    organizationId: uuid("organization_id"),
+    churchId: uuid("church_id"),
     campaignId: uuid("campaign_id")
       .notNull()
       .references(() => donationCampaigns.id, { onDelete: "restrict" }),
@@ -112,5 +120,6 @@ export const donations = pgTable(
       table.organizationId,
       table.churchId
     ),
+    index("donations_content_scope_idx").on(table.contentScope),
   ]
 );

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { verifyChurchContentPublisher } from "@/lib/auth/verify-church-content-publisher";
@@ -35,15 +35,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  try {
-    await triggerContentAnnouncementEmails(
+  after(() =>
+    triggerContentAnnouncementEmails(
       body.type as ContentPublishEmailType,
       body.contentId,
       authUser.uid
-    );
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[api/email/content-published]", error);
-    return NextResponse.json({ success: true });
-  }
+    ).catch((error) => {
+      console.error("[api/email/content-published]", error);
+    })
+  );
+
+  return NextResponse.json({ success: true });
 }

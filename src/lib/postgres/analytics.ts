@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { AnyColumn } from "drizzle-orm";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -40,7 +40,7 @@ function scopedWhere(
   const organizationId = scope.organizationId?.trim();
   if (churchId) return eq(churchIdColumn, churchId);
   if (organizationId) return eq(organizationIdColumn, organizationId);
-  return undefined;
+  return sql`false`;
 }
 
 export async function listAnalyticsSongs(

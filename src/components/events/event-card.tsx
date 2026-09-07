@@ -54,6 +54,11 @@ export function EventCard({ event, className }: EventCardProps) {
         <h3 className="line-clamp-2 font-heading text-base font-semibold leading-snug text-foreground">
           {event.title}
         </h3>
+        {event.description?.trim() ?
+          <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+            {event.description.trim()}
+          </p>
+        : null}
 
         <ul className="mt-auto flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-5 sm:gap-y-2">
           <li className="flex min-w-0 items-start gap-1.5">
@@ -78,6 +83,7 @@ export function EventCard({ event, className }: EventCardProps) {
             </li>
           : null}
         </ul>
+        <span className="text-xs font-semibold text-primary">View Event</span>
       </div>
     </Link>
   );

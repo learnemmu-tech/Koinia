@@ -4,6 +4,9 @@ import type { FirebaseBranchMembership } from "@/types/branch-membership";
 import type { FirebaseMembership, MembershipStatus } from "@/types/membership";
 import { roleMeetsMinimum } from "@/types/membership";
 
+import { isOrganizationAccessSuspended } from "@/lib/auth/organization-workspace-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
+import { resolveSuperAdminPostAuthDestination } from "@/lib/auth/super-admin-routing";
 import { sanitizeCallbackUrl } from "@/lib/callback-url";
 
 import {
@@ -15,6 +18,7 @@ import {
   isJoinPath,
   joinPathForSlug,
   MEMBERSHIP_REMOVED_PATH,
+  ORGANIZATION_SUSPENDED_PATH,
   parseJoinSlugFromPath,
   POST_AUTH_CONTINUE_PATH,
   WAITING_APPROVAL_PATH,
@@ -29,6 +33,7 @@ export {
   ACCESS_DENIED_PATH,
   ACCOUNT_SUSPENDED_PATH,
   MEMBERSHIP_REMOVED_PATH,
+  ORGANIZATION_SUSPENDED_PATH,
 } from "./auth-paths";
 
 export type MembershipRoutingStatus =
@@ -37,6 +42,7 @@ export type MembershipRoutingStatus =
   | "rejected"
   | "removed"
   | "suspended"
+  | "org_suspended"
   | "none";
 
 export type MembershipRoutingResult = {
@@ -109,6 +115,7 @@ export function resolveMembershipRouting({
   churchesCount = 0,
   branchesCount,
   workspaceType,
+  organizationStatus,
   callbackUrl,
   branchMemberships = [],
 }: ResolveMembershipRoutingInput): MembershipRoutingResult {
@@ -130,6 +137,20 @@ export function resolveMembershipRouting({
 
   if (isInvitePath(sanitized)) {
     return { status: "none", destination: sanitized };
+  }
+
+  if (isPlatformSuperAdmin(profile?.platformRole)) {
+    return {
+      status: "active",
+      destination: resolveSuperAdminPostAuthDestination(sanitized),
+    };
+  }
+
+  if (isOrganizationAccessSuspended(organizationStatus)) {
+    return {
+      status: "org_suspended",
+      destination: ORGANIZATION_SUSPENDED_PATH,
+    };
   }
 
   if (membership?.status === "suspended") {
@@ -164,6 +185,7 @@ export function resolveMembershipRouting({
     churchesCount,
     branchesCount,
     workspaceType,
+    organizationStatus,
   };
 
   const joinSlug = parseJoinSlugFromPath(sanitized);

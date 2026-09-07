@@ -3,7 +3,9 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { isOnboardingPath, WAITING_APPROVAL_PATH } from "@/lib/auth/auth-paths";
+import { isOnboardingPath, SUPER_ADMIN_BASE, WAITING_APPROVAL_PATH } from "@/lib/auth/auth-paths";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
+import { shouldRedirectAuthenticatedSuperAdminFromPath } from "@/lib/auth/super-admin-routing";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useWorkspaceAccess } from "@/hooks/use-workspace-access";
 import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
@@ -20,6 +22,7 @@ const EXEMPT_PATH_PREFIXES = [
   "/membership-removed",
   "/account-suspended",
   "/waiting-approval",
+  "/super-admin",
 ];
 
 function isExemptPath(pathname: string): boolean {
@@ -48,6 +51,14 @@ export function OnboardingGuard() {
   useEffect(() => {
     if (!authUser || !profileReady) return;
     if (routedRef.current === pathname) return;
+
+    if (isPlatformSuperAdmin(profile?.platformRole)) {
+      if (shouldRedirectAuthenticatedSuperAdminFromPath(pathname)) {
+        routedRef.current = pathname;
+        router.replace(SUPER_ADMIN_BASE);
+      }
+      return;
+    }
 
     if (isMembershipPending) {
       if (!pathname.startsWith(WAITING_APPROVAL_PATH)) {

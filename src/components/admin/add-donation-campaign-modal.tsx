@@ -56,6 +56,7 @@ type AddDonationCampaignModalProps = {
   onSave: () => void;
   initialCampaign?: FirebaseDonationCampaign | null;
   churchId: string;
+  contentScope?: "platform_public" | "organization";
 };
 
 export function AddDonationCampaignModal({
@@ -64,6 +65,7 @@ export function AddDonationCampaignModal({
   onSave,
   initialCampaign,
   churchId,
+  contentScope = "organization",
 }: AddDonationCampaignModalProps) {
   const { user, authUser } = useFirebaseAuth();
   const { invalidateDonations } = useInvalidateAdminQueries();
@@ -172,9 +174,12 @@ export function AddDonationCampaignModal({
       } else {
         const campaignId = await createDonationCampaign({
           ...payload,
-          churchId,
-          organizationId: tenantFields.organizationId,
-          branchId: tenantFields.branchId,
+          contentScope,
+          churchId: contentScope === "platform_public" ? "" : churchId,
+          organizationId:
+            contentScope === "platform_public" ? undefined : tenantFields.organizationId,
+          branchId:
+            contentScope === "platform_public" ? undefined : tenantFields.branchId,
         });
 
         if (bannerFile) {

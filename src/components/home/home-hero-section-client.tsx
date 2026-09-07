@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 const HOLD_MS = 6500;
 const FADE_MS = 900;
 
-const SLIDES = [
+const ALL_SLIDES = [
   {
     emoji: "📖",
     badge: "Sermons",
@@ -70,6 +70,8 @@ const SLIDES = [
     secondary: { href: "/about", label: "Learn more" },
   },
 ] as const;
+
+const PUBLIC_SLIDES = ALL_SLIDES.filter((slide) => slide.badge !== "Prayer");
 
 type FeatureKey =
   | "songs"
@@ -157,12 +159,19 @@ const FEATURES: Record<FeatureKey, FeatureItem> = {
   },
 };
 
-const FEATURE_SETS: readonly FeatureKey[][] = [
+const ALL_FEATURE_SETS: readonly FeatureKey[][] = [
   ["songs", "sermons", "prayer", "events"],
   ["donations", "shorts", "articles", "community"],
   ["songs", "articles", "sermons", "prayer"],
   ["events", "donations", "shorts", "sermons"],
   ["articles", "songs", "community", "prayer"],
+];
+
+const PUBLIC_FEATURE_SETS: readonly FeatureKey[][] = [
+  ["songs", "sermons", "events", "shorts"],
+  ["donations", "shorts", "articles", "community"],
+  ["songs", "articles", "sermons", "events"],
+  ["events", "donations", "shorts", "sermons"],
 ];
 
 const contentTransition = {
@@ -174,15 +183,34 @@ const contentTransition = {
 type HomeHeroSectionClientProps = {
   church?: FirebaseChurch | null;
   verse: WorshipVerse;
+  isPlatformPublic?: boolean;
 };
 
-export function HomeHeroSectionClient({ verse }: HomeHeroSectionClientProps) {
+export function HomeHeroSectionClient({
+  verse,
+  isPlatformPublic = false,
+}: HomeHeroSectionClientProps) {
+  const slides = isPlatformPublic ? PUBLIC_SLIDES : ALL_SLIDES;
+  const featureSets = isPlatformPublic ? PUBLIC_FEATURE_SETS : ALL_FEATURE_SETS;
   const [slideIndex, setSlideIndex] = React.useState(0);
   const [visible, setVisible] = React.useState(true);
   const [cycleKey, setCycleKey] = React.useState(0);
   const [reduceMotion, setReduceMotion] = React.useState(false);
   const fadeRef = React.useRef<number | null>(null);
   const slideRef = React.useRef(0);
+
+  React.useEffect(() => {
+    if (slideIndex >= slides.length) {
+      setSlideIndex(0);
+      slideRef.current = 0;
+    }
+  }, [slideIndex, slides.length]);
+
+  React.useEffect(() => {
+    setSlideIndex(0);
+    slideRef.current = 0;
+    setVisible(true);
+  }, [isPlatformPublic]);
 
   React.useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -193,7 +221,7 @@ export function HomeHeroSectionClient({ verse }: HomeHeroSectionClientProps) {
   }, []);
 
   const showSlide = React.useCallback((index: number) => {
-    const nextIndex = (index + SLIDES.length) % SLIDES.length;
+    const nextIndex = (index + slides.length) % slides.length;
     if (reduceMotion) {
       slideRef.current = nextIndex;
       setSlideIndex(nextIndex);
@@ -208,7 +236,7 @@ export function HomeHeroSectionClient({ verse }: HomeHeroSectionClientProps) {
       setSlideIndex(nextIndex);
       setVisible(true);
     }, FADE_MS);
-  }, [reduceMotion]);
+  }, [reduceMotion, slides.length]);
 
   React.useEffect(() => {
     if (reduceMotion) return;
@@ -229,8 +257,12 @@ export function HomeHeroSectionClient({ verse }: HomeHeroSectionClientProps) {
     setCycleKey((key) => key + 1);
   }
 
-  const slide = SLIDES[slideIndex]!;
-  const features = FEATURE_SETS[slideIndex]!.map((key) => FEATURES[key]);
+  const activeSlideIndex =
+    slides.length > 0 ? slideIndex % slides.length : 0;
+  const slide = slides[activeSlideIndex] ?? slides[0]!;
+  const activeFeatureSet =
+    featureSets[activeSlideIndex % featureSets.length] ?? featureSets[0] ?? [];
+  const features = activeFeatureSet.map((key) => FEATURES[key]);
 
   return (
     <section
@@ -295,17 +327,17 @@ export function HomeHeroSectionClient({ verse }: HomeHeroSectionClientProps) {
             role="tablist"
             aria-label="Hero slides"
           >
-            {SLIDES.map((item, index) => (
+            {slides.map((item, index) => (
               <button
                 key={item.heading}
                 type="button"
                 role="tab"
                 aria-label={item.heading}
-                aria-selected={index === slideIndex}
+                aria-selected={index === activeSlideIndex}
                 onClick={() => goTo(index)}
                 className={cn(
                   "h-[3px] rounded-[2px] transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  index === slideIndex
+                  index === activeSlideIndex
                     ? "w-6 bg-foreground"
                     : "w-2 bg-muted hover:bg-muted-foreground/40"
                 )}

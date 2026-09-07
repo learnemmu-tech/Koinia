@@ -3,10 +3,14 @@ import { NextResponse } from "next/server";
 
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
-import { getShortById, setShortThumbnailUrl } from "@/lib/postgres/shorts";
+import {
+  getShortById,
+  setShortThumbnailUrl,
+  shortStoragePathPrefix,
+  userCanManageShortRecord,
+} from "@/lib/postgres/shorts";
 import {
   userCanAccessChurchContent,
-  userCanManageChurch,
 } from "@/lib/postgres/session";
 import {
   MAX_SHORT_THUMBNAIL_BYTES,
@@ -62,25 +66,32 @@ async function authorizeUpload(request: NextRequest, shortId: string) {
   }
 
   const isOwner = short.userId === appUser.id;
-  const isAdmin = await userCanManageChurch(
+  const isAdmin = await userCanManageShortRecord(
     verified.uid,
     verified.email,
-    short.churchId
+    short
   );
   if (!isOwner && !isAdmin) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 
-  const allowed = await userCanAccessChurchContent(
-    verified.uid,
-    verified.email,
-    short.churchId
-  );
-  if (!allowed) {
-    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  if (short.contentScope !== "platform_public" && short.churchId) {
+    const allowed = await userCanAccessChurchContent(
+      verified.uid,
+      verified.email,
+      short.churchId
+    );
+    if (!allowed) {
+      return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    }
   }
 
   return { short };
+}
+
+function storagePathPrefixForShort(short: Awaited<ReturnType<typeof getShortById>>) {
+  if (!short) throw new Error("Short not found.");
+  return shortStoragePathPrefix(short);
 }
 
 function validateSlotFile(input: {
@@ -157,7 +168,7 @@ export async function POST(request: NextRequest) {
         if (
           !isOwnedShortObjectKey({
             objectKey,
-            churchId: short.churchId,
+            churchId: storagePathPrefixForShort(short),
             shortId: short.id,
             slot,
           })
@@ -184,7 +195,7 @@ export async function POST(request: NextRequest) {
       }
 
       const signed = await createShortSignedUpload({
-        churchId: short.churchId,
+        churchId: storagePathPrefixForShort(short),
         shortId: short.id,
         slot,
         ext: validated.ext!,
@@ -234,7 +245,7 @@ export async function POST(request: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploaded = await uploadShortObject({
-      churchId: short.churchId,
+      churchId: storagePathPrefixForShort(short),
       shortId: short.id,
       slot,
       ext: validated.ext!,

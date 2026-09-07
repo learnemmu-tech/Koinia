@@ -1,6 +1,12 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-export const platformRoleEnum = pgEnum("platform_role", ["user", "admin"]);
+export const platformRoleEnum = pgEnum("platform_role", [
+  "user",
+  "admin",
+  "super_admin",
+]);
+
+export type PlatformRole = (typeof platformRoleEnum.enumValues)[number];
 
 export const workspaceTypeEnum = pgEnum("workspace_type", [
   "independent_church",
@@ -185,3 +191,10 @@ export const shortVisibilityEnum = pgEnum("short_visibility", [
   "church",
   "public",
 ]);
+
+export const contentScopeEnum = pgEnum("content_scope", [
+  "organization",
+  "platform_public",
+]);
+
+export type ContentScope = (typeof contentScopeEnum.enumValues)[number];

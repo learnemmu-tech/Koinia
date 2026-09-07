@@ -20,6 +20,9 @@ import { sendEmail } from "./send-email";
 import { shouldSendUserEmail } from "./user-preferences-server";
 import type { AdminNotificationPayload, SendEmailResult } from "./types";
 
+/** Contact Us inbox only. Do not reuse for other admin notifications. */
+const CONTACT_US_INBOX = "emmanuel012k@gmail.com";
+
 function formatDisplayName(firstName?: string, lastName?: string): string {
   const name = `${firstName ?? ""} ${lastName ?? ""}`.trim();
   return name || "Friend";
@@ -338,6 +341,30 @@ export const EmailService = {
       react: ContactConfirmationEmail({
         name: input.name,
         subject: input.subject,
+      }),
+    });
+  },
+
+  /** Inbox delivery for Contact Us only — does not change admin notification recipients. */
+  async sendContactUsInbox(input: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }): Promise<SendEmailResult> {
+    return sendEmail({
+      to: CONTACT_US_INBOX,
+      replyTo: input.email,
+      subject: `New Contact Us Message — ${input.subject}`,
+      react: AdminNotificationEmail({
+        title: `New Contact Us Message — ${input.subject}`,
+        summary: "A visitor submitted the Contact Us form.",
+        details: {
+          Name: input.name,
+          "Visitor Email": input.email,
+          Subject: input.subject,
+          Message: input.message,
+        },
       }),
     });
   },

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -22,7 +23,8 @@ export function mapAppUserToProfile(row: AppUserRow): FirestoreUser {
     firstName: row.firstName,
     lastName: row.lastName,
     email: row.email,
-    role: row.platformRole === "admin" ? "admin" : "user",
+    role: row.platformRole === "user" ? "user" : "admin",
+    platformRole: row.platformRole,
     organizationId: row.organizationId ?? undefined,
     needsChurchOnboarding: row.needsChurchOnboarding,
     churchId,
@@ -32,9 +34,9 @@ export function mapAppUserToProfile(row: AppUserRow): FirestoreUser {
   };
 }
 
-export async function getAppUserByClerkId(
+export const getAppUserByClerkId = cache(async (
   clerkId: string
-): Promise<AppUserRow | null> {
+): Promise<AppUserRow | null> => {
   const id = clerkId.trim();
   if (!id) return null;
 
@@ -45,7 +47,7 @@ export async function getAppUserByClerkId(
     .limit(1);
 
   return row ?? null;
-}
+});
 
 export async function getAppUserByEmail(
   email: string

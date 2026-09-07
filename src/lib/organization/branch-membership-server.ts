@@ -8,6 +8,8 @@ export {
   approveBranchMembership,
   rejectBranchMembership,
   removeBranchMembership,
+  updateChurchMembershipRole,
+  assertSafeChurchMemberMutation,
   listActiveBranchMemberships,
   bulkReviewBranchMemberships,
   getBranchMembershipsForUser,

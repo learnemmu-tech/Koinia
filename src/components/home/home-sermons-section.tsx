@@ -13,7 +13,7 @@ type HomeSermonsSectionProps = {
 export function HomeSermonsSection({ sermons }: HomeSermonsSectionProps) {
   const visible = [...sermons]
     .sort((a, b) => b.dateCreated - a.dateCreated)
-    .slice(0, 3);
+    .slice(0, 4);
 
   return (
     <section aria-labelledby="home-sermons-heading" className="space-y-3">
@@ -22,13 +22,14 @@ export function HomeSermonsSection({ sermons }: HomeSermonsSectionProps) {
         title="Latest Sermons"
         description="Messages to encourage, teach, and strengthen your faith."
         href="/sermons"
+        viewAllLabel="View All Sermons"
       />
       {visible.length === 0 ?
         <HomeEmptyState
           title="No sermons yet"
           description="Check back soon for new messages."
         />
-      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:items-stretch md:overflow-visible md:px-0">
+      : <HomeCollectionRail className="md:mx-0 md:grid md:grid-cols-2 md:items-stretch md:overflow-visible md:px-0 lg:grid-cols-4">
           {visible.map((sermon) => (
             <div
               key={sermon.id}

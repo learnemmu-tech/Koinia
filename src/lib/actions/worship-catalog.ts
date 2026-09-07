@@ -2,16 +2,12 @@
 
 
 
-import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
 
 import { getWorshipCatalogCached } from "@/lib/cached-worship-data";
 
-
-
-export async function fetchWorshipCatalogAction(scope: TenantScope) {
-
-  return getWorshipCatalogCached(scope);
-
+export async function fetchWorshipCatalogAction(query: ContentQueryInput) {
+  return getWorshipCatalogCached(query);
 }
 
 

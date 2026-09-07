@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen,
   CalendarDays,
+  Clapperboard,
   Cog,
   HeartHandshake,
   Home,
@@ -17,7 +18,6 @@ import {
   Moon,
   Music,
   Shield,
-  Sparkles,
   Sun,
   User2,
 } from "lucide-react";
@@ -50,7 +50,7 @@ type NavItem = {
   match: (pathname: string) => boolean;
 };
 
-const MOBILE_NAV: NavItem[] = [
+const PUBLIC_MOBILE_NAV: NavItem[] = [
   { label: "Home", href: "/", icon: Home, match: (p) => p === "/" },
   {
     label: "Songs",
@@ -71,10 +71,10 @@ const MOBILE_NAV: NavItem[] = [
     match: (p) => p === "/articles" || p.startsWith("/articles/"),
   },
   {
-    label: "Prayer Requests",
-    href: "/prayer-requests",
-    icon: Sparkles,
-    match: (p) => p.startsWith("/prayer-requests"),
+    label: "Shorts",
+    href: "/shorts",
+    icon: Clapperboard,
+    match: (p) => p === "/shorts" || p.startsWith("/shorts/"),
   },
   {
     label: "Events",
@@ -87,6 +87,16 @@ const MOBILE_NAV: NavItem[] = [
     href: "/donations",
     icon: HeartHandshake,
     match: (p) => p.startsWith("/donations"),
+  },
+];
+
+const AUTHENTICATED_MOBILE_NAV: NavItem[] = [
+  ...PUBLIC_MOBILE_NAV,
+  {
+    label: "Prayer Requests",
+    href: "/prayer-requests",
+    icon: HeartHandshake,
+    match: (p) => p.startsWith("/prayer-requests"),
   },
 ];
 
@@ -175,6 +185,7 @@ export function MobileHeader() {
 
   const displayName = authUser ? getDisplayName(authUser, profile) : "";
   const initials = authUser ? getInitials(authUser, profile) : "U";
+  const mobileNavItems = authUser ? AUTHENTICATED_MOBILE_NAV : PUBLIC_MOBILE_NAV;
 
   const headerShell = (
     <div className="relative flex h-14 items-center justify-between px-1.5">
@@ -286,7 +297,7 @@ export function MobileHeader() {
           className="flex-1 overflow-y-auto px-2 py-3"
         >
           <div className="space-y-0.5">
-            {MOBILE_NAV.map((item) => (
+            {mobileNavItems.map((item) => (
               <NavRow
                 key={item.href}
                 href={item.href}

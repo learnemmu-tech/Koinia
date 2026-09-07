@@ -6,7 +6,7 @@ import { ReadingDetailLayout } from "@/components/reading-detail-layout";
 import { SermonMediaSection } from "@/components/sermons/sermon-media-section";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ShareContentButton } from "@/components/share-content-button";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getSermonByIdCached } from "@/lib/cached-worship-data";
 import {
   buildArticleJsonLd,
@@ -24,8 +24,8 @@ type SermonPageProps = {
 export async function generateMetadata({ params }: SermonPageProps): Promise<Metadata> {
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
-  const { scope } = await getPageTenantContext();
-  const sermon = await getSermonByIdCached(scope, decodedId);
+  const { contentQuery } = await resolvePageContentQuery();
+  const sermon = await getSermonByIdCached(contentQuery, decodedId);
 
   if (!sermon || !sermon.isPublished) {
     return { title: "Sermon Not Found" };
@@ -52,8 +52,8 @@ export async function generateMetadata({ params }: SermonPageProps): Promise<Met
 export default async function SermonPage({ params }: SermonPageProps) {
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
-  const { scope } = await getPageTenantContext();
-  const sermon = await getSermonByIdCached(scope, decodedId);
+  const { contentQuery } = await resolvePageContentQuery();
+  const sermon = await getSermonByIdCached(contentQuery, decodedId);
 
   if (!sermon || !sermon.isPublished) {
     notFound();

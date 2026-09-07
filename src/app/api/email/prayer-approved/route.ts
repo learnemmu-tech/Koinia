@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
@@ -7,7 +7,8 @@ import {
   triggerPrayerApprovedMemberNotifications,
 } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
-import { isPlatformSuperAdmin } from "@/lib/church-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { getPrayerRequestById } from "@/lib/firebase-prayer-request-queries";
 import { getChurchById } from "@/lib/church-queries";
 
@@ -37,8 +38,9 @@ export async function POST(request: Request) {
     const church = await getChurchById(prayer.churchId);
     const organizationId = church?.organizationId;
 
+    const appUser = await getAppUserByClerkId(authUser.uid);
     const canModerate =
-      isPlatformSuperAdmin(authUser.email) ||
+      isPlatformSuperAdmin(appUser?.platformRole) ||
       (await canUserModerateChurchPrayers({
         userId: authUser.uid,
         churchId: prayer.churchId,
@@ -49,10 +51,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await Promise.all([
-      triggerPrayerApprovedMemberNotifications(body.prayerId),
-      triggerPrayerApprovedEmail(body.prayerId),
-    ]);
+    after(() =>
+      Promise.all([
+        triggerPrayerApprovedMemberNotifications(body.prayerId),
+        triggerPrayerApprovedEmail(body.prayerId),
+      ]).catch((error) => {
+        console.error("[api/email/prayer-approved]", error);
+      })
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

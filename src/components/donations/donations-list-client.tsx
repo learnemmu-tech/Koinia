@@ -20,6 +20,7 @@ import { contentCardGridClassName } from "@/lib/responsive-classes";
 
 type DonationsListClientProps = {
   initialCampaigns: FirebaseDonationCampaign[];
+  isPlatformPublic?: boolean;
 };
 
 function matchesSearch(
@@ -32,8 +33,11 @@ function matchesSearch(
 
 export function DonationsListClient({
   initialCampaigns,
+  isPlatformPublic = false,
 }: DonationsListClientProps) {
-  const { campaigns, loading } = useActiveDonationCampaigns(initialCampaigns);
+  const { campaigns, loading } = useActiveDonationCampaigns(initialCampaigns, {
+    clientSync: !isPlatformPublic,
+  });
   const { active, completed } = splitCampaignsByCompletion(campaigns);
 
   const [search, setSearch] = useState("");

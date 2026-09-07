@@ -12,13 +12,11 @@ import {
 
 } from "./firebase-donation-queries";
 
+import type { ContentQueryInput } from "@/lib/content/content-scope";
 import {
-
-  recordMatchesTenantScope,
-
-  type TenantScope,
-
-} from "./organization/tenant-scope";
+  contentCacheKey,
+  recordMatchesContentQuery,
+} from "@/lib/content/content-scope";
 
 
 
@@ -26,62 +24,35 @@ const REVALIDATE_SECONDS = 60;
 
 
 
-function tenantCacheKey(scope: TenantScope): string {
-
-  return `${scope.organizationId}:${scope.churchId}:${scope.branchId ?? ""}`;
-
+function tenantCacheKey(scope: ContentQueryInput): string {
+  return contentCacheKey(scope);
 }
 
-
-
-export async function getActiveDonationCampaignsCached(scope: TenantScope) {
-
+export async function getActiveDonationCampaignsCached(
+  scope: ContentQueryInput,
+  limit?: number
+) {
   const key = tenantCacheKey(scope);
 
   return unstable_cache(
-
-    async () => getActiveDonationCampaigns(scope),
-
-    ["active-donation-campaigns", key],
-
+    async () => getActiveDonationCampaigns(scope, { limit }),
+    ["active-donation-campaigns", key, limit != null ? `limit-${limit}` : "all"],
     { revalidate: REVALIDATE_SECONDS, tags: ["donations", `tenant-${key}`] }
-
   )();
-
 }
 
 
 
 export const getDonationCampaignByIdCached = cache(
-
-  async (scope: TenantScope, campaignId: string) => {
-
+  async (scope: ContentQueryInput, campaignId: string) => {
     const key = tenantCacheKey(scope);
-
     return unstable_cache(
-
       async () => {
-
         const campaign = await getDonationCampaignById(campaignId);
-
-        if (
-
-          !recordMatchesTenantScope(campaign, scope, {
-
-            allowLegacyBranchless: true,
-
-            defaultBranchId: scope.branchId ?? null,
-
-          })
-
-        ) {
-
+        if (!recordMatchesContentQuery(campaign, scope)) {
           return null;
-
         }
-
         return campaign;
-
       },
 
       ["donation-campaign-by-id", key, campaignId],

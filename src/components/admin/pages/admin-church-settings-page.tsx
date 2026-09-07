@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 
 import { RequireAdmin } from "@/components/auth/require-admin";
+import { RequireOrganizationAdmin } from "@/components/auth/require-organization-admin";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
@@ -299,9 +300,9 @@ export function AdminChurchSettingsPageClient() {
   return (
 
     <RequireAdmin>
-
-      <ChurchSettingsContent />
-
+      <RequireOrganizationAdmin>
+        <ChurchSettingsContent />
+      </RequireOrganizationAdmin>
     </RequireAdmin>
 
   );

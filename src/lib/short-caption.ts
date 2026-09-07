@@ -1,10 +1,48 @@
-import type { ShortCategory } from "@/types/video-short";
+import { SHORT_CATEGORIES, type ShortCategory } from "@/types/video-short";
 
 export type ParsedShortCaption = {
   title: string;
   description: string;
   topic: string;
 };
+
+function isKnownCategory(topic: string): boolean {
+  return SHORT_CATEGORIES.some(
+    (item) => item.toLowerCase() === topic.toLowerCase()
+  );
+}
+
+export function resolveShortCategory(topic: string): ShortCategory {
+  const trimmed = topic.trim();
+  if (!trimmed) return "Other";
+  const match = SHORT_CATEGORIES.find(
+    (item) => item.toLowerCase() === trimmed.toLowerCase()
+  );
+  return match ?? "Other";
+}
+
+/** Maps Title + Description (+ custom topic) into the existing caption API field. */
+export function buildShortCaption(
+  title: string,
+  description: string,
+  topic: string
+): string {
+  const titleText = title.trim();
+  const descriptionText = description.trim();
+  const topicText = topic.trim();
+  const parts: string[] = [];
+
+  if (titleText) parts.push(titleText);
+  if (descriptionText) parts.push(descriptionText);
+
+  let caption = parts.join("\n\n");
+
+  if (topicText && !isKnownCategory(topicText)) {
+    caption = caption ? `${caption}\n\n— ${topicText}` : topicText;
+  }
+
+  return caption.slice(0, 500);
+}
 
 /**
  * Shorts store title, description, and a custom topic inside a single `caption`

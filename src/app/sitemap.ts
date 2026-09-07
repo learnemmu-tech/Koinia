@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { PUBLIC_PLATFORM_CONTENT_QUERY } from "@/lib/content/content-scope";
 import { getActiveDonationCampaignsCached } from "@/lib/cached-donation-data";
 import { getPublishedEventsGroupedCached } from "@/lib/cached-event-data";
 import {
@@ -14,17 +14,15 @@ import { absoluteUrl } from "@/lib/utils";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { scope } = await getPageTenantContext();
-
   const [songs, sermons, articles, eventsGrouped, campaigns] = await Promise.all([
-    getPublishedSongsCached(scope).catch(() => []),
-    getPublishedSermonsCached(scope).catch(() => []),
-    getPublishedArticlesCached(scope).catch(() => []),
-    getPublishedEventsGroupedCached(scope).catch(() => ({
+    getPublishedSongsCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => []),
+    getPublishedSermonsCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => []),
+    getPublishedArticlesCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => []),
+    getPublishedEventsGroupedCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => ({
       upcoming: [],
       past: [],
     })),
-    getActiveDonationCampaignsCached(scope).catch(() => []),
+    getActiveDonationCampaignsCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => []),
   ]);
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_SITEMAP_PATHS.map(

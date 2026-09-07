@@ -15,11 +15,15 @@ import { useRealtimeSermons } from "@/hooks/use-worship-realtime";
 
 type SermonsTabContentProps = {
   initialSermons: FirebaseSermon[];
+  isPlatformPublic?: boolean;
 };
 
-export function SermonsTabContent({ initialSermons }: SermonsTabContentProps) {
+export function SermonsTabContent({
+  initialSermons,
+  isPlatformPublic = false,
+}: SermonsTabContentProps) {
   const { data: liveSermons, syncing, loadMore, hasMore, loadingMore } =
-    useRealtimeSermons(initialSermons);
+    useRealtimeSermons(initialSermons, { clientSync: !isPlatformPublic });
   const sermons = useMemo(
     () => liveSermons.filter((sermon) => sermon.isPublished),
     [liveSermons]

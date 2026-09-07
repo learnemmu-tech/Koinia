@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import {
   getArticleById,
@@ -74,6 +75,41 @@ function resolveKind(
   return "song";
 }
 
+type UploadContentRecord = {
+  contentScope?: string;
+  churchId?: string | null;
+};
+
+async function authorizeContentUpload(
+  uid: string,
+  email: string | undefined,
+  record: UploadContentRecord | null
+): Promise<true | NextResponse> {
+  if (!record) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (record.contentScope === "platform_public") {
+    const appUser = await getAppUserByClerkId(uid);
+    if (!isPlatformSuperAdmin(appUser?.platformRole)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return true;
+  }
+
+  const churchId = record.churchId?.trim();
+  if (!churchId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const allowed = await userCanManageChurch(uid, email, churchId);
+  if (!allowed) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return true;
+}
+
 async function authorizeUpload(
   uid: string,
   email: string | undefined,
@@ -113,15 +149,15 @@ async function authorizeUpload(
     const church = await getChurchById(entityId);
     churchId = church?.id ?? null;
   } else if (kind === "song") {
-    churchId = (await getSongById(entityId))?.churchId ?? null;
+    return authorizeContentUpload(uid, email, await getSongById(entityId));
   } else if (kind === "sermon") {
-    churchId = (await getSermonById(entityId))?.churchId ?? null;
+    return authorizeContentUpload(uid, email, await getSermonById(entityId));
   } else if (kind === "article") {
-    churchId = (await getArticleById(entityId))?.churchId ?? null;
+    return authorizeContentUpload(uid, email, await getArticleById(entityId));
   } else if (kind === "event") {
-    churchId = (await getEventById(entityId))?.churchId ?? null;
+    return authorizeContentUpload(uid, email, await getEventById(entityId));
   } else if (kind === "donation") {
-    churchId = (await getDonationCampaignById(entityId))?.churchId ?? null;
+    return authorizeContentUpload(uid, email, await getDonationCampaignById(entityId));
   }
 
   if (!churchId) {

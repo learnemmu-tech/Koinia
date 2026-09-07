@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { LazyPlayer } from "@/components/lazy-player";
+import { Player } from "@/components/player";
 import { usePlayerVisible } from "@/hooks/use-player-visible";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +25,7 @@ export function GlobalAudioPlayerShell({
       >
         {children}
       </div>
-      {showPlayer ? <LazyPlayer /> : null}
+      <Player />
     </>
   );
 }

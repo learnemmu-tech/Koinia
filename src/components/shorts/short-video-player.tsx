@@ -195,7 +195,7 @@ export const ShortVideoPlayer = React.memo(function ShortVideoPlayer({
           poster={poster ?? undefined}
           playsInline
           loop
-          preload={active ? "auto" : "metadata"}
+          preload={active ? "auto" : "none"}
           className="size-full object-cover"
           onLoadedMetadata={(event) => {
             const duration = event.currentTarget.duration;

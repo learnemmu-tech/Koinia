@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { EventDetailClient } from "@/components/events/event-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getEventByIdCached } from "@/lib/cached-event-data";
 import { eventToIsoStartDate } from "@/lib/event-firestore";
 import {
@@ -21,8 +21,8 @@ type EventDetailPageProps = {
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
-  const { scope } = await getPageTenantContext();
-  const event = await getEventByIdCached(scope, decodedId);
+  const { contentQuery } = await resolvePageContentQuery();
+  const event = await getEventByIdCached(contentQuery, decodedId);
 
   if (!event || event.status !== "published") {
     return { title: "Event Not Found" };
@@ -42,8 +42,8 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
-  const { scope } = await getPageTenantContext();
-  const event = await getEventByIdCached(scope, decodedId);
+  const { contentQuery } = await resolvePageContentQuery();
+  const event = await getEventByIdCached(contentQuery, decodedId);
 
   if (!event || event.status !== "published") {
     notFound();

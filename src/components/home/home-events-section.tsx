@@ -25,15 +25,16 @@ export function HomeEventsSection({ events }: HomeEventsSectionProps) {
         title="Upcoming Events"
         description="Gather with the community for worship, teaching, and fellowship."
         href="/events"
+        viewAllLabel="View All Events"
       />
       {visible.length === 0 ?
         <HomeEmptyState
           title="No upcoming events"
           description="Check back soon for new gatherings."
         />
-      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:overflow-visible md:px-0">
+      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:items-stretch md:overflow-visible md:px-0">
           {highlight ?
-            <div className={homeRailItemClass(HOME_RAIL_LANDSCAPE)}>
+            <div className={`${homeRailItemClass(HOME_RAIL_LANDSCAPE)} md:h-full`}>
               <HomeEventCard
                 event={highlight}
                 highlight
@@ -45,7 +46,7 @@ export function HomeEventsSection({ events }: HomeEventsSectionProps) {
           {rest.map((event) => (
             <div
               key={event.id}
-              className={homeRailItemClass(HOME_RAIL_LANDSCAPE)}
+              className={`${homeRailItemClass(HOME_RAIL_LANDSCAPE)} md:h-full`}
             >
               <HomeEventCard event={event} now={now} />
             </div>

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { firebaseAuth } from "@/lib/firebase-auth-service";
-import type { OrganizationSnapshot } from "@/lib/organization/organization-server";
+import type { OrganizationSnapshot } from "@/types/organization-snapshot";
 import { QUERY_STALE_TIME } from "@/lib/react-query-config";
 
 async function fetchOrganization(

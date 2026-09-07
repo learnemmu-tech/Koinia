@@ -8,21 +8,22 @@ import {
   listSermons,
   updateSermon as saveSermon,
 } from "@/lib/postgres/features";
-import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { ContentQueryInput } from "@/lib/content/content-scope";
 import type {
   CreateSermonInput,
   FirebaseSermon,
   UpdateSermonInput,
 } from "@/types/firebase-sermon";
 
-export async function getSermons(scope: TenantScope): Promise<FirebaseSermon[]> {
+export async function getSermons(scope: ContentQueryInput): Promise<FirebaseSermon[]> {
   return listSermons(scope);
 }
 
 export async function getPublishedSermons(
-  scope: TenantScope
+  scope: ContentQueryInput,
+  options?: { limit?: number }
 ): Promise<FirebaseSermon[]> {
-  return (await listSermons(scope)).filter((sermon) => sermon.isPublished);
+  return listSermons(scope, { publishedOnly: true, limit: options?.limit });
 }
 
 export async function getSermonById(
@@ -36,7 +37,7 @@ export async function getSermonsByIds(ids: string[]): Promise<FirebaseSermon[]> 
 }
 
 export async function searchSermons(
-  scope: TenantScope,
+  scope: ContentQueryInput,
   searchQuery: string
 ): Promise<FirebaseSermon[]> {
   const normalized = searchQuery.trim().toLowerCase();

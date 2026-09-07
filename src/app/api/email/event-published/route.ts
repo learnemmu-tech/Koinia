@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { resolveIsAdmin } from "@/lib/admin-access";
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { triggerEventAnnouncementEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
@@ -18,14 +18,13 @@ export async function POST(request: Request) {
   }
 
   const appUser = await getAppUserByClerkId(authUser.uid);
-  const isAdmin =
-    resolveIsAdmin(authUser.email) || appUser?.platformRole === "admin";
+  const isSuperAdmin = isPlatformSuperAdmin(appUser?.platformRole);
   const canPublish = await verifyChurchContentPublisher(
     authUser.uid,
     authUser.email
   );
 
-  if (!isAdmin && !canPublish) {
+  if (!isSuperAdmin && !canPublish) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -36,11 +35,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  try {
-    await triggerEventAnnouncementEmails(body.eventId, authUser.uid);
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[api/email/event-published]", error);
-    return NextResponse.json({ success: true });
-  }
+  after(() =>
+    triggerEventAnnouncementEmails(body.eventId, authUser.uid).catch((error) => {
+      console.error("[api/email/event-published]", error);
+    })
+  );
+
+  return NextResponse.json({ success: true });
 }

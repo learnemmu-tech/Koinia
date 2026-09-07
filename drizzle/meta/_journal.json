@@ -22,6 +22,20 @@
       "when": 1788716495795,
       "tag": "0002_short_comment_parent_id",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788780000000,
+      "tag": "0003_platform_role_super_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788900000000,
+      "tag": "0004_content_scope",
+      "breakpoints": true
     }
   ]
 }

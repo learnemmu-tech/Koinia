@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { EventsListClient } from "@/components/events/events-list-client";
 import { EventsAdminBar } from "@/components/admin/inline/events-admin-bar";
-import { getPageTenantContext } from "@/lib/church-page-data";
+import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getPublishedEventsGroupedCached } from "@/lib/cached-event-data";
 import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
@@ -18,8 +18,8 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function EventsPage() {
-  const { scope } = await getPageTenantContext();
-  const { upcoming, past } = await getPublishedEventsGroupedCached(scope);
+  const { contentQuery, isPlatformPublic } = await resolvePageContentQuery();
+  const { upcoming, past } = await getPublishedEventsGroupedCached(contentQuery);
 
   return (
     <section
@@ -39,10 +39,16 @@ export default async function EventsPage() {
             ministry events.
           </p>
         </div>
-        <EventsAdminBar churchId={scope.churchId ?? ""} />
+        <EventsAdminBar
+          contentScope={isPlatformPublic ? "platform_public" : "organization"}
+        />
       </header>
 
-      <EventsListClient initialUpcoming={upcoming} initialPast={past} />
+      <EventsListClient
+        initialUpcoming={upcoming}
+        initialPast={past}
+        isPlatformPublic={isPlatformPublic}
+      />
     </section>
   );
 }

@@ -10,8 +10,8 @@ import type { MembershipRoutingResult } from "@/lib/auth/membership-routing";
 import { upsertAppUserFromClerk } from "@/lib/postgres/upsert-app-user";
 
 /**
- * Syncs Clerk identity into PostgreSQL (`users.clerk_id`) without changing
- * an existing `needs_church_onboarding` value, then returns the post-auth path.
+ * Syncs Clerk identity into PostgreSQL, including one-time SuperAdmin
+ * bootstrap from a Clerk-verified primary email, then returns the post-auth path.
  */
 export async function completePostAuthRouting(
   clerkUserId: string,

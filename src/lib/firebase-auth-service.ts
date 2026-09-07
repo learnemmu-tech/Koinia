@@ -2,6 +2,8 @@ import { POST_AUTH_CONTINUE_PATH } from "@/lib/auth/auth-paths";
 import type { EmailNotificationPreferences } from "@/lib/email/types";
 import { normalizeEmailPreferences } from "@/lib/email/preferences";
 
+import type { PlatformRole } from "@/lib/auth/platform-role";
+
 export type UserRole = "user" | "admin";
 
 export type ChurchRole = "member" | "admin";
@@ -11,6 +13,7 @@ export type FirestoreUser = {
   lastName: string;
   email: string;
   role: UserRole;
+  platformRole?: PlatformRole;
   organizationId?: string;
   needsChurchOnboarding?: boolean;
   churchId?: string;
@@ -201,6 +204,12 @@ export function mapFirestoreUserData(data: Record<string, unknown>): FirestoreUs
     lastName: String(data.lastName ?? ""),
     email: String(data.email ?? ""),
     role: (data.role as UserRole) ?? "user",
+    platformRole:
+      data.platformRole === "super_admin" ||
+      data.platformRole === "admin" ||
+      data.platformRole === "user"
+        ? data.platformRole
+        : undefined,
     organizationId: data.organizationId ? String(data.organizationId) : undefined,
     needsChurchOnboarding: data.needsChurchOnboarding === true,
     churchId: data.churchId ? String(data.churchId) : undefined,
