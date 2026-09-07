@@ -7,6 +7,7 @@ import Script from "next/script";
 import type { Metadata, Viewport } from "next";
 import type { ThemeConfig } from "@/types";
 
+import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider } from "@clerk/nextjs";
 
 import { RootClientShell } from "@/components/root-client-shell";
@@ -62,6 +63,7 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
               {children}
             </RootClientShell>
           </ClerkProvider>
+          <Analytics />
         </body>
 
         {/* Umami Analytics */}
