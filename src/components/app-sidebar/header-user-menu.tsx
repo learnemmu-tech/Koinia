@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import type { AuthUser } from "@/context/firebase-auth-context";
 import type { FirestoreUser } from "@/lib/firebase-auth-service";
@@ -42,6 +43,8 @@ function getDisplayName(
 }
 
 export function HeaderUserMenu() {
+  const tCommon = useTranslations("common");
+  const tNav = useTranslations("navigation");
   const { authUser, profile, loading } = useFirebaseAuth();
   const mounted = useMounted();
 
@@ -52,7 +55,7 @@ export function HeaderUserMenu() {
   if (!authUser) {
     return (
       <Button asChild size="sm" variant="outline" className="rounded-full">
-        <Link href="/signin">Sign In</Link>
+        <Link href="/signin">{tCommon("signIn")}</Link>
       </Button>
     );
   }
@@ -67,7 +70,7 @@ export function HeaderUserMenu() {
           variant="ghost"
           size="icon"
           className="size-9 rounded-full"
-          aria-label="Open account menu"
+          aria-label={tNav("openAccountMenu")}
         >
           <Avatar className="size-8 border">
             {authUser.photoURL ?

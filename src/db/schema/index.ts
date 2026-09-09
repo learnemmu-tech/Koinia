@@ -10,3 +10,4 @@ export * from "./notifications";
 export * from "./user-library";
 export * from "./audit-logs";
 export * from "./shorts";
+export * from "./books";

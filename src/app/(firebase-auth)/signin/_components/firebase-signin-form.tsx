@@ -1,9 +1,10 @@
 "use client";
 
 import { useSignIn } from "@clerk/nextjs";
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -27,15 +28,19 @@ import {
 } from "@/lib/firebase-auth-service";
 import { cn } from "@/lib/utils";
 
-const signInSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
-});
+const signInSchema = (tValidation: ReturnType<typeof useTranslations<"validation">>) =>
+  z.object({
+    email: z
+      .string()
+      .min(1, tValidation("emailRequired"))
+      .email(tValidation("invalidEmail")),
+    password: z.string().min(1, tValidation("passwordRequired")),
+  });
 
-type SignInValues = z.infer<typeof signInSchema>;
+type SignInValues = {
+  email: string;
+  password: string;
+};
 
 const authInputClass =
   "h-9 py-1.5 text-sm border-input bg-background text-foreground placeholder:text-muted-foreground";
@@ -49,6 +54,13 @@ export function FirebaseSignInForm({
   callbackUrl = "/",
   ...props
 }: FirebaseSignInFormProps) {
+  const tAuth = useTranslations("auth");
+  const tValidation = useTranslations("validation");
+  const tCommon = useTranslations("common");
+  const signInSchemaMemo = useMemo(
+    () => signInSchema(tValidation),
+    [tValidation]
+  );
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [isResending, setIsResending] = React.useState(false);
@@ -68,7 +80,7 @@ export function FirebaseSignInForm({
     handleSubmit,
     formState: { errors },
   } = useForm<SignInValues>({
-    resolver: zodResolver(signInSchema),
+    resolver: zodResolver(signInSchemaMemo),
   });
 
   const isDisabled = isLoading || isGoogleLoading || fetchStatus === "fetching";
@@ -92,7 +104,7 @@ export function FirebaseSignInForm({
 
     const { profile } = await syncSessionProfileAfterClerkAuth();
     setAuthCookie(true, { role: profile.role, profile });
-    toast.success("Signed in successfully!");
+    toast.success(tAuth("signedInSuccess"));
     router.replace(await fetchPostAuthDestination(redirectTo));
   }
 
@@ -141,7 +153,7 @@ export function FirebaseSignInForm({
       ) {
         await sendSignInVerificationCode();
         setVerificationEmail(data.email);
-        toast.success(`We sent a verification code to ${data.email}.`);
+        toast.success(tAuth("verificationCodeSentToToast", { email: data.email }));
         return;
       }
 
@@ -157,7 +169,7 @@ export function FirebaseSignInForm({
   async function handleVerifyCode(event: React.FormEvent) {
     event.preventDefault();
     if (verificationCode.length !== 6) {
-      setVerificationError("Enter the 6-digit verification code.");
+      setVerificationError(tAuth("verificationCodeHint"));
       return;
     }
 
@@ -189,7 +201,7 @@ export function FirebaseSignInForm({
 
     try {
       await sendSignInVerificationCode();
-      toast.success("Verification code sent.");
+      toast.success(tAuth("verificationCodeSent"));
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
     } finally {
@@ -214,7 +226,7 @@ export function FirebaseSignInForm({
 
       const { profile } = googleResult;
       setAuthCookie(true, { role: profile.role, profile });
-      toast.success("Signed in with Google!");
+      toast.success(tAuth("signedInGoogle"));
       router.push(await fetchPostAuthDestination(redirectTo));
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
@@ -240,6 +252,8 @@ export function FirebaseSignInForm({
         isLoading={isLoading}
         isResending={isResending}
         errorMessage={verificationError}
+        title={tAuth("verifyEmailTitle")}
+        description={tAuth("verificationCodeSentTo", { email: verificationEmail })}
         {...props}
       />
     );
@@ -249,16 +263,16 @@ export function FirebaseSignInForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col gap-2 text-center md:text-left">
         <h1 className="text-2xl font-bold tracking-tight">
-          Login to your account
+          {tAuth("loginTitle")}
         </h1>
         <p className="text-sm text-zinc-400">
-          Enter your email below to login to your account
+          {tAuth("loginSubtitle")}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{tAuth("email")}</Label>
           <Input
             id="email"
             type="email"
@@ -275,19 +289,19 @@ export function FirebaseSignInForm({
 
         <div className="grid gap-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{tAuth("password")}</Label>
             <Link
               href="/forgot-password"
               className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
-              Forgot your password?
+              {tAuth("forgotPassword")}
             </Link>
           </div>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
+              placeholder={tAuth("enterPassword")}
               autoComplete="current-password"
               disabled={isDisabled}
               className={cn(authInputClass, "pr-10")}
@@ -298,7 +312,7 @@ export function FirebaseSignInForm({
               tabIndex={-1}
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-3 my-auto text-muted-foreground hover:text-foreground"
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? tAuth("hidePassword") : tAuth("showPassword")}
             >
               {showPassword ?
                 <EyeOff className="size-4" />
@@ -318,7 +332,7 @@ export function FirebaseSignInForm({
           disabled={isDisabled}
         >
           {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Login
+          {tAuth("login")}
         </Button>
       </form>
 
@@ -327,7 +341,7 @@ export function FirebaseSignInForm({
           <span className="w-full border-t border-border" />
         </div>
         <span className="relative bg-background px-2 text-xs uppercase tracking-wider text-muted-foreground">
-          Or continue with
+          {tAuth("orContinueWith")}
         </span>
       </div>
 
@@ -341,16 +355,16 @@ export function FirebaseSignInForm({
         {isGoogleLoading ?
           <Loader2 className="mr-2 size-4 animate-spin" />
         : <Google className="mr-2 size-4" />}
-        Sign in with Google
+        {tAuth("signInWithGoogle")}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
+        {tAuth("noAccount")}{" "}
         <Link
           href={buildAuthHref("/signup", redirectTo)}
           className="text-foreground underline underline-offset-4 hover:text-primary"
         >
-          Sign up
+          {tCommon("signUp")}
         </Link>
       </p>
     </div>

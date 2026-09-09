@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Edit2, FileText, Loader2, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { FirebaseArticle } from "@/types/firebase-article";
@@ -33,6 +34,8 @@ export function ArticleList({
   onEdit,
   onDelete,
 }: ArticleListProps) {
+  const t = useTranslations("articles");
+  const tCommon = useTranslations("common");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selected, setSelected] = useState<FirebaseArticle | null>(null);
@@ -42,10 +45,10 @@ export function ArticleList({
     setDeleting(selected.id);
     try {
       await deleteArticle(selected.id);
-      toast.success("Article deleted");
+      toast.success(t("deletedSuccess"));
       onDelete();
     } catch {
-      toast.error("Failed to delete article");
+      toast.error(t("deleteFailed"));
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -58,7 +61,7 @@ export function ArticleList({
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
         <div className="flex flex-col items-center justify-center gap-3 py-20">
           <Loader2 className="h-7 w-7 animate-spin text-primary/60" />
-          <p className="text-sm text-muted-foreground">Loading articles…</p>
+          <p className="text-sm text-muted-foreground">{t("loadingAdmin")}</p>
         </div>
       </div>
     );
@@ -72,9 +75,9 @@ export function ArticleList({
             <FileText className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium">No articles have been created for this church yet.</p>
+            <p className="text-sm font-medium">{t("emptyAdminTitle")}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Add your first article to get started.
+              {t("emptyAdminDescription")}
             </p>
           </div>
         </div>
@@ -88,10 +91,10 @@ export function ArticleList({
         <div className="border-b border-border/50 bg-muted/30 px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              All Articles
+              {t("allAdmin")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {articles.length} {articles.length === 1 ? "article" : "articles"}
+              {t("itemCount", { count: articles.length })}
             </p>
           </div>
         </div>
@@ -131,11 +134,11 @@ export function ArticleList({
                     </span>
                     {article.featured ? (
                       <span className="inline-flex rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                        Featured
+                        {tCommon("featured")}
                       </span>
                     ) : null}
                     <span className="text-[10px] text-muted-foreground">
-                      by {article.author}
+                      {tCommon("by")} {article.author}
                     </span>
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
@@ -144,7 +147,7 @@ export function ArticleList({
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {article.isPublished ? "Published" : "Draft"}
+                      {article.isPublished ? tCommon("published") : tCommon("draft")}
                     </span>
                   </div>
                 </div>
@@ -165,7 +168,7 @@ export function ArticleList({
                     className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Edit</span>
+                    <span className="hidden sm:inline">{tCommon("edit")}</span>
                   </Button>
                   <Button
                     size="sm"
@@ -182,7 +185,7 @@ export function ArticleList({
                     ) : (
                       <Trash2 className="h-3.5 w-3.5" />
                     )}
-                    <span className="hidden sm:inline">Delete</span>
+                    <span className="hidden sm:inline">{tCommon("delete")}</span>
                   </Button>
                 </div>
               </div>
@@ -194,19 +197,19 @@ export function ArticleList({
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Article?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{selected?.title}&quot;? This
-              action cannot be undone.
+              {tCommon("deleteConfirmNamed", { name: selected?.title ?? "" })}{" "}
+              {tCommon("cannotUndo")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2 pt-2">
-            <AlertDialogCancel className="rounded-full px-5">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full px-5">{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="rounded-full bg-destructive px-5 text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {tCommon("delete")}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

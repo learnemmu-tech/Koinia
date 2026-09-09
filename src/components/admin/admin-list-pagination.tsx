@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 
@@ -17,12 +18,14 @@ export function AdminListPagination({
   totalItems,
   onPageChange,
 }: AdminListPaginationProps) {
+  const t = useTranslations("common");
+
   if (totalItems <= 0 || totalPages <= 1) return null;
 
   return (
     <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-border/50 bg-card px-4 py-3 sm:flex-row">
       <p className="text-xs text-muted-foreground">
-        Page {page} of {totalPages} · {totalItems} items
+        {t("pageOf", { page, totalPages, totalItems })}
       </p>
       <div className="flex items-center gap-2">
         <Button
@@ -33,7 +36,7 @@ export function AdminListPagination({
           onClick={() => onPageChange(page - 1)}
         >
           <ChevronLeft className="size-4" />
-          Previous
+          {t("previous")}
         </Button>
         <Button
           variant="outline"
@@ -42,7 +45,7 @@ export function AdminListPagination({
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >
-          Next
+          {t("next")}
           <ChevronRight className="size-4" />
         </Button>
       </div>

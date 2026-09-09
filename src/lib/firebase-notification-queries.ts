@@ -49,6 +49,11 @@ export const NOTIFICATION_PRESETS: Record<
     message: "Your church membership has been approved.",
     pathPrefix: "/dashboard",
   },
+  book: {
+    title: "New Book Published",
+    message: "A new book has been published.",
+    pathPrefix: "/books",
+  },
 };
 
 async function createPublishNotificationViaApi(input: {

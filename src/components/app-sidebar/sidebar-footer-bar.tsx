@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowRight, ChevronsUpDown, User } from "lucide-react";
-
 import type { AuthUser } from "@/context/firebase-auth-context";
 import type { FirestoreUser } from "@/lib/firebase-auth-service";
 
@@ -20,9 +20,6 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 import { AccountMenuItems } from "./account-menu-items";
-
-const footerIconClass =
-  "flex size-7 shrink-0 items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover-hover:hover:bg-accent hover-hover:hover:text-foreground active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 function getInitials(authUser: AuthUser, profile: FirestoreUser | null): string {
   if (profile?.firstName && profile?.lastName) {
@@ -44,27 +41,6 @@ function getDisplayName(
     return `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim();
   }
   return authUser.displayName ?? "User";
-}
-
-function SidebarToggleButton({
-  isCollapsed,
-  onToggle,
-}: {
-  isCollapsed: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      className={footerIconClass}
-    >
-      <span className="text-base leading-none" aria-hidden>
-        {isCollapsed ? "»" : "«"}
-      </span>
-    </button>
-  );
 }
 
 function ProfileAvatar({
@@ -96,8 +72,9 @@ function ProfileAvatar({
 }
 
 export function SidebarFooterBar() {
-  const { authUser, profile, loading } = useFirebaseAuth();
-  const { isMobile, state, toggleSidebar } = useSidebar();
+  const tCommon = useTranslations("common");
+  const tNav = useTranslations("navigation");
+  const { authUser, profile, loading } = useFirebaseAuth();  const { isMobile, state } = useSidebar();
   const mounted = useMounted();
   const isCollapsed = state === "collapsed" && !isMobile;
 
@@ -138,9 +115,9 @@ export function SidebarFooterBar() {
         >
           <User className="size-4 shrink-0" aria-hidden />
           {isCollapsed ?
-            <span className="sr-only">Sign in</span>
+            <span className="sr-only">{tCommon("signIn")}</span>
           : <>
-              Sign in
+              {tCommon("signIn")}
               <ArrowRight className="size-3.5" aria-hidden />
             </>
           }
@@ -159,7 +136,7 @@ export function SidebarFooterBar() {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="Open account menu"
+              aria-label={tNav("openAccountMenu")}
               className="flex size-8 items-center justify-center rounded-md outline-none hover:bg-accent"
             >
               <ProfileAvatar
@@ -183,10 +160,6 @@ export function SidebarFooterBar() {
             <AccountMenuItems />
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {!isMobile ?
-          <SidebarToggleButton isCollapsed={isCollapsed} onToggle={toggleSidebar} />
-        : null}
       </div>
     );
   }
@@ -197,7 +170,7 @@ export function SidebarFooterBar() {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            aria-label="Open account menu"
+            aria-label={tNav("openAccountMenu")}
             className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left outline-none transition-colors hover-hover:hover:bg-accent active:bg-accent"
           >
             <ProfileAvatar
@@ -231,10 +204,6 @@ export function SidebarFooterBar() {
           <AccountMenuItems />
         </DropdownMenuContent>
       </DropdownMenu>
-
-      {!isMobile ?
-        <SidebarToggleButton isCollapsed={isCollapsed} onToggle={toggleSidebar} />
-      : null}
     </div>
   );
 }

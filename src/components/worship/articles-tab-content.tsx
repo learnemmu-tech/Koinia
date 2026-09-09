@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import type { FirebaseArticle } from "@/types/firebase-article";
 
@@ -22,6 +23,7 @@ export function ArticlesTabContent({
   initialArticles,
   isPlatformPublic = false,
 }: ArticlesTabContentProps) {
+  const t = useTranslations("articles");
   const { data: liveArticles, syncing, loadMore, hasMore, loadingMore } =
     useRealtimeArticles(initialArticles, { clientSync: !isPlatformPublic });
   const articles = useMemo(
@@ -47,7 +49,7 @@ export function ArticlesTabContent({
   }
 
   if (articles.length === 0) {
-    return <TabEmptyState message="No Articles Found" />;
+    return <TabEmptyState message={t("empty")} />;
   }
 
   return (
@@ -55,13 +57,17 @@ export function ArticlesTabContent({
       <ContentListToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search articles…"
+        searchPlaceholder={t("searchPlaceholder")}
       />
 
-      <CollectionTabHeader title="Articles" count={filteredArticles.length} />
+      <CollectionTabHeader
+        title={t("title")}
+        count={filteredArticles.length}
+        countLabel={t("itemCount", { count: filteredArticles.length })}
+      />
 
       {filteredArticles.length === 0 ?
-        <TabEmptyState message="No articles match your search." />
+        <TabEmptyState message={t("noMatch")} />
       : <div className={worshipContentGridClassName}>
           {filteredArticles.map((article) => (
             <FirebaseArticleCard key={article.id} article={article} />

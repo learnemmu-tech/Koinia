@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Plus, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +20,13 @@ type AdminToolbarProps = {
 export function AdminToolbar({
   search,
   onSearchChange,
-  searchPlaceholder = "Search…",
+  searchPlaceholder,
   children,
   actionLabel,
   onAction,
   actionDisabled = false,
 }: AdminToolbarProps) {
+  const t = useTranslations("common");
   return (
       <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="relative w-full min-w-0 sm:max-w-sm">
@@ -32,7 +34,7 @@ export function AdminToolbar({
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder ?? t("searchPlaceholder")}
           className="rounded-full pl-9"
         />
       </div>

@@ -5,16 +5,15 @@ type Bucket = { count: number; resetAt: number };
 const memoryBuckets = new Map<string, Bucket>();
 
 /**
- * Simple rate limiter for join endpoints.
+ * Simple rate limiter.
  * Uses Upstash when configured; otherwise in-memory (single-instance dev).
  */
-export async function rateLimitJoinRequest(
-  identifier: string,
-  limit = 10,
-  windowMs = 60 * 60 * 1000
+async function rateLimitByKey(
+  key: string,
+  prefix: string,
+  limit: number,
+  windowMs: number
 ): Promise<{ allowed: boolean; retryAfterMs?: number }> {
-  const key = `join:${identifier}`;
-
   const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
   const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -25,7 +24,7 @@ export async function rateLimitJoinRequest(
       const ratelimit = new Ratelimit({
         redis: new Redis({ url: upstashUrl, token: upstashToken }),
         limiter: Ratelimit.slidingWindow(limit, "1 h"),
-        prefix: "fch-join",
+        prefix,
       });
       const result = await ratelimit.limit(key);
       return {
@@ -50,4 +49,20 @@ export async function rateLimitJoinRequest(
 
   bucket.count += 1;
   return { allowed: true };
+}
+
+export async function rateLimitContactRequest(
+  identifier: string,
+  limit = 5,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(`contact:${identifier}`, "fch-contact", limit, windowMs);
+}
+
+export async function rateLimitJoinRequest(
+  identifier: string,
+  limit = 10,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(`join:${identifier}`, "fch-join", limit, windowMs);
 }

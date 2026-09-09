@@ -6,6 +6,7 @@ import {
 } from "@/lib/organization/invitation-server";
 import { getMembershipForUser } from "@/lib/organization/organization-server";
 import type { MembershipRole } from "@/types/membership";
+import { roleMeetsMinimum } from "@/types/membership";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 const INVITE_ROLES: MembershipRole[] = [
@@ -36,7 +37,11 @@ export async function GET(request: Request) {
 
   try {
     const membership = await getMembershipForUser(organizationId, decoded.uid);
-    if (!membership || membership.status !== "active") {
+    if (
+      !membership ||
+      membership.status !== "active" ||
+      !roleMeetsMinimum(membership.role, "org_admin")
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -174,12 +179,12 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[api/invitations] POST", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to create invitation";
+    const forbidden = message.toLowerCase().includes("permission");
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to create invitation",
-      },
-      { status: 500 }
+      { error: message },
+      { status: forbidden ? 403 : 500 }
     );
   }
 }

@@ -26,6 +26,11 @@ export const publicHeaderNav: PublicNavItem[] = [
     match: startsWith("/articles"),
   },
   {
+    label: "Books",
+    href: "/books",
+    match: startsWith("/books"),
+  },
+  {
     label: "Events",
     href: "/events",
     match: startsWith("/events"),
@@ -47,6 +52,7 @@ export const publicExploreNav: PublicNavItem[] = [
   { label: "Short Videos", href: "/shorts", match: startsWith("/shorts") },
   { label: "Sermons", href: "/sermons", match: startsWith("/sermons") },
   { label: "Articles", href: "/articles", match: startsWith("/articles") },
+  { label: "Books", href: "/books", match: startsWith("/books") },
   { label: "Events", href: "/events", match: startsWith("/events") },
   {
     label: "Support the Mission",

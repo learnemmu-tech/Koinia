@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { AddMusicModal } from "@/components/admin/add-music-modal";
 import { MusicList } from "@/components/admin/music-list";
@@ -41,6 +42,8 @@ import {
 } from "@/lib/song-firestore";
 
 export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean }) {
+  const t = useTranslations("songs");
+  const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
   const { organization } = useOrganization();
   const adminChurchId = useAdminChurchId();
@@ -102,9 +105,9 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
     <div className={embedded ? "space-y-4" : adminSectionClass}>
       {!embedded ?
         <AdminPageHeader
-          title="Songs"
-          description="Manage worship songs, lyrics, and audio"
-          actionLabel="Add Song"
+          title={t("title")}
+          description={t("adminDescription")}
+          actionLabel={t("add")}
           onAction={() => {
             setSelectedSong(null);
             setModalOpen(true);
@@ -126,8 +129,8 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search songs…"
-        actionLabel={embedded ? "Add Song" : undefined}
+        searchPlaceholder={t("searchPlaceholder")}
+        actionLabel={embedded ? t("add") : undefined}
         onAction={
           embedded ?
             () => {
@@ -143,12 +146,12 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
           onValueChange={(value) => setPublishFilter(value as PublishFilter)}
         >
           <SelectTrigger className="w-full min-w-0 sm:w-[8.75rem] rounded-full">
-            <SelectValue placeholder="Filter" />
+            <SelectValue placeholder={tCommon("filter")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            <SelectItem value="published">{tCommon("published")}</SelectItem>
+            <SelectItem value="draft">{tCommon("draft")}</SelectItem>
           </SelectContent>
         </Select>
       </AdminToolbar>

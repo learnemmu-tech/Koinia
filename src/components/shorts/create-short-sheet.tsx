@@ -46,6 +46,7 @@ import {
   uploadShortFile,
 } from "@/lib/shorts-client";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 type CreateShortSheetProps = {
   open: boolean;
@@ -85,6 +86,8 @@ export function CreateShortSheet({
   contentScope = "organization",
   churchId = "",
 }: CreateShortSheetProps) {
+  const tc = useTranslations("common");
+  const ts = useTranslations("shorts");
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [topic, setTopic] = React.useState("");
@@ -412,7 +415,7 @@ export function CreateShortSheet({
           </SheetHeader>
           <button
             type="button"
-            aria-label="Close"
+            aria-label={tc("close")}
             disabled={busy}
             onClick={() => onOpenChange(false)}
             className="app-interactive flex size-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/30 text-muted-foreground transition-colors hover-hover:hover:bg-muted/60 hover-hover:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
@@ -471,7 +474,7 @@ export function CreateShortSheet({
                           className="app-interactive inline-flex h-8 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-muted-foreground transition-colors hover-hover:hover:bg-muted/50 hover-hover:hover:text-foreground"
                         >
                           <RefreshCw className="size-3" />
-                          Replace
+                          {tc("replace")}
                         </button>
                         <button
                           type="button"
@@ -551,7 +554,7 @@ export function CreateShortSheet({
                             disabled={busy}
                             className="app-interactive mt-1 text-xs font-medium text-muted-foreground hover-hover:hover:text-foreground"
                           >
-                            Replace
+                            {tc("replace")}
                           </button>
                         </div>
                       : <button
@@ -690,7 +693,7 @@ export function CreateShortSheet({
                   disabled={busy}
                   className="h-11 rounded-[10px] px-5 sm:h-10"
                 >
-                  Cancel
+                  {tc("cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -705,7 +708,7 @@ export function CreateShortSheet({
                     </>
                   : <>
                       <Clapperboard className="size-4" aria-hidden />
-                      Post Short
+                      {ts("create")}
                     </>
                   }
                 </Button>

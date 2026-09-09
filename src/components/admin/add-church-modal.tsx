@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -85,6 +86,10 @@ export function AddChurchModal({
   userId,
   userEmail,
 }: AddChurchModalProps) {
+  const t = useTranslations("churches");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
+  const tErrors = useTranslations("errors");
   const { user } = useFirebaseAuth();
   const [form, setForm] = useState<ChurchFormState>(EMPTY_FORM);
   const [logoFile, setLogoFile] = useState<File | undefined>();
@@ -184,18 +189,18 @@ export function AddChurchModal({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!form.name.trim()) {
-      toast.error("Church name is required");
+      toast.error(t("nameRequired"));
       return;
     }
 
     const useOrgFlow = Boolean(organizationId && userId);
     if (useOrgFlow) {
       if (!form.city.trim()) {
-        toast.error("City is required");
+        toast.error(t("cityRequired"));
         return;
       }
       if (!form.country.trim()) {
-        toast.error("Country is required");
+        toast.error(t("countryRequired"));
         return;
       }
     }
@@ -204,7 +209,7 @@ export function AddChurchModal({
     try {
       const idToken = user ? await user.getIdToken() : undefined;
       if (!idToken) {
-        toast.error("You must be signed in to upload files.");
+        toast.error(tErrors("signedInRequired"));
         setLoading(false);
         return;
       }
@@ -286,7 +291,7 @@ export function AddChurchModal({
           }
         }
 
-        toast.success("Church updated successfully");
+        toast.success(t("updatedSuccess"));
       } else {
         const created =
           useOrgFlow ?
@@ -330,7 +335,7 @@ export function AddChurchModal({
           }
         }
 
-        toast.success("Church created successfully");
+        toast.success(t("createdSuccess"));
         onSave(
           useOrgFlow ?
             { churchId, branchId: created.branchId }
@@ -344,7 +349,7 @@ export function AddChurchModal({
       onClose();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to save church"
+        error instanceof Error ? error.message : t("saveFailed")
       );
     } finally {
       setLoading(false);
@@ -356,10 +361,10 @@ export function AddChurchModal({
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {initialChurch ? "Edit Church" : "Add Church"}
+            {initialChurch ? t("editModalTitle") : t("addModalTitle")}
           </DialogTitle>
           <DialogDescription>
-            Configure church profile, branding, and activation status.
+            {t("addModalDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -367,16 +372,16 @@ export function AddChurchModal({
           <fieldset disabled={loading} className="space-y-5 disabled:opacity-70">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="church-name">Church Name</Label>
+              <Label htmlFor="church-name">{t("name")}</Label>
               <Input
                 id="church-name"
                 value={form.name}
                 onChange={(e) => updateField("name", e.target.value)}
-                placeholder="Grace Community Church"
+                placeholder={tForms("placeholders.churchName")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="church-slug">Slug</Label>
+              <Label htmlFor="church-slug">{tForms("slug")}</Label>
               <Input
                 id="church-slug"
                 value={form.slug}
@@ -384,11 +389,11 @@ export function AddChurchModal({
                   setSlugTouched(true);
                   updateField("slug", e.target.value);
                 }}
-                placeholder="grace-community-church"
+                placeholder={tForms("placeholders.churchSlug")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pastor-name">Pastor Name</Label>
+              <Label htmlFor="pastor-name">{tForms("pastorName")}</Label>
               <Input
                 id="pastor-name"
                 value={form.pastorName}
@@ -398,7 +403,7 @@ export function AddChurchModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="church-description">Description</Label>
+            <Label htmlFor="church-description">{tForms("description")}</Label>
             <Textarea
               id="church-description"
               value={form.description}
@@ -409,7 +414,7 @@ export function AddChurchModal({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="church-city">City</Label>
+              <Label htmlFor="church-city">{tForms("city")}</Label>
               <Input
                 id="church-city"
                 value={form.city}
@@ -417,7 +422,7 @@ export function AddChurchModal({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="church-state">State</Label>
+              <Label htmlFor="church-state">{tForms("state")}</Label>
               <Input
                 id="church-state"
                 value={form.state}
@@ -425,7 +430,7 @@ export function AddChurchModal({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="church-country">Country</Label>
+              <Label htmlFor="church-country">{tForms("country")}</Label>
               <Input
                 id="church-country"
                 value={form.country}
@@ -433,7 +438,7 @@ export function AddChurchModal({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="established-year">Established Year</Label>
+              <Label htmlFor="established-year">{tForms("establishedYear")}</Label>
               <Input
                 id="established-year"
                 type="number"
@@ -445,7 +450,7 @@ export function AddChurchModal({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="church-email">Email</Label>
+              <Label htmlFor="church-email">{tForms("email")}</Label>
               <Input
                 id="church-email"
                 type="email"
@@ -454,7 +459,7 @@ export function AddChurchModal({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="church-phone">Phone</Label>
+              <Label htmlFor="church-phone">{tForms("phone")}</Label>
               <Input
                 id="church-phone"
                 value={form.phone}
@@ -462,16 +467,16 @@ export function AddChurchModal({
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="church-website">Website</Label>
+              <Label htmlFor="church-website">{tForms("website")}</Label>
               <Input
                 id="church-website"
                 value={form.website}
                 onChange={(e) => updateField("website", e.target.value)}
-                placeholder="https://"
+                placeholder={tForms("placeholders.website")}
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="church-address">Address</Label>
+              <Label htmlFor="church-address">{tForms("address")}</Label>
               <Input
                 id="church-address"
                 value={form.address}
@@ -482,7 +487,7 @@ export function AddChurchModal({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="primary-color">Primary Color</Label>
+              <Label htmlFor="primary-color">{tForms("primaryColor")}</Label>
               <div className="flex gap-2">
                 <Input
                   id="primary-color"
@@ -498,7 +503,7 @@ export function AddChurchModal({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="secondary-color">Secondary Color</Label>
+              <Label htmlFor="secondary-color">{tForms("secondaryColor")}</Label>
               <div className="flex gap-2">
                 <Input
                   id="secondary-color"
@@ -520,13 +525,13 @@ export function AddChurchModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="welcome-message">Welcome Message</Label>
+            <Label htmlFor="welcome-message">{tForms("welcomeMessage")}</Label>
             <Textarea
               id="welcome-message"
               value={form.welcomeMessage}
               onChange={(e) => updateField("welcomeMessage", e.target.value)}
               rows={2}
-              placeholder="Welcome to our church family..."
+              placeholder={tForms("placeholders.welcomeMessage")}
             />
           </div>
 
@@ -537,14 +542,18 @@ export function AddChurchModal({
 
               return (
                 <div key={kind} className="space-y-2">
-                  <Label className="capitalize">{kind}</Label>
+                  <Label className="capitalize">
+                    {kind === "logo" ? tForms("logo") : tForms("bannerImage")}
+                  </Label>
                   <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/60 bg-muted/20 p-4 transition hover:bg-muted/40">
                     {preview ?
                       <div className="relative w-full">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={preview}
-                          alt={`${kind} preview`}
+                          alt={tForms("imagePreviewAlt", {
+                            kind: kind === "logo" ? tForms("logo") : tForms("bannerImage"),
+                          })}
                           className="mx-auto max-h-24 rounded-lg object-cover"
                         />
                         <button
@@ -568,7 +577,10 @@ export function AddChurchModal({
                       <>
                         <Upload className="size-5 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">
-                          Upload {kind} ({MAX_IMAGE_SIZE_LABEL})
+                          {tForms("uploadImage", {
+                            kind: kind === "logo" ? tForms("logo") : tForms("bannerImage"),
+                            max: MAX_IMAGE_SIZE_LABEL,
+                          })}
                         </span>
                       </>
                     )}
@@ -593,9 +605,9 @@ export function AddChurchModal({
 
           <div className="flex items-center justify-between rounded-xl border border-border/50 px-4 py-3">
             <div>
-              <p className="text-sm font-medium">Active</p>
+              <p className="text-sm font-medium">{t("activeLabel")}</p>
               <p className="text-xs text-muted-foreground">
-                Inactive churches are hidden from the public church selector.
+                {t("activeDescription")}
               </p>
             </div>
             <Switch
@@ -606,17 +618,17 @@ export function AddChurchModal({
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ?
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Saving...
+                  {tCommon("saving")}
                 </>
               : initialChurch ?
-                "Save Changes"
-              : "Create Church"}
+                tCommon("saveChanges")
+              : t("createChurch")}
             </Button>
           </div>
           </fieldset>

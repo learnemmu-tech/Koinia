@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 
 import { ChurchList } from "@/components/admin/church-list";
 import { AdminListPagination } from "@/components/admin/admin-list-pagination";
@@ -21,6 +22,8 @@ const AddChurchModal = dynamic(
 );
 
 export function AdminChurchesPageClient() {
+  const t = useTranslations("dashboard");
+  const tNav = useTranslations("navigation");
   const { data: churches, loading } = useAdminChurches();
 
   const [search, setSearch] = useState("");
@@ -48,9 +51,9 @@ export function AdminChurchesPageClient() {
   return (
     <div className={adminSectionClass}>
       <AdminPageHeader
-        title="Churches"
-        description="Manage churches on the platform"
-        actionLabel="Add Church"
+        title={t("churchesTitle")}
+        description={t("churchesPlatformDescription")}
+        actionLabel={tNav("addChurch")}
         onAction={() => {
           setSelectedChurch(null);
           setModalOpen(true);
@@ -60,7 +63,7 @@ export function AdminChurchesPageClient() {
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search churches…"
+        searchPlaceholder={t("searchChurches")}
       />
 
       <ChurchList

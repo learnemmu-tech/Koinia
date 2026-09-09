@@ -8,13 +8,14 @@ import {
   getPublishedSermonsCached,
   getPublishedSongsCached,
 } from "@/lib/cached-worship-data";
+import { listPublishedCatalogBooks } from "@/lib/postgres/books";
 import { STATIC_SITEMAP_PATHS } from "@/lib/seo";
 import { absoluteUrl } from "@/lib/utils";
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [songs, sermons, articles, eventsGrouped, campaigns] = await Promise.all([
+  const [songs, sermons, articles, eventsGrouped, campaigns, books] = await Promise.all([
     getPublishedSongsCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => []),
     getPublishedSermonsCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => []),
     getPublishedArticlesCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => []),
@@ -23,6 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       past: [],
     })),
     getActiveDonationCampaignsCached(PUBLIC_PLATFORM_CONTENT_QUERY).catch(() => []),
+    listPublishedCatalogBooks().catch(() => []),
   ]);
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_SITEMAP_PATHS.map(
@@ -70,6 +72,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  const bookEntries: MetadataRoute.Sitemap = books
+    .filter((book) => book.visibility === "public")
+    .map((book) => ({
+      url: absoluteUrl(`/books/${encodeURIComponent(book.id)}`),
+      lastModified: new Date(book.updatedAt),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }));
+
   return [
     ...staticEntries,
     ...songEntries,
@@ -77,5 +88,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...articleEntries,
     ...eventEntries,
     ...donationEntries,
+    ...bookEntries,
   ];
 }

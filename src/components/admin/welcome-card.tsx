@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, Globe2, Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   Card,
@@ -19,11 +20,12 @@ import {
 } from "@/lib/organization/workspace-type";
 
 export function WelcomeCard() {
+  const t = useTranslations("dashboard");
   const { profile } = useFirebaseAuth();
   const { organization, churches } = useOrganization();
   const { activeBranch } = useActiveBranch();
 
-  const firstName = profile?.firstName?.trim() || "there";
+  const firstName = profile?.firstName?.trim() || t("welcomeFallbackName");
   const isMultiChurch = isMultiChurchOrgWorkspace(organization);
   const isIndependent = isIndependentChurchWorkspace(organization);
 
@@ -49,21 +51,22 @@ export function WelcomeCard() {
           </div>
           <div className="min-w-0 space-y-2">
             <CardTitle className="font-heading text-xl sm:text-2xl">
-              Welcome, {firstName}
+              {t("welcome", { name: firstName })}
             </CardTitle>
             <CardDescription className="text-base leading-relaxed">
               {isMultiChurch && !activeBranch ?
-                "Your organization workspace is ready. Create your first church to start managing ministry content."
+                t("workspaceReady")
               : isIndependent ?
-                <>
-                  You&apos;re managing{" "}
-                  <span className="font-medium text-foreground">{displayName}</span>
-                  . Share your join link from Church Settings to welcome members.
-                </>
-              : <>
-                  You&apos;re managing{" "}
-                  <span className="font-medium text-foreground">{displayName}</span>.
-                </>
+                t.rich("managingWithJoin", {
+                  church: () => (
+                    <span className="font-medium text-foreground">{displayName}</span>
+                  ),
+                })
+              : t.rich("managing", {
+                  church: () => (
+                    <span className="font-medium text-foreground">{displayName}</span>
+                  ),
+                })
               }
             </CardDescription>
           </div>
@@ -75,14 +78,14 @@ export function WelcomeCard() {
             <div className="rounded-xl border bg-background/60 px-4 py-3">
               <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <Building2 className="size-3.5" />
-                {isMultiChurch && !activeBranch ? "Organization" : "Church"}
+                {isMultiChurch && !activeBranch ? t("organization") : t("church")}
               </div>
               <p className="truncate font-medium text-foreground">{displayName}</p>
             </div>
             <div className="rounded-xl border bg-background/60 px-4 py-3">
               <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <Globe2 className="size-3.5" />
-                Country
+                {t("country")}
               </div>
               <p className="truncate font-medium text-foreground">{country}</p>
             </div>

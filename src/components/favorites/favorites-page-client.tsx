@@ -25,10 +25,12 @@ import {
   pageContentClass,
   typePageTitleClass,
 } from "@/lib/responsive-classes";
+import { useTranslations } from "next-intl";
 
 type FilterTab = "all" | "sermons" | "songs" | "articles" | "events";
 
 export function FavoritesPageClient() {
+  const t = useTranslations("library");
   const { favorites, loading: favoritesLoading } = useFavorites();
   const {
     songs,
@@ -60,9 +62,9 @@ export function FavoritesPageClient() {
   return (
     <div className={pageContentClass}>
       <div className="space-y-2">
-        <h1 className={typePageTitleClass}>My Library</h1>
+        <h1 className={typePageTitleClass}>{t("title")}</h1>
         <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-          Everything you have saved in one place.
+          {t("description")}
         </p>
       </div>
 
@@ -81,62 +83,62 @@ export function FavoritesPageClient() {
         >
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-border/50 bg-muted/50 p-1 sm:max-w-3xl sm:grid-cols-5">
             <TabsTrigger value="all" className="rounded-lg text-xs sm:text-sm">
-              All ({visibleCount})
+              {t("all", { count: visibleCount })}
             </TabsTrigger>
             <TabsTrigger value="sermons" className="rounded-lg text-xs sm:text-sm">
-              Sermons ({sermons.length})
+              {t("sermons", { count: sermons.length })}
             </TabsTrigger>
             <TabsTrigger value="songs" className="rounded-lg text-xs sm:text-sm">
-              Songs ({songs.length})
+              {t("songs", { count: songs.length })}
             </TabsTrigger>
             <TabsTrigger value="articles" className="rounded-lg text-xs sm:text-sm">
-              Articles ({articles.length})
+              {t("articles", { count: articles.length })}
             </TabsTrigger>
             <TabsTrigger value="events" className="rounded-lg text-xs sm:text-sm">
-              Events ({events.length})
+              {t("events", { count: events.length })}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="mt-0">
             <FavoriteEntryGrid
               entries={filteredEntries}
-              emptyMessage="No saved items are available right now. Some items may be from another church you no longer have access to."
+              emptyMessage={t("emptyAll")}
             />
           </TabsContent>
 
           <TabsContent value="songs" className="mt-0">
             <FavoriteEntryGrid
               entries={filteredEntries}
-              emptyMessage="No songs saved yet. Browse songs and tap the heart icon to save them here."
+              emptyMessage={t("emptySongs")}
               browseHref="/songs"
-              browseLabel="Browse Songs"
+              browseLabel={t("browseSongs")}
             />
           </TabsContent>
 
           <TabsContent value="sermons" className="mt-0">
             <FavoriteEntryGrid
               entries={filteredEntries}
-              emptyMessage="No sermons saved yet. Browse sermons and tap the heart icon to save them here."
+              emptyMessage={t("emptySermons")}
               browseHref="/sermons"
-              browseLabel="Browse Sermons"
+              browseLabel={t("browseSermons")}
             />
           </TabsContent>
 
           <TabsContent value="articles" className="mt-0">
             <FavoriteEntryGrid
               entries={filteredEntries}
-              emptyMessage="No articles saved yet. Browse articles and tap the heart icon to save them here."
+              emptyMessage={t("emptyArticles")}
               browseHref="/articles"
-              browseLabel="Browse Articles"
+              browseLabel={t("browseArticles")}
             />
           </TabsContent>
 
           <TabsContent value="events" className="mt-0">
             <FavoriteEntryGrid
               entries={filteredEntries}
-              emptyMessage="No events saved yet. Browse events and tap the heart icon to save them here."
+              emptyMessage={t("emptyEvents")}
               browseHref="/events"
-              browseLabel="Browse Events"
+              browseLabel={t("browseEvents")}
             />
           </TabsContent>
         </Tabs>
@@ -192,17 +194,19 @@ function FavoriteEntryCard({ entry }: { entry: ResolvedFavoriteEntry }) {
 }
 
 function LibraryEmptyState() {
+  const t = useTranslations("library");
+
   return (
     <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center">
       <Bookmark className="mx-auto size-10 text-muted-foreground/60" />
       <p className="mt-4 text-lg font-semibold text-foreground">
-        Your library is empty
+        {t("emptyTitle")}
       </p>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-        Save sermons, songs, articles, and events to read or listen later.
+        {t("emptyDescription")}
       </p>
       <Button asChild className="mt-6 rounded-full" variant="outline">
-        <Link href="/songs">Browse Content</Link>
+        <Link href="/songs">{t("browseSongs")}</Link>
       </Button>
     </div>
   );

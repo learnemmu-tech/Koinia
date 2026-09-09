@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { provisionWorkspaceInPostgres } from "@/lib/postgres/provision-workspace";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import type { FirstChurchOnboardingInput } from "@/lib/organization/onboarding-server";
 import type { WorkspaceType } from "@/types/organization";
+import { triggerOrganizationCreatedAdminEmail } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 
 type OnboardingWorkspaceBody = FirstChurchOnboardingInput & {
@@ -66,6 +68,22 @@ export async function POST(request: Request) {
 
     try {
       const result = await provisionWorkspaceInPostgres(userId, payload);
+
+      if (result.organizationCreated) {
+        const appUser = await getAppUserByClerkId(userId);
+        const creatorName =
+          `${appUser?.firstName ?? ""} ${appUser?.lastName ?? ""}`.trim() || "—";
+        triggerOrganizationCreatedAdminEmail({
+          organizationId: result.organizationId,
+          organizationName: name,
+          workspaceType,
+          creatorName,
+          creatorEmail: decoded.email?.trim() || appUser?.email?.trim() || "—",
+          churchName:
+            workspaceType === "independent_church" ? name : undefined,
+        });
+      }
+
       return NextResponse.json(result);
     } catch (error) {
       console.error(

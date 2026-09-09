@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Separator } from "@/components/ui/separator";
@@ -10,47 +11,22 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import type { EmailNotificationPreferences } from "@/lib/email/types";
 import { DEFAULT_EMAIL_PREFERENCES } from "@/lib/email/preferences";
 
-const PREFERENCE_ITEMS: {
+const PREFERENCE_ITEM_KEYS = [
+  { key: "song", titleKey: "songsTitle", descriptionKey: "songsDescription" },
+  { key: "sermon", titleKey: "sermonsTitle", descriptionKey: "sermonsDescription" },
+  { key: "article", titleKey: "articlesTitle", descriptionKey: "articlesDescription" },
+  { key: "event", titleKey: "eventsTitle", descriptionKey: "eventsDescription" },
+  { key: "donation", titleKey: "donationsTitle", descriptionKey: "donationsDescription" },
+  { key: "prayer", titleKey: "prayerTitle", descriptionKey: "prayerDescription" },
+] as const satisfies {
   key: keyof EmailNotificationPreferences;
-  title: string;
-  description: string;
-}[] = [
-  {
-    key: "song",
-    title: "Songs",
-    description: "Email when a new worship song is published.",
-  },
-  {
-    key: "sermon",
-    title: "Sermons",
-    description: "Email when a new sermon is published.",
-  },
-  {
-    key: "article",
-    title: "Articles",
-    description: "Email when a new article is published.",
-  },
-  {
-    key: "event",
-    title: "Events",
-    description:
-      "Email when a new event is published and confirmations when you register.",
-  },
-  {
-    key: "donation",
-    title: "Donations",
-    description:
-      "Email when a new giving campaign launches and thank-you receipts after you donate.",
-  },
-  {
-    key: "prayer",
-    title: "Prayer updates",
-    description:
-      "Confirmations when you submit a prayer request and when it is approved.",
-  },
-];
+  titleKey: string;
+  descriptionKey: string;
+}[];
 
 export function EmailNotificationSettings() {
+  const t = useTranslations("settings.emailNotifications");
+  const tSettings = useTranslations("settings");
   const { user } = useFirebaseAuth();
   const [preferences, setPreferences] =
     useState<EmailNotificationPreferences>(DEFAULT_EMAIL_PREFERENCES);
@@ -58,6 +34,16 @@ export function EmailNotificationSettings() {
   const [savingKey, setSavingKey] = useState<
     keyof EmailNotificationPreferences | null
   >(null);
+
+  const preferenceItems = useMemo(
+    () =>
+      PREFERENCE_ITEM_KEYS.map((item) => ({
+        key: item.key,
+        title: t(item.titleKey),
+        description: t(item.descriptionKey),
+      })),
+    [t]
+  );
 
   const loadPreferences = useCallback(async () => {
     if (!user) return;
@@ -110,14 +96,14 @@ export function EmailNotificationSettings() {
 
       if (!response.ok) {
         setPreferences(previous);
-        toast.error("Unable to save email preferences. Please try again.");
+        toast.error(tSettings("emailPreferencesSaveFailed"));
         return;
       }
 
-      toast.success("Email preferences updated.");
+      toast.success(tSettings("emailPreferencesUpdated"));
     } catch {
       setPreferences(previous);
-      toast.error("Unable to save email preferences. Please try again.");
+      toast.error(tSettings("emailPreferencesSaveFailed"));
     } finally {
       setSavingKey(null);
     }
@@ -133,7 +119,7 @@ export function EmailNotificationSettings() {
 
   return (
     <div className="space-y-1">
-      {PREFERENCE_ITEMS.map((item, index) => (
+      {preferenceItems.map((item, index) => (
         <div key={item.key}>
           <div className="flex items-start justify-between gap-4 px-4 py-4">
             <div className="space-y-1">
@@ -149,11 +135,11 @@ export function EmailNotificationSettings() {
               onCheckedChange={(checked) =>
                 void updatePreference(item.key, checked)
               }
-              aria-label={`Toggle ${item.title}`}
+              aria-label={tSettings("toggleNotification", { title: item.title })}
             />
           </div>
 
-          {index < PREFERENCE_ITEMS.length - 1 ?
+          {index < preferenceItems.length - 1 ?
             <Separator />
           : null}
         </div>

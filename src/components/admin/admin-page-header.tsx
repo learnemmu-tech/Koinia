@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { typePageTitleClass } from "@/lib/responsive-classes";
@@ -17,7 +18,7 @@ type AdminPageHeaderProps = {
 };
 
 export function AdminPageHeader({
-  eyebrow = "Admin",
+  eyebrow,
   title,
   description,
   actionLabel,
@@ -25,13 +26,16 @@ export function AdminPageHeader({
   actionDisabled = false,
   children,
 }: AdminPageHeaderProps) {
+  const t = useTranslations("common");
+  const label = eyebrow ?? t("admin");
+
   return (
     <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
       <div className="h-1 w-full bg-gradient-to-r from-primary/40 via-primary to-primary/40" />
       <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/60">
-            {eyebrow}
+            {label}
           </p>
           <h1 className={typePageTitleClass}>{title}</h1>
           {description ? (

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Loader2, MoreHorizontal, UserCheck, UserX } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -105,6 +106,8 @@ export function ChurchMembersPanel({
   branchId,
   churchName,
 }: ChurchMembersPanelProps) {
+  const t = useTranslations("churchMembers");
+  const tCommon = useTranslations("common");
   const { organization } = useOrganization();
   const [data, setData] = useState<BranchMembersResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,7 +134,7 @@ export function ChurchMembersPanel({
       );
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        toast.error(body.error ?? "Failed to load members");
+        toast.error(body.error ?? t("loadFailed"));
         return;
       }
       setData((await res.json()) as BranchMembersResponse);
@@ -139,7 +142,7 @@ export function ChurchMembersPanel({
     } finally {
       setLoading(false);
     }
-  }, [organization, branchId]);
+  }, [organization, branchId, t]);
 
   useEffect(() => {
     void load();
@@ -197,21 +200,21 @@ export function ChurchMembersPanel({
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Failed to update members");
+        throw new Error(body.error ?? t("updateFailed"));
       }
       toast.success(
         action === "approve" ?
           membershipIds.length > 1 ?
-            `${membershipIds.length} members approved`
-          : "Member approved"
+            t("membersApproved", { count: membershipIds.length })
+          : t("memberApproved")
         : membershipIds.length > 1 ?
-          `${membershipIds.length} requests rejected`
-        : "Request rejected"
+          t("requestsRejected", { count: membershipIds.length })
+        : t("requestRejected")
       );
       await load();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to update members"
+        error instanceof Error ? error.message : t("updateFailed")
       );
     } finally {
       setBusy(false);
@@ -240,13 +243,13 @@ export function ChurchMembersPanel({
       });
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        throw new Error(body.error ?? "Failed to update role");
+        throw new Error(body.error ?? t("roleUpdateFailed"));
       }
-      toast.success("Role updated");
+      toast.success(t("roleUpdated"));
       setRoleMember(null);
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update role");
+      toast.error(error instanceof Error ? error.message : t("roleUpdateFailed"));
     } finally {
       setBusy(false);
     }
@@ -274,14 +277,14 @@ export function ChurchMembersPanel({
       });
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        throw new Error(body.error ?? "Failed to remove member");
+        throw new Error(body.error ?? t("memberRemoveFailed"));
       }
-      toast.success("Member removed");
+      toast.success(t("memberRemoved"));
       setRemoveMember(null);
       await load();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to remove member"
+        error instanceof Error ? error.message : t("memberRemoveFailed")
       );
     } finally {
       setBusy(false);
@@ -307,7 +310,7 @@ export function ChurchMembersPanel({
               className="size-4 shrink-0 rounded border-input"
               checked={selectedIds.has(member.id)}
               onChange={() => toggleSelect(member.id)}
-              aria-label={`Select ${name}`}
+              aria-label={t("selectMember", { name })}
             />
           : null}
           <Avatar className="size-10">
@@ -322,7 +325,7 @@ export function ChurchMembersPanel({
               {user?.email ?? "—"}
             </p>
             <p className="text-xs text-muted-foreground">
-              Requested {formatRequestedDate(member.createdAt)}
+              {t("requestedDate", { date: formatRequestedDate(member.createdAt) })}
             </p>
           </div>
         </div>
@@ -336,7 +339,7 @@ export function ChurchMembersPanel({
               {busy ?
                 <Loader2 className="mr-1.5 size-4 animate-spin" />
               : <UserCheck className="mr-1.5 size-4" />}
-              Approve
+              {tCommon("approve")}
             </Button>
             <Button
               size="sm"
@@ -347,7 +350,7 @@ export function ChurchMembersPanel({
               {busy ?
                 <Loader2 className="mr-1.5 size-4 animate-spin" />
               : <UserX className="mr-1.5 size-4" />}
-              Reject
+              {tCommon("reject")}
             </Button>
           </div>
         : null}
@@ -367,11 +370,11 @@ export function ChurchMembersPanel({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Pending requests</CardTitle>
+          <CardTitle className="text-base">{t("pendingRequestsTitle")}</CardTitle>
           <CardDescription>
             {churchName ?
-              `People who requested to join ${churchName} via your join link.`
-            : "Approve requests to grant access to church content."}
+              t("pendingRequestsDescription", { name: churchName })
+            : t("pendingRequestsDescriptionGeneric")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -385,7 +388,7 @@ export function ChurchMembersPanel({
                     variant="outline"
                     onClick={toggleSelectAllPending}
                   >
-                    {allPendingSelected ? "Clear selection" : "Select all"}
+                    {allPendingSelected ? t("clearSelection") : t("selectAll")}
                   </Button>
                   <Button
                     type="button"
@@ -395,7 +398,7 @@ export function ChurchMembersPanel({
                       void review(Array.from(selectedIds), "approve")
                     }
                   >
-                    Bulk approve
+                    {t("bulkApprove")}
                   </Button>
                   <Button
                     type="button"
@@ -406,7 +409,7 @@ export function ChurchMembersPanel({
                       void review(Array.from(selectedIds), "reject")
                     }
                   >
-                    Bulk reject
+                    {t("bulkReject")}
                   </Button>
                 </div>
               : null}
@@ -420,7 +423,7 @@ export function ChurchMembersPanel({
               </ul>
             </>
           : <p className="text-sm text-muted-foreground">
-              No pending requests right now.
+              {t("noPendingRequests")}
             </p>
           }
         </CardContent>
@@ -428,9 +431,9 @@ export function ChurchMembersPanel({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Approved members</CardTitle>
+          <CardTitle className="text-base">{t("approvedMembersTitle")}</CardTitle>
           <CardDescription>
-            Active members with access to this church workspace.
+            {t("approvedMembersDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -467,7 +470,7 @@ export function ChurchMembersPanel({
                             variant="ghost"
                             size="icon"
                             className="size-8 shrink-0"
-                            aria-label={`Actions for ${name}`}
+                            aria-label={t("actionsForMember", { name })}
                           >
                             <MoreHorizontal className="size-4" />
                           </Button>
@@ -483,13 +486,13 @@ export function ChurchMembersPanel({
                               );
                             }}
                           >
-                            Edit Role
+                            {t("editRole")}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onSelect={() => setRemoveMember(member)}
                           >
-                            Remove Member
+                            {t("removeMember")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -499,7 +502,7 @@ export function ChurchMembersPanel({
               })}
             </ul>
           : <p className="text-sm text-muted-foreground">
-              No approved members yet. Share your join link to get started.
+              {t("noApprovedMembers")}
             </p>
           }
         </CardContent>
@@ -513,10 +516,9 @@ export function ChurchMembersPanel({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Role</DialogTitle>
+            <DialogTitle>{t("editRoleTitle")}</DialogTitle>
             <DialogDescription>
-              Change this member&apos;s church role. Organization Admin and
-              SuperAdmin cannot be assigned here.
+              {t("editRoleDescription")}
             </DialogDescription>
           </DialogHeader>
           {roleMember ?
@@ -529,11 +531,13 @@ export function ChurchMembersPanel({
                   {usersById[roleMember.userId]?.email ?? "—"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Current role: {formatMembershipRoleLabel(roleMember.role)}
+                  {t("currentRole", {
+                    role: formatMembershipRoleLabel(roleMember.role),
+                  })}
                 </p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium">Role</p>
+                <p className="text-sm font-medium">{t("roleLabel")}</p>
                 <Select
                   value={nextRole}
                   onValueChange={(value) => {
@@ -561,13 +565,13 @@ export function ChurchMembersPanel({
               onClick={() => setRoleMember(null)}
               disabled={busy}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="button" onClick={() => void saveRole()} disabled={busy}>
               {busy ?
                 <Loader2 className="mr-1.5 size-4 animate-spin" />
               : null}
-              Save Changes
+              {tCommon("saveChanges")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -581,18 +585,19 @@ export function ChurchMembersPanel({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove member?</AlertDialogTitle>
+            <AlertDialogTitle>{t("removeMemberTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove{" "}
-              {removeMember
-                ? memberName(removeMember.userId, usersById)
-                : "this person"}{" "}
-              from {churchName ?? "this church"}. Their FaithConnectHub account
-              will not be deleted.
+              {t("removeMemberDescription", {
+                name:
+                  removeMember
+                    ? memberName(removeMember.userId, usersById)
+                    : t("thisPerson"),
+                church: churchName ?? t("thisChurch"),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={busy}
@@ -601,7 +606,7 @@ export function ChurchMembersPanel({
                 void confirmRemove();
               }}
             >
-              Remove Member
+              {t("removeMember")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

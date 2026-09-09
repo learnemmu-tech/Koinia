@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -17,10 +18,12 @@ type ContentListToolbarProps = {
 export function ContentListToolbar({
   search,
   onSearchChange,
-  searchPlaceholder = "Search…",
+  searchPlaceholder,
   children,
   className,
 }: ContentListToolbarProps) {
+  const t = useTranslations("common");
+
   return (
     <div
       className={cn(
@@ -36,9 +39,9 @@ export function ContentListToolbar({
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder ?? t("searchPlaceholder")}
           className="h-10 rounded-full pl-9"
-          aria-label="Search content"
+          aria-label={t("search")}
         />
       </div>
       {children ? <div className="flex shrink-0 flex-wrap gap-2">{children}</div> : null}

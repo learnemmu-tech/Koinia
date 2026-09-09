@@ -3,6 +3,19 @@ import { NextResponse } from "next/server";
 import { InvitationEmail } from "@/emails/templates/invitation-email";
 import { sendEmail } from "@/lib/email/send-email";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { getMembershipForUser } from "@/lib/organization/organization-server";
+import { getInvitationByToken } from "@/lib/postgres/invitations";
+import { roleMeetsMinimum } from "@/types/membership";
+
+function invitationTokenFromLink(inviteLink: string): string | null {
+  try {
+    const path = new URL(inviteLink).pathname;
+    const match = path.match(/\/invite\/([^/]+)\/?$/);
+    return match?.[1]?.trim() || null;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   const authUser = await verifyBearerToken(request);
@@ -26,6 +39,28 @@ export async function POST(request: Request) {
         { error: "email and inviteLink are required" },
         { status: 400 }
       );
+    }
+
+    const token = invitationTokenFromLink(inviteLink);
+    if (!token) {
+      return NextResponse.json({ error: "Invalid invite link" }, { status: 400 });
+    }
+
+    const invitation = await getInvitationByToken(token);
+    if (!invitation || invitation.status !== "pending") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const membership = await getMembershipForUser(
+      invitation.organizationId,
+      authUser.uid
+    );
+    if (
+      !membership ||
+      membership.status !== "active" ||
+      !roleMeetsMinimum(membership.role, "org_admin")
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const result = await sendEmail({

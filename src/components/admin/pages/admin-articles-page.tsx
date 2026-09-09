@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { ArticleList } from "@/components/admin/article-list";
 import { AdminChurchNotice } from "@/components/admin/admin-church-notice";
@@ -29,6 +30,7 @@ const AddArticleModal = dynamic(
 );
 
 export function AdminArticlesPageClient({ embedded = false }: { embedded?: boolean }) {
+  const t = useTranslations("articles");
   const searchParams = useSearchParams();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
@@ -86,9 +88,9 @@ export function AdminArticlesPageClient({ embedded = false }: { embedded?: boole
     <div className={embedded ? "space-y-4" : adminSectionClass}>
       {!embedded ?
         <AdminPageHeader
-          title="Articles"
-          description="Manage faith articles and devotionals"
-          actionLabel="Add Article"
+          title={t("title")}
+          description={t("adminDescription")}
+          actionLabel={t("add")}
           onAction={() => {
             setSelectedArticle(null);
             setModalOpen(true);
@@ -102,8 +104,8 @@ export function AdminArticlesPageClient({ embedded = false }: { embedded?: boole
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search articles…"
-        actionLabel={embedded ? "Add Article" : undefined}
+        searchPlaceholder={t("searchPlaceholder")}
+        actionLabel={embedded ? t("add") : undefined}
         onAction={
           embedded ?
             () => {

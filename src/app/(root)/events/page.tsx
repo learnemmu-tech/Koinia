@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 
 import { EventsListClient } from "@/components/events/events-list-client";
 import { EventsAdminBar } from "@/components/admin/inline/events-admin-bar";
+import { I18nPageHeading } from "@/components/i18n/page-heading";
 import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getPublishedEventsGroupedCached } from "@/lib/cached-event-data";
-import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
+import { pageContentClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
@@ -27,18 +28,7 @@ export default async function EventsPage() {
       aria-labelledby="events-heading"
     >
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/60">
-            Ministry
-          </p>
-          <h1 id="events-heading" className={typePageTitleClass}>
-            Events
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Discover upcoming worship services, fellowship gatherings, and special
-            ministry events.
-          </p>
-        </div>
+        <I18nPageHeading ns="events" headingId="events-heading" />
         <EventsAdminBar
           contentScope={isPlatformPublic ? "platform_public" : "organization"}
         />

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Pencil } from "lucide-react";
 
 import { useIsAdmin } from "@/hooks/use-is-admin";
@@ -18,10 +19,12 @@ type AdminQuickEditButtonProps = {
 export function AdminQuickEditButton({
   href,
   onSelect,
-  label = "Edit",
+  label,
   className,
 }: AdminQuickEditButtonProps) {
+  const tCommon = useTranslations("common");
   const isAdmin = useIsAdmin();
+  const resolvedLabel = label ?? tCommon("edit");
 
   if (!isAdmin) return null;
 
@@ -35,7 +38,7 @@ export function AdminQuickEditButton({
   const content = (
     <>
       <Pencil className="size-3" />
-      {label}
+      {resolvedLabel}
     </>
   );
 
@@ -43,7 +46,7 @@ export function AdminQuickEditButton({
     return (
       <Link
         href={href}
-        aria-label={label}
+        aria-label={resolvedLabel}
         onClick={(event) => event.stopPropagation()}
         className={buttonClassName}
       >
@@ -56,7 +59,7 @@ export function AdminQuickEditButton({
     return (
       <button
         type="button"
-        aria-label={label}
+        aria-label={resolvedLabel}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();

@@ -5,14 +5,22 @@ import NextTopLoader from "nextjs-toploader";
 
 import Providers from "@/components/provider";
 import { SiteJsonLd } from "@/components/seo/json-ld";
+import type { Locale } from "@/i18n/config";
+import { I18nProvider } from "@/i18n/provider";
 
 type Props = {
   initialActiveChurchId: string | null;
+  initialLocale: Locale;
   modal: ReactNode;
   children: ReactNode;
 };
 
-export function RootClientShell({ initialActiveChurchId, modal, children }: Props) {
+export function RootClientShell({
+  initialActiveChurchId,
+  initialLocale,
+  modal,
+  children,
+}: Props) {
   return (
     <>
       <NextTopLoader
@@ -22,11 +30,13 @@ export function RootClientShell({ initialActiveChurchId, modal, children }: Prop
         shadow="0 0 10px #6366f1"
       />
 
-      <Providers initialChurches={[]} initialActiveChurchId={initialActiveChurchId}>
-        <SiteJsonLd />
-        {children}
-        {modal}
-      </Providers>
+      <I18nProvider initialLocale={initialLocale}>
+        <Providers initialChurches={[]} initialActiveChurchId={initialActiveChurchId}>
+          <SiteJsonLd />
+          {children}
+          {modal}
+        </Providers>
+      </I18nProvider>
     </>
   );
 }

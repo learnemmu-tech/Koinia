@@ -14,12 +14,14 @@ import {
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useIsPlatformSuperAdmin } from "@/hooks/use-admin-church-id";
 import { useSidebarAdminBadges } from "@/hooks/use-sidebar-admin-badges";
+import { useNavLabel } from "@/i18n/nav";
 import { cn } from "@/lib/utils";
 
 type SidebarNavSectionsProps = {
   sections: SidebarNavSection[];
   showBadges?: boolean;
   className?: string;
+  isAuthenticated?: boolean;
 };
 
 function NavBadge({ count, collapsed }: { count: number; collapsed?: boolean }) {
@@ -98,6 +100,7 @@ export function SidebarNavSections({
   sections,
   showBadges = false,
   className,
+  isAuthenticated = false,
 }: SidebarNavSectionsProps) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile, state } = useSidebar();
@@ -105,6 +108,8 @@ export function SidebarNavSections({
   const isSuperAdmin = useIsPlatformSuperAdmin();
   const { user } = useFirebaseAuth();
   const badges = useSidebarAdminBadges();
+  const navLabel = useNavLabel();
+  const canSeeAuthItems = Boolean(user) || isAuthenticated;
 
   function closeMobile() {
     if (isMobile) setOpenMobile(false);
@@ -122,7 +127,7 @@ export function SidebarNavSections({
     <div className={cn("flex flex-col", className)}>
       {sections.map((section, index) => {
         const visibleItems = section.items.filter((item) => {
-          if (item.authOnly && !user) return false;
+          if (item.authOnly && !canSeeAuthItems) return false;
           if (item.superAdminOnly && !isSuperAdmin) return false;
           return true;
         });
@@ -143,7 +148,7 @@ export function SidebarNavSections({
           >
             {section.label && !isCollapsed ?
               <SidebarGroupLabel className="mb-1.5 h-auto px-3 py-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                {section.label}
+                {navLabel(section.label)}
               </SidebarGroupLabel>
             : null}
             <SidebarMenu className={cn(isCollapsed ? "gap-0.5" : "gap-0.5")}>
@@ -151,6 +156,7 @@ export function SidebarNavSections({
                 const Icon = item.icon;
                 const isActive = item.match(pathname);
                 const badgeCount = resolveBadge(item);
+                const label = navLabel(item.label);
 
                 return (
                   <SidebarMenuItem key={item.href}>
@@ -170,11 +176,11 @@ export function SidebarNavSections({
                       <Icon />
                       {isCollapsed ?
                         <>
-                          <CollapsedNavLabel label={item.label} />
+                          <CollapsedNavLabel label={label} />
                           <NavBadge count={badgeCount} collapsed />
                         </>
                       : <>
-                          <span className="truncate">{item.label}</span>
+                          <span className="truncate">{label}</span>
                           <NavBadge count={badgeCount} />
                         </>
                       }

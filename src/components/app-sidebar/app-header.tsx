@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ type AppHeaderProps = {
 };
 
 export function AppHeader({ search }: AppHeaderProps) {
+  const tCommon = useTranslations("common");
   const { authUser, loading } = useFirebaseAuth();
   const mounted = useMounted();
 
@@ -36,7 +38,7 @@ export function AppHeader({ search }: AppHeaderProps) {
           <NotificationBell userId={authUser.uid} />
         ) : (
           <Button asChild size="sm" variant="outline">
-            <Link href="/signin">Sign In</Link>
+            <Link href="/signin">{tCommon("signIn")}</Link>
           </Button>
         )}
       </div>

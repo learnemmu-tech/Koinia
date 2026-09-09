@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -35,25 +36,28 @@ export function AuthEmailVerificationStep({
   isLoading = false,
   isResending = false,
   errorMessage,
-  title = "Verify your email",
+  title,
   description,
   className,
 }: AuthEmailVerificationStepProps) {
+  const tAuth = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const isDisabled = isLoading || isResending;
 
   return (
     <div className={cn("flex flex-col gap-6", className)}>
       <div className="flex flex-col gap-2 text-center md:text-left">
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {title ?? tAuth("verifyEmailTitle")}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          {description ??
-            `Enter the 6-digit code sent to ${email}.`}
+          {description ?? tAuth("verificationCodeSentTo", { email })}
         </p>
       </div>
 
       <form onSubmit={onVerify} className="grid gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="verification-code">Verification code</Label>
+          <Label htmlFor="verification-code">{tAuth("verificationCode")}</Label>
           <Input
             id="verification-code"
             inputMode="numeric"
@@ -76,7 +80,7 @@ export function AuthEmailVerificationStep({
           {isLoading ?
             <Loader2 className="mr-2 size-4 animate-spin" />
           : null}
-          Verify email
+          {tAuth("verifyEmail")}
         </Button>
       </form>
 
@@ -91,9 +95,9 @@ export function AuthEmailVerificationStep({
           {isResending ?
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
-              Sending code…
+              {tAuth("sendingCode")}
             </>
-          : "Resend verification code"}
+          : tAuth("resendVerificationCode")}
         </Button>
         {onBack ?
           <Button
@@ -103,7 +107,7 @@ export function AuthEmailVerificationStep({
             disabled={isDisabled}
             onClick={onBack}
           >
-            Back
+            {tCommon("back")}
           </Button>
         : null}
       </div>

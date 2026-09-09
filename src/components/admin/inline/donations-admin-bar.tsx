@@ -3,6 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { useIsAdmin } from "@/hooks/use-is-admin";
@@ -24,6 +25,7 @@ type DonationsAdminBarProps = {
 export function DonationsAdminBar({
   contentScope = "organization",
 }: DonationsAdminBarProps) {
+  const t = useTranslations("donations");
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsPlatformSuperAdmin();
   const workspace = useWorkspaceTenantScope();
@@ -49,7 +51,7 @@ export function DonationsAdminBar({
         className="shrink-0 gap-1.5 rounded-full"
       >
         <Plus className="size-4" aria-hidden />
-        Create Donation Campaign
+        {t("add")}
       </Button>
 
       {open ? (

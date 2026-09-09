@@ -2,7 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -11,6 +13,7 @@ import { useMounted } from "@/hooks/use-mounted";
 import { isMembershipStatusPath } from "@/lib/auth/auth-paths";
 
 export function AppSiteHeaderClient() {
+  const tCommon = useTranslations("common");
   const { authUser, loading } = useFirebaseAuth();
   const mounted = useMounted();
   const pathname = usePathname();
@@ -26,12 +29,13 @@ export function AppSiteHeaderClient() {
       <div className="min-w-0 flex-1" aria-hidden />
 
       <div className="flex shrink-0 items-center gap-2">
+        <LocaleSwitcher />
         {!mounted || loading ?
           <div className="size-10" />
         : authUser ?
           <NotificationBell userId={authUser.uid} />
         : <Button asChild size="sm" variant="outline" className="rounded-full">
-            <Link href="/signin">Sign In</Link>
+            <Link href="/signin">{tCommon("signIn")}</Link>
           </Button>
         }
       </div>

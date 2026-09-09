@@ -1,6 +1,7 @@
 export type FirebaseSermon = {
   id: string;
   contentScope?: "organization" | "platform_public";
+  organizationId?: string;
   churchId: string;
   title: string;
   subtitle?: string;

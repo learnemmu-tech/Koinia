@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type { FirebaseEvent } from "@/types/firebase-event";
 
@@ -36,6 +37,7 @@ export function EventsListClient({
   initialPast,
   isPlatformPublic = false,
 }: EventsListClientProps) {
+  const t = useTranslations("events");
   const initialCombined = useMemo(
     () => [...initialUpcoming, ...initialPast],
     [initialUpcoming, initialPast]
@@ -83,16 +85,16 @@ export function EventsListClient({
       <ContentListToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search events…"
+        searchPlaceholder={t("searchPlaceholder")}
       >
         <Select value={scheduleFilter} onValueChange={setScheduleFilter}>
           <SelectTrigger className="w-full min-w-0 sm:w-[10rem] rounded-full">
-            <SelectValue placeholder="Schedule" />
+            <SelectValue placeholder={t("schedule")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All events</SelectItem>
-            <SelectItem value="upcoming">Upcoming</SelectItem>
-            <SelectItem value="past">Past</SelectItem>
+            <SelectItem value="all">{t("allEvents")}</SelectItem>
+            <SelectItem value="upcoming">{t("upcoming")}</SelectItem>
+            <SelectItem value="past">{t("past")}</SelectItem>
           </SelectContent>
         </Select>
       </ContentListToolbar>
@@ -100,22 +102,22 @@ export function EventsListClient({
       {noResults ?
         <div className="rounded-2xl border border-dashed border-border/50 px-6 py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            No events match your search.
+            {t("noMatch")}
           </p>
         </div>
       : <div className="space-y-10">
           {showUpcoming ?
             <EventsSection
-              title="Upcoming Events"
+              title={t("upcomingTitle")}
               events={filteredUpcoming}
-              emptyMessage="No upcoming events scheduled right now."
+              emptyMessage={t("noUpcoming")}
             />
           : null}
           {showPast ?
             <EventsSection
-              title="Past Events"
+              title={t("pastTitle")}
               events={filteredPast}
-              emptyMessage="No past events to show yet."
+              emptyMessage={t("noPast")}
             />
           : null}
         </div>

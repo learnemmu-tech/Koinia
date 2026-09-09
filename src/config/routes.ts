@@ -19,6 +19,7 @@ export const publicRoutes = [
   "/songs",
   "/sermons",
   "/articles",
+  "/books",
 ];
 
 export const authRoutes = ["/signin", "/signup", "/forgot-password"];
@@ -34,7 +35,7 @@ export const protectedRoutes = [
   "/prayer-requests/submit",
 ];
 
-export const contentDetailPrefixes = ["/songs", "/articles", "/sermons"];
+export const contentDetailPrefixes = ["/songs", "/articles", "/sermons", "/books"];
 
 export const workspaceRoutes = [
   "/dashboard",

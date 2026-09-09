@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, MapPin, Pencil, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { RequireAdmin } from "@/components/auth/require-admin";
@@ -61,6 +62,9 @@ const BranchModal = dynamic(
 );
 
 function OrganizationSettingsForm() {
+  const tOrg = useTranslations("organization");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
   const { authUser } = useFirebaseAuth();
   const { organization, loading, refetch } = useOrganization();
   const [name, setName] = useState("");
@@ -91,10 +95,10 @@ function OrganizationSettingsForm() {
           logo: logo.trim() || undefined,
         }
       );
-      toast.success("Organization settings saved");
+      toast.success(tOrg("settingsSaved"));
       refetch();
     } catch {
-      toast.error("Failed to save organization settings");
+      toast.error(tOrg("settingsSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -112,7 +116,7 @@ function OrganizationSettingsForm() {
     return (
       <Card>
         <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          No organization found for your account.
+          {tOrg("notFound")}
         </CardContent>
       </Card>
     );
@@ -124,9 +128,9 @@ function OrganizationSettingsForm() {
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>Organization Profile</CardTitle>
+              <CardTitle>{tOrg("profileTitle")}</CardTitle>
               <CardDescription>
-                Identity and branding for your organization tenant.
+                {tOrg("profileDescription")}
               </CardDescription>
             </div>
             <PlanBadge planId={organization.subscriptionPlan} />
@@ -134,7 +138,7 @@ function OrganizationSettingsForm() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="org-name">Organization name</Label>
+            <Label htmlFor="org-name">{tOrg("nameLabel")}</Label>
             <Input
               id="org-name"
               value={name}
@@ -143,7 +147,7 @@ function OrganizationSettingsForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="org-description">Description</Label>
+            <Label htmlFor="org-description">{tForms("description")}</Label>
             <Textarea
               id="org-description"
               value={description}
@@ -152,7 +156,7 @@ function OrganizationSettingsForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="org-logo">Logo URL</Label>
+            <Label htmlFor="org-logo">{tOrg("logoUrlLabel")}</Label>
             <Input
               id="org-logo"
               value={logo}
@@ -161,7 +165,7 @@ function OrganizationSettingsForm() {
             />
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Status</span>
+            <span>{tOrg("statusLabel")}</span>
             <Badge variant="secondary">{organization.status}</Badge>
           </div>
         </CardContent>
@@ -172,9 +176,9 @@ function OrganizationSettingsForm() {
           {saving ?
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
-              Saving…
+              {tCommon("saving")}
             </>
-          : "Save settings"}
+          : tOrg("saveSettings")}
         </Button>
       </div>
     </form>
@@ -182,8 +186,11 @@ function OrganizationSettingsForm() {
 }
 
 function OrganizationChurchesPanel() {
+  const t = useTranslations("dashboard");
+  const tOrg = useTranslations("organization");
+  const tCommon = useTranslations("common");
   const { authUser } = useFirebaseAuth();
-  const { organization, churches, branchesByChurch, loading, refetch } =
+  const { organization, branchesByChurch, loading, refetch } =
     useOrganization();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -224,10 +231,10 @@ function OrganizationChurchesPanel() {
         authUser.uid,
         authUser.email
       );
-      toast.success("Church deleted");
+      toast.success(tOrg("churchDeleted"));
       refetch();
     } catch {
-      toast.error("Failed to delete church");
+      toast.error(tOrg("churchDeleteFailed"));
     } finally {
       setBusyBranchId(null);
     }
@@ -236,9 +243,9 @@ function OrganizationChurchesPanel() {
   return (
     <div className="space-y-4">
       <AdminPageHeader
-        title="Churches"
-        description="Create and manage churches in your organization."
-        actionLabel="Create Church"
+        title={t("churchesTitle")}
+        description={t("churchesOrgDescription")}
+        actionLabel={t("createChurch")}
         onAction={() => {
           setEditingBranch(null);
           setModalOpen(true);
@@ -248,14 +255,13 @@ function OrganizationChurchesPanel() {
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search churches…"
+        searchPlaceholder={t("searchChurches")}
       />
 
       {pageItems.length === 0 && !loading ?
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No churches yet. Create your first church to start inviting admins
-            and managing content.
+            {t("noChurchesYet")}
           </CardContent>
         </Card>
       : <div className="space-y-3">
@@ -266,7 +272,7 @@ function OrganizationChurchesPanel() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{branch.name}</p>
                     <Badge variant={branch.isActive ? "default" : "secondary"}>
-                      {branch.isActive ? "Active" : "Inactive"}
+                      {branch.isActive ? tCommon("active") : tCommon("inactive")}
                     </Badge>
                   </div>
                   {branch.address || branch.city ?
@@ -289,7 +295,7 @@ function OrganizationChurchesPanel() {
                     }}
                   >
                     <Pencil className="mr-1 size-3.5" />
-                    Edit
+                    {tCommon("edit")}
                   </Button>
                   <Button
                     type="button"
@@ -353,6 +359,9 @@ function OrganizationChurchesPanel() {
 }
 
 export function OrganizationBranchesPanel() {
+  const t = useTranslations("dashboard");
+  const tOrg = useTranslations("organization");
+  const tCommon = useTranslations("common");
   const { authUser } = useFirebaseAuth();
   const { organization, churches, branchesByChurch, loading, refetch } =
     useOrganization();
@@ -385,10 +394,10 @@ export function OrganizationBranchesPanel() {
         authUser.uid,
         authUser.email
       );
-      toast.success("Church deleted");
+      toast.success(tOrg("churchDeleted"));
       refetch();
     } catch {
-      toast.error("Failed to delete church");
+      toast.error(tOrg("churchDeleteFailed"));
     } finally {
       setBusyBranchId(null);
     }
@@ -405,10 +414,12 @@ export function OrganizationBranchesPanel() {
         authUser.email,
         { isActive: !branch.isActive }
       );
-      toast.success(branch.isActive ? "Church disabled" : "Church activated");
+      toast.success(
+        branch.isActive ? tOrg("churchDisabled") : tOrg("churchActivated")
+      );
       refetch();
     } catch {
-      toast.error("Failed to update church");
+      toast.error(tOrg("churchUpdateFailed"));
     } finally {
       setBusyBranchId(null);
     }
@@ -426,8 +437,7 @@ export function OrganizationBranchesPanel() {
     return (
       <Card>
         <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          Add a church first before creating branches. Branches are optional —
-          single-location churches work without them.
+          {t("addChurchBeforeBranches")} {t("addChurchBeforeBranchesContinuation")}
         </CardContent>
       </Card>
     );
@@ -436,9 +446,9 @@ export function OrganizationBranchesPanel() {
   return (
     <div className="space-y-4">
       <AdminPageHeader
-        title="Churches"
-        description="Manage churches in your organization."
-        actionLabel="Create Church"
+        title={t("churchesTitle")}
+        description={t("churchesOrgManageDescription")}
+        actionLabel={t("createChurch")}
         onAction={() => {
           setEditingBranch(null);
           setBranchModalOpen(true);
@@ -446,10 +456,10 @@ export function OrganizationBranchesPanel() {
       />
 
       <div className="max-w-xs space-y-2">
-        <Label>Church</Label>
+        <Label>{tOrg("selectChurchLabel")}</Label>
         <Select value={selectedChurchId} onValueChange={setSelectedChurchId}>
           <SelectTrigger>
-            <SelectValue placeholder="Select church" />
+            <SelectValue placeholder={tOrg("selectChurchPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {activeChurches.map((church) => (
@@ -464,8 +474,7 @@ export function OrganizationBranchesPanel() {
       {branches.length === 0 ?
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No branches for this church. Branches are optional — your church
-            can operate as a single location.
+            {tOrg("noBranches")}
           </CardContent>
         </Card>
       : <div className="space-y-3">
@@ -476,7 +485,7 @@ export function OrganizationBranchesPanel() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{branch.name}</p>
                     <Badge variant={branch.isActive ? "default" : "secondary"}>
-                      {branch.isActive ? "Active" : "Inactive"}
+                      {branch.isActive ? tCommon("active") : tCommon("inactive")}
                     </Badge>
                   </div>
                   {branch.address || branch.city ?
@@ -499,7 +508,7 @@ export function OrganizationBranchesPanel() {
                     }}
                   >
                     <Pencil className="mr-1 size-3.5" />
-                    Edit
+                    {tCommon("edit")}
                   </Button>
                   <Button
                     type="button"
@@ -508,7 +517,7 @@ export function OrganizationBranchesPanel() {
                     disabled={busyBranchId === branch.id}
                     onClick={() => void handleToggleBranch(branch)}
                   >
-                    {branch.isActive ? "Disable" : "Enable"}
+                    {branch.isActive ? tOrg("disable") : tOrg("enable")}
                   </Button>
                   <Button
                     type="button"
@@ -550,6 +559,9 @@ export function OrganizationBranchesPanel() {
 }
 
 function OrganizationPageContent() {
+  const t = useTranslations("dashboard");
+  const tOrg = useTranslations("organization");
+  const tNav = useTranslations("navigation");
   const { organization } = useOrganization();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -575,23 +587,23 @@ function OrganizationPageContent() {
   return (
     <div className={adminSectionClass}>
       <AdminPageHeader
-        title="Organization"
-        description="Manage your organization, churches, members, and invitations."
+        title={t("organizationTitle")}
+        description={t("organizationDescription")}
       />
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="flex h-auto flex-wrap">
-          <TabsTrigger value="settings">General</TabsTrigger>
+          <TabsTrigger value="settings">{t("general")}</TabsTrigger>
           {!isIndependent ?
             <>
-              <TabsTrigger value="churches">Churches</TabsTrigger>
-              <TabsTrigger value="invitations">Invitations</TabsTrigger>
-              <TabsTrigger value="members">Members</TabsTrigger>
-              <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
+              <TabsTrigger value="churches">{t("churchesTitle")}</TabsTrigger>
+              <TabsTrigger value="invitations">{tOrg("tabInvitations")}</TabsTrigger>
+              <TabsTrigger value="members">{tNav("members")}</TabsTrigger>
+              <TabsTrigger value="roles">{tOrg("tabRolesPermissions")}</TabsTrigger>
             </>
           : null}
           <TabsTrigger value="billing" asChild>
-            <a href="/dashboard/billing">Billing</a>
+            <a href="/dashboard/billing">{tNav("billing")}</a>
           </TabsTrigger>
         </TabsList>
 

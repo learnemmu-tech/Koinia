@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Edit2, Loader2, Power, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { FirebaseChurch } from "@/types/firebase-church";
@@ -36,6 +37,8 @@ export function ChurchList({
   onChanged,
   onDeleteChurch,
 }: ChurchListProps) {
+  const t = useTranslations("churches");
+  const tCommon = useTranslations("common");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FirebaseChurch | null>(null);
 
@@ -43,10 +46,10 @@ export function ChurchList({
     setBusyId(church.id);
     try {
       await setChurchActive(church.id, !church.isActive);
-      toast.success(church.isActive ? "Church disabled" : "Church activated");
+      toast.success(church.isActive ? t("disabledToast") : t("activatedToast"));
       onChanged();
     } catch {
-      toast.error("Failed to update church status");
+      toast.error(t("statusUpdateFailed"));
     } finally {
       setBusyId(null);
     }
@@ -61,10 +64,10 @@ export function ChurchList({
       } else {
         await deleteChurch(deleteTarget.id);
       }
-      toast.success("Church deleted");
+      toast.success(t("deletedSuccess"));
       onChanged();
     } catch {
-      toast.error("Failed to delete church");
+      toast.error(t("deleteFailed"));
     } finally {
       setBusyId(null);
       setDeleteTarget(null);
@@ -82,9 +85,7 @@ export function ChurchList({
   if (churches.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-border/50 px-6 py-12 text-center">
-        <p className="text-sm text-muted-foreground">
-          No churches yet. Add your first church to begin multi-tenant setup.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("emptyList")}</p>
       </div>
     );
   }
@@ -112,7 +113,7 @@ export function ChurchList({
                       : "rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
                   }
                 >
-                  {church.isActive ? "Active" : "Disabled"}
+                  {church.isActive ? tCommon("active") : t("disabled")}
                 </span>
               </div>
 
@@ -139,7 +140,7 @@ export function ChurchList({
                 onClick={() => onEdit(church)}
               >
                 <Edit2 className="mr-1.5 size-3.5" />
-                Edit
+                {tCommon("edit")}
               </Button>
               <Button
                 type="button"
@@ -149,7 +150,7 @@ export function ChurchList({
                 onClick={() => handleToggleActive(church)}
               >
                 <Power className="mr-1.5 size-3.5" />
-                {church.isActive ? "Disable" : "Enable"}
+                {church.isActive ? tCommon("disable") : tCommon("enable")}
               </Button>
               <Button
                 type="button"
@@ -159,7 +160,7 @@ export function ChurchList({
                 onClick={() => setDeleteTarget(church)}
               >
                 <Trash2 className="mr-1.5 size-3.5" />
-                Delete
+                {tCommon("delete")}
               </Button>
             </div>
           </article>
@@ -169,15 +170,14 @@ export function ChurchList({
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete church?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes {deleteTarget?.name}. Content linked to this church will
-              remain in Firestore until cleaned up manually.
+              {t("deleteDescription", { name: deleteTarget?.name ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>{tCommon("delete")}</AlertDialogAction>
           </div>
         </AlertDialogContent>
       </AlertDialog>

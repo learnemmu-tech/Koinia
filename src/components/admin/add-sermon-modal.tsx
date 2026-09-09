@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -43,41 +44,53 @@ import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";
 import { uploadSongFileLocal } from "@/lib/local-upload";
 import { MAX_IMAGE_SIZE_LABEL, validateImageFile } from "@/lib/upload-limits";
 
-const sermonSchema = z
-  .object({
-    title: z.string().min(1, "Title is required"),
-    subtitle: z.string().optional(),
-    scriptureReference: z.string().min(1, "Scripture reference is required"),
-    speaker: z.string().min(1, "Speaker / Pastor is required"),
-    shortDescription: z.string().min(1, "Short description is required"),
-    content: z.string().min(1, "Sermon content is required"),
-    tags: z.string().optional(),
-    youtubeUrl: z.string().optional(),
-    audioUrl: z.string().optional(),
-    isPublished: z.boolean(),
-  })
-  .superRefine((values, ctx) => {
-    const youtube = values.youtubeUrl?.trim() ?? "";
-    const audio = values.audioUrl?.trim() ?? "";
+const createSermonSchema = (tValidation: ReturnType<typeof useTranslations<"validation">>) =>
+  z
+    .object({
+      title: z.string().min(1, tValidation("titleRequired")),
+      subtitle: z.string().optional(),
+      scriptureReference: z.string().min(1, tValidation("scriptureRequired")),
+      speaker: z.string().min(1, tValidation("speakerRequired")),
+      shortDescription: z.string().min(1, tValidation("shortDescriptionRequired")),
+      content: z.string().min(1, tValidation("sermonContentRequired")),
+      tags: z.string().optional(),
+      youtubeUrl: z.string().optional(),
+      audioUrl: z.string().optional(),
+      isPublished: z.boolean(),
+    })
+    .superRefine((values, ctx) => {
+      const youtube = values.youtubeUrl?.trim() ?? "";
+      const audio = values.audioUrl?.trim() ?? "";
 
-    if (youtube && !isValidYouTubeUrl(youtube)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Enter a valid YouTube URL (youtube.com or youtu.be)",
-        path: ["youtubeUrl"],
-      });
-    }
+      if (youtube && !isValidYouTubeUrl(youtube)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: tValidation("invalidYouTubeUrl"),
+          path: ["youtubeUrl"],
+        });
+      }
 
-    if (audio && !isValidAudioUrl(audio)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Enter a valid audio URL (http, https, or /uploads/...)",
-        path: ["audioUrl"],
-      });
-    }
-  });
+      if (audio && !isValidAudioUrl(audio)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: tValidation("invalidAudioUrl"),
+          path: ["audioUrl"],
+        });
+      }
+    });
 
-type SermonFormValues = z.infer<typeof sermonSchema>;
+type SermonFormValues = {
+  title: string;
+  subtitle?: string;
+  scriptureReference: string;
+  speaker: string;
+  shortDescription: string;
+  content: string;
+  tags?: string;
+  youtubeUrl?: string;
+  audioUrl?: string;
+  isPublished: boolean;
+};
 
 type AddSermonModalProps = {
   isOpen: boolean;
@@ -123,6 +136,15 @@ export function AddSermonModal({
   churchId,
   contentScope = "organization",
 }: AddSermonModalProps) {
+  const t = useTranslations("sermons");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
+  const tErrors = useTranslations("errors");
+  const tValidation = useTranslations("validation");
+  const sermonSchema = useMemo(
+    () => createSermonSchema(tValidation),
+    [tValidation]
+  );
   const { user, authUser } = useFirebaseAuth();
   const { invalidateSermons } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
@@ -203,7 +225,7 @@ export function AddSermonModal({
     }
 
     if (!coverFile && !coverPreview.trim()) {
-      toast.error("Cover image is required");
+      toast.error(tErrors("coverRequired"));
       return;
     }
 
@@ -215,7 +237,7 @@ export function AddSermonModal({
     try {
       const idToken = user ? await user.getIdToken() : undefined;
       if (!idToken) {
-        toast.error("You must be signed in to upload files.");
+        toast.error(tErrors("signedInRequired"));
         return;
       }
 
@@ -250,7 +272,7 @@ export function AddSermonModal({
           organizationId: tenantFields.organizationId,
         });
 
-        toast.success("Sermon updated successfully");
+        toast.success(t("updatedSuccess"));
       } else {
         const sermonId = await createSermon({
           ...payload,
@@ -287,7 +309,7 @@ export function AddSermonModal({
           organizationId: tenantFields.organizationId,
         });
 
-        toast.success("Sermon added successfully");
+        toast.success(t("addedSuccess"));
       }
 
       await invalidateSermons();
@@ -296,7 +318,7 @@ export function AddSermonModal({
       setCoverFile(undefined);
       setCoverPreview("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save sermon");
+      toast.error(error instanceof Error ? error.message : tErrors("saveSermonFailed"));
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -307,11 +329,11 @@ export function AddSermonModal({
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !loading) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{initialSermon ? "Edit Sermon" : "Add Sermon"}</DialogTitle>
+          <DialogTitle>{initialSermon ? t("editModalTitle") : t("addModalTitle")}</DialogTitle>
           <DialogDescription>
             {initialSermon
-              ? "Update sermon details, media links, and cover image"
-              : `Publish a new sermon to ${siteConfig.name}`}
+              ? t("editModalDescription")
+              : t("addModalDescription", { siteName: siteConfig.name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -319,7 +341,7 @@ export function AddSermonModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Card className="border-border/50 shadow-none">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">Sermon Details</CardTitle>
+                <CardTitle className="text-sm font-semibold">{tForms("sermonDetails")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -327,9 +349,9 @@ export function AddSermonModal({
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Title</FormLabel>
+                      <FormLabel>{tForms("title")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Sermon title" disabled={loading} {...field} />
+                        <Input placeholder={tForms("placeholders.sermonTitle")} disabled={loading} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -341,9 +363,9 @@ export function AddSermonModal({
                   name="subtitle"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Subtitle (optional)</FormLabel>
+                      <FormLabel>{tForms("subtitleOptional")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Optional subtitle" disabled={loading} {...field} />
+                        <Input placeholder={tForms("placeholders.subtitle")} disabled={loading} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -355,9 +377,9 @@ export function AddSermonModal({
                   name="scriptureReference"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Scripture Reference</FormLabel>
+                      <FormLabel>{tForms("scriptureReference")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="John 3:16" disabled={loading} {...field} />
+                        <Input placeholder={tForms("placeholders.scriptureShort")} disabled={loading} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -369,9 +391,9 @@ export function AddSermonModal({
                   name="speaker"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Speaker / Pastor</FormLabel>
+                      <FormLabel>{tForms("speaker")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Pastor name" disabled={loading} {...field} />
+                        <Input placeholder={tForms("placeholders.speakerName")} disabled={loading} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -383,10 +405,10 @@ export function AddSermonModal({
                   name="shortDescription"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Short Description</FormLabel>
+                      <FormLabel>{tForms("shortDescription")}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Brief summary for cards and search..."
+                          placeholder={tForms("placeholders.sermonSummary")}
                           rows={3}
                           disabled={loading}
                           {...field}
@@ -402,10 +424,10 @@ export function AddSermonModal({
                   name="content"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Sermon Content</FormLabel>
+                      <FormLabel>{tForms("sermonContent")}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Full sermon notes or transcript..."
+                          placeholder={tForms("placeholders.sermonContent")}
                           rows={8}
                           disabled={loading}
                           {...field}
@@ -421,15 +443,15 @@ export function AddSermonModal({
                   name="tags"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tags (optional)</FormLabel>
+                      <FormLabel>{tForms("tagsOptional")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="faith, grace, salvation"
+                          placeholder={tForms("placeholders.sermonTags")}
                           disabled={loading}
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Comma-separated tags</FormDescription>
+                      <FormDescription>{tForms("commaSeparatedTags")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -440,10 +462,10 @@ export function AddSermonModal({
                   name="youtubeUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>YouTube URL (optional)</FormLabel>
+                      <FormLabel>{tForms("youtubeUrlOptional")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="https://youtube.com/watch?v=... or https://youtu.be/..."
+                          placeholder={tForms("placeholders.youtubeUrl")}
                           disabled={loading}
                           {...field}
                         />
@@ -458,10 +480,10 @@ export function AddSermonModal({
                   name="audioUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Audio URL (optional)</FormLabel>
+                      <FormLabel>{tForms("audioUrl")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="https://example.com/sermon.mp3"
+                          placeholder={tForms("placeholders.audioUrl")}
                           disabled={loading}
                           {...field}
                         />
@@ -475,18 +497,18 @@ export function AddSermonModal({
 
             <Card className="border-border/50 shadow-none">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">Cover Image</CardTitle>
+                <CardTitle className="text-sm font-semibold">{tForms("coverImage")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Required · Max {MAX_IMAGE_SIZE_LABEL}
+                  {tForms("requiredMax", { max: MAX_IMAGE_SIZE_LABEL })}
                 </p>
                 <div className="flex gap-4">
                   {coverPreview ? (
                     <div className="relative h-20 w-20 shrink-0">
                       <img
                         src={coverPreview}
-                        alt="Cover preview"
+                        alt={tForms("coverPreviewAlt")}
                         className="h-full w-full rounded object-cover"
                       />
                       <button
@@ -504,7 +526,7 @@ export function AddSermonModal({
                   ) : null}
                   <label className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-4 transition-colors hover:border-primary">
                     <Upload className="mb-1 h-6 w-6 text-muted-foreground" />
-                    <span className="text-xs font-medium">Click to upload</span>
+                    <span className="text-xs font-medium">{tForms("clickToUpload")}</span>
                     <input
                       type="file"
                       accept=".jpg,.jpeg,.png,.webp,.gif,.avif,image/*"
@@ -515,7 +537,7 @@ export function AddSermonModal({
                   </label>
                 </div>
                 {uploadProgress > 0 ? (
-                  <p className="text-xs text-muted-foreground">Uploading… {uploadProgress}%</p>
+                  <p className="text-xs text-muted-foreground">{tForms("uploadingProgress", { percent: uploadProgress })}</p>
                 ) : null}
               </CardContent>
             </Card>
@@ -526,9 +548,9 @@ export function AddSermonModal({
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border border-border/50 p-4">
                   <div className="space-y-0.5">
-                    <FormLabel>Publish</FormLabel>
+                    <FormLabel>{tCommon("publish")}</FormLabel>
                     <p className="text-xs text-muted-foreground">
-                      Make this sermon visible on the home page
+                      {tForms("publishSermonDescription")}
                     </p>
                   </div>
                   <FormControl>
@@ -544,16 +566,16 @@ export function AddSermonModal({
 
             <div className="flex justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={loading} className="gap-2">
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
+                    {tCommon("saving")}
                   </>
                 ) : (
-                  "Save Sermon"
+                  t("saveSermon")
                 )}
               </Button>
             </div>

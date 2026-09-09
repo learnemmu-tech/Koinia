@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
 
@@ -35,6 +36,7 @@ export function DonationsListClient({
   initialCampaigns,
   isPlatformPublic = false,
 }: DonationsListClientProps) {
+  const t = useTranslations("donations");
   const { campaigns, loading } = useActiveDonationCampaigns(initialCampaigns, {
     clientSync: !isPlatformPublic,
   });
@@ -66,7 +68,7 @@ export function DonationsListClient({
     return (
       <div className="rounded-xl border border-dashed border-border/60 px-6 py-12 text-center">
         <p className="text-sm text-muted-foreground">
-          No active donation campaigns available.
+          {t("empty")}
         </p>
       </div>
     );
@@ -84,16 +86,16 @@ export function DonationsListClient({
       <ContentListToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search campaigns…"
+        searchPlaceholder={t("searchPlaceholder")}
       >
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-full min-w-0 sm:w-[10rem] rounded-full">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All campaigns</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="all">{t("allCampaigns")}</SelectItem>
+            <SelectItem value="active">{t("active")}</SelectItem>
+            <SelectItem value="completed">{t("completed")}</SelectItem>
           </SelectContent>
         </Select>
       </ContentListToolbar>
@@ -101,22 +103,22 @@ export function DonationsListClient({
       {noResults ?
         <div className="rounded-xl border border-dashed border-border/60 px-6 py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            No campaigns match your search.
+            {t("noMatch")}
           </p>
         </div>
       : <div className="space-y-10">
           {showActive ?
             <CampaignSection
-              title="Active Campaigns"
+              title={t("activeTitle")}
               campaigns={filteredActive}
-              emptyMessage="No active donation campaigns available."
+              emptyMessage={t("empty")}
             />
           : null}
           {showCompleted ?
             <CampaignSection
-              title="Completed Campaigns"
+              title={t("completedTitle")}
               campaigns={filteredCompleted}
-              emptyMessage="No completed campaigns yet."
+              emptyMessage={t("noCompleted")}
             />
           : null}
         </div>

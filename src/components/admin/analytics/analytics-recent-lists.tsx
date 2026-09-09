@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import type { FirebaseDonation } from "@/types/firebase-donation";
 
@@ -35,15 +36,16 @@ export function AnalyticsRecentLists({
   loading = false,
   insightsLoading = false,
 }: AnalyticsRecentListsProps) {
+  const t = useTranslations("dashboard");
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="overflow-hidden rounded-2xl border-border/50 shadow-sm">
         <div className="h-1 w-full bg-gradient-to-r from-primary/20 via-primary/50 to-primary/20" />
         <CardHeader className="p-5 pb-3">
           <CardTitle className="font-heading text-base">
-            Recent User Registrations
+            {t("recentRegistrations")}
           </CardTitle>
-          <CardDescription>Newest members on the platform</CardDescription>
+          <CardDescription>{t("recentRegistrationsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 px-5 pb-5 pt-0">
           {insightsLoading ?
@@ -59,7 +61,7 @@ export function AnalyticsRecentLists({
                 <div className="min-w-0">
                   <p className="truncate font-medium">{user.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {user.email || "No email"}
+                    {user.email || t("noEmail")}
                   </p>
                 </div>
                 <p className="shrink-0 text-xs text-muted-foreground">
@@ -67,7 +69,7 @@ export function AnalyticsRecentLists({
                 </p>
               </div>
             ))
-          : <AnalyticsEmptyState label="No recent registrations yet" compact />}
+          : <AnalyticsEmptyState label={t("noRecentRegistrations")} compact />}
         </CardContent>
       </Card>
 
@@ -75,9 +77,9 @@ export function AnalyticsRecentLists({
         <div className="h-1 w-full bg-gradient-to-r from-primary/20 via-primary/50 to-primary/20" />
         <CardHeader className="p-5 pb-3">
           <CardTitle className="font-heading text-base">
-            Recent Donations
+            {t("recentDonations")}
           </CardTitle>
-          <CardDescription>Latest completed and pending gifts</CardDescription>
+          <CardDescription>{t("recentDonationsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 px-5 pb-5 pt-0">
           {loading ?
@@ -92,7 +94,7 @@ export function AnalyticsRecentLists({
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium">
-                    {donation.isAnonymous ? "Anonymous donor" : donation.donorName}
+                    {donation.isAnonymous ? t("anonymousDonor") : donation.donorName}
                   </p>
                   <p className="truncate text-xs capitalize text-muted-foreground">
                     {donation.paymentStatus}
@@ -108,7 +110,7 @@ export function AnalyticsRecentLists({
                 </div>
               </div>
             ))
-          : <AnalyticsEmptyState label="No donations recorded yet" compact />}
+          : <AnalyticsEmptyState label={t("noDonations")} compact />}
         </CardContent>
       </Card>
     </div>

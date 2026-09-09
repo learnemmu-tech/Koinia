@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BookOpen, CalendarDays, Church, HeartHandshake, Loader2, Music, Users } from "lucide-react";
+import { Bell, BookMarked, BookOpen, CalendarDays, Church, HeartHandshake, Loader2, Music, Users } from "lucide-react";
 
 import type { FirebaseNotification } from "@/types/firebase-notification";
 
@@ -27,6 +27,7 @@ import {
 } from "@/lib/firebase-notification-queries";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 type NotificationBellProps = {
   userId: string;
@@ -43,6 +44,8 @@ function NotificationTypeIcon({
   switch (type) {
     case "article":
       return <BookOpen className={className} aria-hidden />;
+    case "book":
+      return <BookMarked className={className} aria-hidden />;
     case "sermon":
       return <Church className={className} aria-hidden />;
     case "event":
@@ -62,6 +65,7 @@ export function NotificationBell({
   variant = "icon",
 }: NotificationBellProps) {
   const router = useRouter();
+  const t = useTranslations("notifications");
   const [notifications, setNotifications] = useState<FirebaseNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -126,7 +130,7 @@ export function NotificationBell({
                 </span>
               : null}
             </span>
-            <span className="truncate">Notifications</span>
+            <span className="truncate">{t("title")}</span>
             {unreadCount > 0 ?
               <span className="ml-auto flex size-[18px] shrink-0 items-center justify-center rounded-full bg-red-500 text-[10px] font-semibold leading-none text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -135,7 +139,7 @@ export function NotificationBell({
           </button>
         : <button
             type="button"
-            aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+            aria-label={`${t("title")}${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
             className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-sm transition-colors hover-hover:hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Bell className="size-4" />
@@ -158,7 +162,7 @@ export function NotificationBell({
       <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-3 py-2.5">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">
-            Notifications
+            {t("title")}
           </DropdownMenuLabel>
           {unreadCount > 0 ? (
             <Button
@@ -168,7 +172,7 @@ export function NotificationBell({
               className="h-auto px-2 py-1 text-xs"
               onClick={handleMarkAllRead}
             >
-              Mark all read
+              {t("markAllRead")}
             </Button>
           ) : null}
         </div>
@@ -181,7 +185,7 @@ export function NotificationBell({
           </div>
         ) : notifications.length === 0 ? (
           <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-            No notifications yet
+            {t("empty")}
           </p>
         ) : (
           <ScrollArea className="max-h-80">

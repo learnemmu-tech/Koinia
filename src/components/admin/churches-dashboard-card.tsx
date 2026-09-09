@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
@@ -19,9 +20,11 @@ export function ChurchesDashboardCard({
   activeTab = false,
   onSelect,
 }: ChurchesDashboardCardProps) {
+  const t = useTranslations("dashboard");
+
   const stats = [
-    { label: "Total Churches", value: loading ? "—" : total },
-    { label: "Active Churches", value: loading ? "—" : active },
+    { label: t("totalChurches"), value: loading ? "—" : total },
+    { label: t("activeChurches"), value: loading ? "—" : active },
   ];
 
   return (
@@ -41,9 +44,9 @@ export function ChurchesDashboardCard({
           </div>
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/60">
-              Platform
+              {t("platform")}
             </p>
-            <h3 className="font-heading text-base font-bold">Church Management</h3>
+            <h3 className="font-heading text-base font-bold">{t("churchManagement")}</h3>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">

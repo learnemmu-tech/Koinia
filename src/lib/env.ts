@@ -19,6 +19,8 @@ export const env = createEnv({
 
     UMAMI_WEBSITE_ID: z.string().optional(),
     SUPER_ADMIN_EMAIL: z.string().email().optional(),
+    ADMIN_NOTIFICATION_EMAIL: z.string().email().optional(),
+    CONTACT_EMAIL: z.string().email().optional(),
   },
 
   client: {

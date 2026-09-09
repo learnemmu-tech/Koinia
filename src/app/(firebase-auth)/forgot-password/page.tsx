@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -15,16 +16,25 @@ import { Label } from "@/components/ui/label";
 import { getFirebaseAuthErrorMessage } from "@/lib/firebase-auth-errors";
 import { resetPassword } from "@/lib/firebase-auth-service";
 
-const forgotPasswordSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-});
+const forgotPasswordSchema = (tValidation: ReturnType<typeof useTranslations<"validation">>) =>
+  z.object({
+    email: z
+      .string()
+      .min(1, tValidation("emailRequired"))
+      .email(tValidation("invalidEmail")),
+  });
 
-type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
+type ForgotPasswordValues = {
+  email: string;
+};
 
 function ForgotPasswordForm() {
+  const tAuth = useTranslations("auth");
+  const tValidation = useTranslations("validation");
+  const forgotPasswordSchemaMemo = useMemo(
+    () => forgotPasswordSchema(tValidation),
+    [tValidation]
+  );
   const [isLoading, setIsLoading] = React.useState(false);
 
   const {
@@ -32,14 +42,14 @@ function ForgotPasswordForm() {
     handleSubmit,
     formState: { errors },
   } = useForm<ForgotPasswordValues>({
-    resolver: zodResolver(forgotPasswordSchema),
+    resolver: zodResolver(forgotPasswordSchemaMemo),
   });
 
   async function onSubmit(data: ForgotPasswordValues) {
     setIsLoading(true);
     try {
       await resetPassword(data.email);
-      toast.success("Password reset email sent. Check your inbox.");
+      toast.success(tAuth("resetEmailSent"));
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
     } finally {
@@ -50,15 +60,15 @@ function ForgotPasswordForm() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 text-center md:text-left">
-        <h1 className="text-2xl font-bold tracking-tight">Forgot password</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{tAuth("forgotPasswordTitle")}</h1>
         <p className="text-sm text-zinc-400">
-          Enter your email and we&apos;ll send you a reset link
+          {tAuth("forgotPasswordSubtitle")}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{tAuth("email")}</Label>
           <Input
             id="email"
             type="email"
@@ -79,7 +89,7 @@ function ForgotPasswordForm() {
           disabled={isLoading}
         >
           {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Send reset link
+          {tAuth("sendResetLink")}
         </Button>
       </form>
 
@@ -90,7 +100,7 @@ function ForgotPasswordForm() {
       >
         <Link href="/signin">
           <ArrowLeft className="mr-2 size-4" />
-          Back to sign in
+          {tAuth("backToSignIn")}
         </Link>
       </Button>
     </div>

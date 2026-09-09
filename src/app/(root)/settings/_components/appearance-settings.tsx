@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { setCookie } from "cookies-next";
 import { CheckIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 
 import type { ThemeConfig } from "@/types";
@@ -14,6 +15,8 @@ import { cn } from "@/lib/utils";
 const RADIUS = ["default", 0, 0.3, 0.5, 0.75, 1.0] as const;
 
 export function AppearanceSettings({ theme, radius }: ThemeConfig) {
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
   const router = useRouter();
 
   const { resolvedTheme: themeMode, setTheme } = useTheme();
@@ -29,11 +32,11 @@ export function AppearanceSettings({ theme, radius }: ThemeConfig) {
     <div className="space-y-8 px-6">
       <section id="mode" className="space-y-4">
         <h3 className="font-heading text-lg drop-shadow-md dark:bg-gradient-to-br dark:from-neutral-200 dark:to-neutral-600 dark:bg-clip-text dark:text-transparent sm:text-xl md:text-2xl">
-          Theme Mode
+          {t("themeMode")}
         </h3>
 
         <div className="flex gap-4">
-          {["light", "dark"].map((mode) => (
+          {(["light", "dark"] as const).map((mode) => (
             <div key={mode} onClick={() => setTheme(mode)}>
               <div
                 className={cn(
@@ -62,7 +65,7 @@ export function AppearanceSettings({ theme, radius }: ThemeConfig) {
               </div>
 
               <span className="block w-full p-2 text-center text-sm font-normal capitalize text-muted-foreground">
-                {mode}
+                {mode === "light" ? tCommon("themeLight") : tCommon("themeDark")}
               </span>
             </div>
           ))}
@@ -71,7 +74,7 @@ export function AppearanceSettings({ theme, radius }: ThemeConfig) {
 
       <section id="themes" className="space-y-4">
         <h3 className="font-heading text-lg drop-shadow-md dark:bg-gradient-to-br dark:from-neutral-200 dark:to-neutral-600 dark:bg-clip-text dark:text-transparent sm:text-xl md:text-2xl">
-          Themes
+          {t("themes")}
         </h3>
 
         <div className="flex max-w-5xl flex-wrap gap-2">
@@ -104,7 +107,7 @@ export function AppearanceSettings({ theme, radius }: ThemeConfig) {
 
       <section id="radius" className="space-y-4">
         <h3 className="font-heading text-lg drop-shadow-md dark:bg-gradient-to-br dark:from-neutral-200 dark:to-neutral-600 dark:bg-clip-text dark:text-transparent sm:text-xl md:text-2xl">
-          Radius
+          {t("radius")}
         </h3>
 
         <div className="flex flex-wrap gap-2">

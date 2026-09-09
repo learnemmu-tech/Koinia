@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { PrayerRequestList } from "@/components/admin/prayer-request-list";
 import { AdminChurchNotice } from "@/components/admin/admin-church-notice";
@@ -16,6 +17,7 @@ import { filterBySearch } from "@/lib/admin-list-utils";
 import { getPrayerRequestDisplayName } from "@/lib/prayer-request-firestore";
 
 export function AdminPrayersPageClient({ embedded = false }: { embedded?: boolean }) {
+  const t = useTranslations("prayer");
   const blocked = useAdminChurchBlocked();
   const { data: requests, loading, loadMore, hasMore, loadingMore } =
     useAdminPrayerRequests();
@@ -39,8 +41,8 @@ export function AdminPrayersPageClient({ embedded = false }: { embedded?: boolea
     <div className={embedded ? "space-y-4" : adminSectionClass}>
       {!embedded ?
         <AdminPageHeader
-          title="Prayer Requests"
-          description="Review, approve, and manage community prayer requests"
+          title={t("title")}
+          description={t("adminDescription")}
         />
       : null}
 
@@ -49,7 +51,7 @@ export function AdminPrayersPageClient({ embedded = false }: { embedded?: boolea
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search prayer requests…"
+        searchPlaceholder={t("searchPlaceholder")}
       />
 
       <PrayerRequestList requests={filteredRequests} loading={loading} />

@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import { MAX_SHORT_SOURCE_THUMBNAIL_BYTES } from "@/types/video-short";
 import { compressShortCoverIfNeeded } from "@/lib/compress-short-image";
 import {
@@ -127,6 +128,8 @@ export function ShortActionRail({
   onCoverUpdated,
   variant = "default",
 }: ShortActionRailProps) {
+  const tc = useTranslations("common");
+  const te = useTranslations("errors");
   const overlay = variant === "overlay";
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -146,7 +149,7 @@ export function ShortActionRail({
       await navigator.clipboard.writeText(url);
       toast.success("Link copied");
     } catch {
-      toast.error("Could not copy link.");
+      toast.error(te("generic"));
     }
   }
 
@@ -241,8 +244,8 @@ export function ShortActionRail({
     <>
       <div className="flex flex-col items-center gap-4">
         <ActionButton
-          label="Like"
-          activeLabel="Unlike"
+          label={tc("like")}
+          activeLabel={tc("like")}
           active={liked}
           count={likeCount}
           onClick={onLike}
@@ -252,7 +255,7 @@ export function ShortActionRail({
         </ActionButton>
 
         <ActionButton
-          label="Comments"
+          label={tc("comment")}
           count={commentCount}
           onClick={onComments}
           overlay={overlay}
@@ -261,7 +264,7 @@ export function ShortActionRail({
         </ActionButton>
 
         <ActionButton
-          label="Share"
+          label={tc("share")}
           onClick={() => void handleShare()}
           overlay={overlay}
         >
@@ -272,7 +275,7 @@ export function ShortActionRail({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="More options"
+              aria-label={tc("more")}
               className={cn(
                 "app-interactive flex size-11 items-center justify-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                 overlay
@@ -285,10 +288,10 @@ export function ShortActionRail({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onClick={() => void handleShare()}>
-              Copy link
+              {tc("copyLink")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => void handleReport()}>
-              Report Short
+              {tc("report")}
             </DropdownMenuItem>
             {canManage ?
               <>
@@ -340,9 +343,9 @@ export function ShortActionRail({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>{tc("cancel")}</AlertDialogCancel>
             <AlertDialogAction disabled={busy} onClick={() => void handleDelete()}>
-              Delete
+              {tc("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

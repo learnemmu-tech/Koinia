@@ -2,6 +2,7 @@
 
 import { Loader2, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 
@@ -28,18 +29,20 @@ type PrayerRequestsListClientProps = {
 };
 
 function PrayerRequestsEmptyState() {
+  const t = useTranslations("prayer");
+
   return (
     <div className="flex flex-col items-center px-6 py-20 text-center sm:py-24">
       <div className="flex size-20 items-center justify-center rounded-2xl bg-primary/10 text-4xl">
         🙏
       </div>
       <h2 className="mt-6 text-xl font-semibold tracking-tight text-foreground">
-        No prayer requests yet
+        {t("emptyTitle")}
       </h2>
       <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-        Be the first to share a prayer need with your community.
+        {t("emptyDescription")}
       </p>
-      <SubmitPrayerRequestButton className="mt-8" label="Request Prayer" />
+      <SubmitPrayerRequestButton className="mt-8" label={t("requestPrayer")} />
     </div>
   );
 }
@@ -55,6 +58,8 @@ function PrayerRequestsToolbar({
   category: string;
   onCategoryChange: (value: string) => void;
 }) {
+  const t = useTranslations("prayer");
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="relative w-full max-w-[400px]">
@@ -65,19 +70,19 @@ function PrayerRequestsToolbar({
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search prayer requests…"
+          placeholder={t("searchPlaceholder")}
           className="h-10 rounded-full border-border/60 bg-background pl-10 shadow-sm"
         />
       </div>
       <Select value={category} onValueChange={onCategoryChange}>
         <SelectTrigger className="h-10 w-full rounded-full border-border/60 bg-background shadow-sm sm:w-[11rem]">
-          <SelectValue placeholder="Category" />
+          <SelectValue placeholder={t("category")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All categories</SelectItem>
+          <SelectItem value="all">{t("allCategories")}</SelectItem>
           {PRAYER_CATEGORIES.map((item) => (
             <SelectItem key={item.value} value={item.value}>
-              {item.label}
+              {t(`categories.${item.value}`)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -89,6 +94,8 @@ function PrayerRequestsToolbar({
 export function PrayerRequestsListClient({
   initialRequests,
 }: PrayerRequestsListClientProps) {
+  const t = useTranslations("prayer");
+  const tCommon = useTranslations("common");
   const { requests, loading, loadMore, hasMore, loadingMore } =
     useApprovedPrayerRequests(initialRequests);
   const [search, setSearch] = useState("");
@@ -124,16 +131,16 @@ export function PrayerRequestsListClient({
               id="prayer-requests-heading"
               className="font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
             >
-              Prayer Wall
+              {t("wallTitle")}
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              Lift each other up in prayer. Every request matters.
+              {t("description")}
             </p>
           </div>
         </div>
         <SubmitPrayerRequestButton
           className="h-10 shrink-0 self-start rounded-full px-5 shadow-sm sm:ml-4"
-          label="Request Prayer"
+          label={t("requestPrayer")}
         />
       </header>
 
@@ -157,10 +164,10 @@ export function PrayerRequestsListClient({
       : filteredRequests.length === 0 ?
         <div className="rounded-2xl border border-dashed border-border/60 bg-muted/10 px-6 py-14 text-center">
           <p className="text-sm font-medium text-foreground">
-            No matching prayer requests
+            {t("noMatchTitle")}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Try adjusting your search or category filter.
+            {t("noMatchDescription")}
           </p>
         </div>
       : <>
@@ -181,9 +188,9 @@ export function PrayerRequestsListClient({
                 {loadingMore ?
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
-                    Loading…
+                    {tCommon("loading")}
                   </>
-                : "Load more"}
+                : tCommon("loadMore")}
               </Button>
             </div>
           : null}

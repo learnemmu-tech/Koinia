@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 
 import { SongsTabContent } from "@/components/worship/songs-tab-content";
 import { SongsAdminBar } from "@/components/admin/inline/songs-admin-bar";
+import { SongsPageHeading } from "@/components/worship/songs-page-heading";
 import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getPublishedSongsCached } from "@/lib/cached-worship-data";
-import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
+import { pageContentClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
@@ -33,17 +34,7 @@ export default async function SongsPage() {
       aria-labelledby="songs-heading"
     >
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/60">
-            Worship Collection
-          </p>
-          <h1 id="songs-heading" className={typePageTitleClass}>
-            Songs
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Listen to Christian worship music and read Telugu and English lyrics.
-          </p>
-        </div>
+        <SongsPageHeading />
         <SongsAdminBar
           contentScope={isPlatformPublic ? "platform_public" : "organization"}
         />

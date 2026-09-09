@@ -2,19 +2,16 @@ import { NextResponse } from "next/server";
 
 import { donationCheckoutApiSchema } from "@/lib/donation-form-validation";
 import {
-  completeDonationPayment,
+  bindDonationCheckoutReference,
   createPendingDonation,
 } from "@/lib/donation-server";
 import { getDonationCampaignById } from "@/lib/firebase-donation-queries";
 import { getConfiguredPaymentProvider } from "@/lib/payments";
 
-function getBaseUrl(request: Request): string {
+function getBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
 
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  const protocol = request.headers.get("x-forwarded-proto") ?? "http";
-  if (host) return `${protocol}://${host}`;
   if (process.env.NODE_ENV === "production") {
     throw new Error("NEXT_PUBLIC_APP_URL is not configured.");
   }
@@ -45,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     const provider = getConfiguredPaymentProvider();
-    const baseUrl = getBaseUrl(request);
+    const baseUrl = getBaseUrl();
 
     const donationId = await createPendingDonation({
       campaignId: campaign.id,
@@ -71,6 +68,13 @@ export async function POST(request: Request) {
       cancelUrl: `${baseUrl}/donations/${encodeURIComponent(campaign.id)}?cancelled=1`,
     });
 
+    // Bind provider checkout/order id to the pending donation so client verify
+    // cannot complete a different donation with a valid signature.
+    const checkoutReference = checkout.orderId ?? checkout.sessionId;
+    if (checkoutReference) {
+      await bindDonationCheckoutReference(donationId, checkoutReference);
+    }
+
     return NextResponse.json({
       donationId,
       provider: checkout.provider,
@@ -87,47 +91,5 @@ export async function POST(request: Request) {
       error instanceof Error ? error.message : "Unable to start checkout.";
     const status = message.includes("not configured") ? 503 : 500;
     return NextResponse.json({ error: message }, { status });
-  }
-}
-
-export async function PATCH(request: Request) {
-  try {
-    const body = (await request.json()) as {
-      donationId?: string;
-      campaignId?: string;
-      transactionId?: string;
-      amount?: number;
-      currency?: string;
-      paymentProvider?: "stripe" | "razorpay";
-      status?: "completed" | "failed" | "cancelled";
-    };
-
-    if (
-      !body.donationId ||
-      !body.campaignId ||
-      !body.transactionId ||
-      !body.amount ||
-      !body.currency ||
-      !body.paymentProvider ||
-      !body.status
-    ) {
-      return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
-    }
-
-    await completeDonationPayment({
-      donationId: body.donationId,
-      campaignId: body.campaignId,
-      transactionId: body.transactionId,
-      amount: body.amount,
-      currency: body.currency.toUpperCase() as "INR" | "USD",
-      paymentProvider: body.paymentProvider,
-      status: body.status,
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to update donation.";
-    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

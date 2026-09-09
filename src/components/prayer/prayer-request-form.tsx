@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Send } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,12 +40,9 @@ import {
   PRAYER_CATEGORIES,
   PRAYER_REQUEST_MAX,
   PRAYER_TITLE_MAX,
-  prayerRequestSubmitSchema,
+  PRAYER_NAME_MAX,
   type PrayerRequestSubmitValues,
 } from "@/lib/prayer-request-validation";
-
-const SUCCESS_MESSAGE =
-  "Your prayer request has been submitted. Our church admin will review it shortly.";
 
 function getDefaultName(
   profile: { firstName?: string; lastName?: string } | null,
@@ -68,12 +67,60 @@ export function PrayerRequestForm({
   onCancel,
 }: PrayerRequestFormProps) {
   const router = useRouter();
+  const tPrayer = useTranslations("prayer");
+  const tCommon = useTranslations("common");
+  const tValidation = useTranslations("validation");
   const { authUser, profile, loading, user } = useFirebaseAuth();
   const organization = useOrganizationOptional();
   const activeBranch = useActiveBranchOptional();
   const { churchId, isLoading: churchLoading } = useActiveChurchScope();
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const prayerRequestSubmitSchema = useMemo(
+    () =>
+      z.object({
+        name: z
+          .string()
+          .max(
+            PRAYER_NAME_MAX,
+            tValidation("maxLength", { count: PRAYER_NAME_MAX })
+          ),
+        email: z
+          .string()
+          .email(tValidation("invalidEmail"))
+          .max(120)
+          .optional()
+          .or(z.literal("")),
+        title: z
+          .string()
+          .min(1, tValidation("prayerTitleRequired"))
+          .max(
+            PRAYER_TITLE_MAX,
+            tValidation("maxLength", { count: PRAYER_TITLE_MAX })
+          ),
+        request: z
+          .string()
+          .min(1, tValidation("prayerRequestRequired"))
+          .max(
+            PRAYER_REQUEST_MAX,
+            tValidation("maxLength", { count: PRAYER_REQUEST_MAX })
+          ),
+        category: z.enum([
+          "general",
+          "health",
+          "family",
+          "finances",
+          "salvation",
+          "guidance",
+          "thanksgiving",
+          "other",
+        ]),
+        isAnonymous: z.boolean(),
+        shareWithCommunity: z.boolean(),
+      }),
+    [tValidation]
+  );
 
   const form = useForm<PrayerRequestSubmitValues>({
     resolver: zodResolver(prayerRequestSubmitSchema),
@@ -101,13 +148,13 @@ export function PrayerRequestForm({
 
   async function onSubmit(values: PrayerRequestSubmitValues) {
     if (!authUser) {
-      setSubmitError("Please sign in to submit a prayer request.");
+      setSubmitError(tPrayer("signInRequired"));
       return;
     }
 
     const effectiveChurchId = churchId || getLegacyDefaultChurchId();
     if (MULTI_CHURCH_ENABLED && !effectiveChurchId) {
-      setSubmitError("No church is configured yet. Please try again later.");
+      setSubmitError(tPrayer("noChurchConfigured"));
       return;
     }
 
@@ -161,7 +208,7 @@ export function PrayerRequestForm({
       setSubmitted(true);
       onSuccess?.();
     } catch {
-      setSubmitError("Unable to submit your prayer request. Please try again.");
+      setSubmitError(tPrayer("submitFailed"));
     }
   }
 
@@ -177,10 +224,10 @@ export function PrayerRequestForm({
     return (
       <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-6 text-center">
         <p className="text-sm text-muted-foreground">
-          Sign in to submit a prayer request.
+          {tPrayer("signInToSubmit")}
         </p>
         <Button asChild className="mt-4 rounded-full">
-          <Link href="/signin?callbackUrl=/prayer-requests">Sign In</Link>
+          <Link href="/signin?callbackUrl=/prayer-requests">{tCommon("signIn")}</Link>
         </Button>
       </div>
     );
@@ -193,12 +240,12 @@ export function PrayerRequestForm({
           🙏
         </div>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          {SUCCESS_MESSAGE}
+          {tPrayer("submitSuccess")}
         </p>
         {variant === "page" ?
           <div className="flex flex-wrap gap-3 pt-2">
             <Button asChild variant="default" className="rounded-full">
-              <Link href="/prayer-requests">View Prayer Requests</Link>
+              <Link href="/prayer-requests">{tPrayer("viewPrayerRequests")}</Link>
             </Button>
             <Button
               type="button"
@@ -206,7 +253,7 @@ export function PrayerRequestForm({
               className="rounded-full"
               onClick={() => router.push("/")}
             >
-              Back Home
+              {tPrayer("backHome")}
             </Button>
           </div>
         : onCancel ?
@@ -216,7 +263,7 @@ export function PrayerRequestForm({
             className="mt-2 rounded-full"
             onClick={onCancel}
           >
-            Done
+            {tPrayer("done")}
           </Button>
         : null}
       </div>
@@ -244,10 +291,12 @@ export function PrayerRequestForm({
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{isDialog ? "Title" : "Prayer Title"}</FormLabel>
+              <FormLabel>
+                {isDialog ? tPrayer("titleLabel") : tPrayer("prayerTitle")}
+              </FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Brief title for your request"
+                  placeholder={tPrayer("titlePlaceholder")}
                   maxLength={PRAYER_TITLE_MAX}
                   autoComplete="off"
                   {...field}
@@ -263,10 +312,12 @@ export function PrayerRequestForm({
           name="request"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{isDialog ? "Description" : "Prayer Request"}</FormLabel>
+              <FormLabel>
+                {isDialog ? tPrayer("descriptionLabel") : tPrayer("prayerRequest")}
+              </FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Share your prayer need with the community..."
+                  placeholder={tPrayer("requestPlaceholder")}
                   rows={isDialog ? 5 : 6}
                   maxLength={PRAYER_REQUEST_MAX}
                   {...field}
@@ -282,17 +333,17 @@ export function PrayerRequestForm({
           name="category"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Category</FormLabel>
+              <FormLabel>{tPrayer("category")}</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder={tPrayer("categoryPlaceholder")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {PRAYER_CATEGORIES.map((category) => (
                     <SelectItem key={category.value} value={category.value}>
-                      {category.label}
+                      {tPrayer(`categories.${category.value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -309,12 +360,14 @@ export function PrayerRequestForm({
             <FormItem className="flex items-center justify-between gap-4 rounded-xl border border-border/50 bg-muted/20 p-4">
               <div className="space-y-1">
                 <FormLabel>
-                  {isDialog ? "Make this anonymous" : "Submit anonymously"}
+                  {isDialog ?
+                    tPrayer("makeAnonymous")
+                  : tPrayer("submitAnonymously")}
                 </FormLabel>
                 <FormDescription>
                   {isDialog ?
-                    "Your name will show as Anonymous if approved."
-                  : "Your name will not be shown publicly if approved."}
+                    tPrayer("anonymousDescriptionDialog")
+                  : tPrayer("anonymousDescription")}
                 </FormDescription>
               </div>
               <FormControl>
@@ -331,9 +384,9 @@ export function PrayerRequestForm({
             render={({ field }) => (
               <FormItem className="flex items-center justify-between gap-4 rounded-xl border border-border/50 bg-muted/20 p-4">
                 <div className="space-y-1">
-                  <FormLabel>Share with community</FormLabel>
+                  <FormLabel>{tPrayer("shareWithCommunity")}</FormLabel>
                   <FormDescription>
-                    When approved, your request can appear on the public prayer wall.
+                    {tPrayer("shareWithCommunityDescription")}
                   </FormDescription>
                 </div>
                 <FormControl>
@@ -350,12 +403,16 @@ export function PrayerRequestForm({
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name (optional)</FormLabel>
+                <FormLabel>{tPrayer("nameOptional")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Your name" autoComplete="name" {...field} />
+                  <Input
+                    placeholder={tPrayer("namePlaceholder")}
+                    autoComplete="name"
+                    {...field}
+                  />
                 </FormControl>
                 <FormDescription>
-                  Pre-filled from your profile when available.
+                  {tPrayer("namePrefilledHint")}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -378,7 +435,7 @@ export function PrayerRequestForm({
               onClick={onCancel}
               disabled={form.formState.isSubmitting}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
           : null}
           <Button
@@ -391,7 +448,9 @@ export function PrayerRequestForm({
             : isDialog ?
               null
             : <Send className="mr-2 size-4" aria-hidden />}
-            {isDialog ? "Submit Request" : "Submit Prayer Request"}
+            {isDialog ?
+              tPrayer("submitRequest")
+            : tPrayer("submitPrayerRequest")}
           </Button>
         </div>
       </form>
@@ -408,14 +467,13 @@ export function PrayerRequestForm({
       <div className="space-y-6 p-6 sm:p-8">
         <div className="space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/60">
-            Share a Need
+            {tPrayer("formEyebrow")}
           </p>
           <h2 className="font-heading text-xl font-semibold text-foreground sm:text-2xl">
-            Submit Prayer Request
+            {tPrayer("submitTitle")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Share your prayer need with our community. Requests are reviewed
-            before appearing publicly.
+            {tPrayer("submitDescription")}
           </p>
         </div>
 

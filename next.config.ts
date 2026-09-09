@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // This is validation for the environment variables early in the build process.
 import "./src/lib/env";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isProd = process.env.NODE_ENV === "production";
 const isDocker = process.env.IS_DOCKER === "true";
@@ -119,4 +122,4 @@ const config: NextConfig = {
   },
 };
 
-export default config;
+export default withNextIntl(config);

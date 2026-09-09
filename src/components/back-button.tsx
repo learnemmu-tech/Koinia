@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,13 @@ type BackButtonProps = {
 };
 
 export function BackButton({
-  label = "Back",
+  label,
   fallbackHref = "/",
   className,
 }: BackButtonProps) {
+  const tCommon = useTranslations("common");
   const router = useRouter();
+  const resolvedLabel = label ?? tCommon("back");
 
   function handleBack() {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -40,7 +43,7 @@ export function BackButton({
       )}
     >
       <ArrowLeft className="h-4 w-4 shrink-0" />
-      <span>{label}</span>
+      <span>{resolvedLabel}</span>
     </Button>
   );
 }

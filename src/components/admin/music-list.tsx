@@ -174,6 +174,7 @@
 
 import React, { useState } from "react";
 import { Edit2, Trash2, Loader2, Music2, FileText, Headphones, Star, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { FirebaseSong } from "@/types/firebase-song";
@@ -204,6 +205,8 @@ type MusicListProps = {
 };
 
 export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) {
+  const t = useTranslations("songs");
+  const tCommon = useTranslations("common");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedSong, setSelectedSong] = useState<FirebaseSong | null>(null);
@@ -218,10 +221,10 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
     setDeleting(selectedSong.id);
     try {
       await deleteSong(selectedSong.id);
-      toast.success("Song deleted");
+      toast.success(t("deletedSuccess"));
       onDelete();
     } catch {
-      toast.error("Failed to delete song");
+      toast.error(t("deleteFailed"));
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -235,7 +238,7 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
         <div className="flex flex-col items-center justify-center gap-3 py-20">
           <Loader2 className="h-7 w-7 animate-spin text-primary/60" />
-          <p className="text-sm text-muted-foreground">Loading songs…</p>
+          <p className="text-sm text-muted-foreground">{t("loadingAdmin")}</p>
         </div>
       </div>
     );
@@ -250,9 +253,9 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
             <Music2 className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium">No songs have been created for this church yet.</p>
+            <p className="text-sm font-medium">{t("emptyAdminTitle")}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Create your first song to get started.
+              {t("emptyAdminDescription")}
             </p>
           </div>
         </div>
@@ -268,10 +271,10 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
         <div className="border-b border-border/50 bg-muted/30 px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              All Songs
+              {t("allAdmin")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {songs.length} {songs.length === 1 ? "song" : "songs"}
+              {t("songCount", { count: songs.length })}
             </p>
           </div>
         </div>
@@ -327,25 +330,25 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
                     {song.featured ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
                         <Star className="h-2.5 w-2.5" />
-                        Featured
+                        {tCommon("featured")}
                       </span>
                     ) : null}
                     {!song.published ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                         <EyeOff className="h-2.5 w-2.5" />
-                        Draft
+                        {tCommon("draft")}
                       </span>
                     ) : null}
                     {hasAudio && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
                         <Headphones className="h-2.5 w-2.5" />
-                        Audio
+                        {tCommon("audio")}
                       </span>
                     )}
                     {hasLyrics && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                         <FileText className="h-2.5 w-2.5" />
-                        Lyrics
+                        {tCommon("lyrics")}
                       </span>
                     )}
                   </div>
@@ -369,7 +372,7 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
                     className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Edit</span>
+                    <span className="hidden sm:inline">{tCommon("edit")}</span>
                   </Button>
                   <Button
                     size="sm"
@@ -383,7 +386,7 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
                     ) : (
                       <Trash2 className="h-3.5 w-3.5" />
                     )}
-                    <span className="hidden sm:inline">Delete</span>
+                    <span className="hidden sm:inline">{tCommon("delete")}</span>
                   </Button>
                 </div>
               </div>
@@ -399,24 +402,23 @@ export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) 
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-destructive/10">
               <Trash2 className="h-5 w-5 text-destructive" />
             </div>
-            <AlertDialogTitle className="mt-2">Delete Song?</AlertDialogTitle>
+            <AlertDialogTitle className="mt-2">{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-foreground">
-                &quot;{selectedSong ? getSongDisplayTitle(selectedSong) : ""}&quot;
-              </span>
-              ? This action cannot be undone.
+              {tCommon("deleteConfirmNamed", {
+                name: selectedSong ? getSongDisplayTitle(selectedSong) : "",
+              })}{" "}
+              {tCommon("cannotUndo")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2 pt-2">
             <AlertDialogCancel className="rounded-full px-5">
-              Cancel
+              {tCommon("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="rounded-full bg-destructive px-5 text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {tCommon("delete")}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

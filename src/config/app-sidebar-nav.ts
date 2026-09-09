@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  BookMarked,
   BookOpen,
   CalendarDays,
   Church,
@@ -12,6 +13,7 @@ import {
   Home,
   Layers,
   LayoutDashboard,
+  Library,
   Music,
   Settings2,
   Shield,
@@ -144,6 +146,28 @@ export const PUBLIC_BROWSE_NAV_ITEMS: AppNavItem[] = BROWSE_NAV_ITEMS.filter(
   (item) => item.href !== "/prayer-requests"
 );
 
+export const BOOKS_NAV_ITEM: AppNavItem = {
+  label: "Books",
+  href: "/books",
+  icon: BookMarked,
+  match: startsWith("/books"),
+};
+
+export const LIBRARY_NAV_ITEM: AppNavItem = {
+  label: "Library",
+  href: "/favorites",
+  icon: Library,
+  match: startsWith("/favorites"),
+  authOnly: true,
+};
+
+export const RESOURCE_NAV_ITEMS: AppNavItem[] = [
+  BOOKS_NAV_ITEM,
+  LIBRARY_NAV_ITEM,
+];
+
+export const PUBLIC_RESOURCE_NAV_ITEMS: AppNavItem[] = [BOOKS_NAV_ITEM];
+
 export const SUPER_ADMIN_NAV_ITEM: AppNavItem = {
   label: "Super Admin",
   href: SUPER_ADMIN_BASE,
@@ -224,6 +248,7 @@ export function getMultiOrgAdminSidebarSections(
   return [
     { items: [HOME_NAV_ITEM] },
     { label: "Manage", items: MULTI_ORG_MANAGE_NAV_ITEMS },
+    { label: "Resources", items: RESOURCE_NAV_ITEMS },
     {
       label: "Churches",
       items: [
@@ -270,7 +295,7 @@ export function getAdminSidebarSections(
   if (isMultiChurchOrgWorkspace(organization)) {
     return [
       ...getMultiOrgAdminSidebarSections(organization, churches),
-      { items: MULTI_ORG_SETTINGS_NAV_ITEMS },
+      { label: "Settings", items: MULTI_ORG_SETTINGS_NAV_ITEMS },
       { items: [SUPER_ADMIN_NAV_ITEM] },
     ];
   }
@@ -281,7 +306,8 @@ export function getAdminSidebarSections(
     { items: [HOME_NAV_ITEM] },
     { label: "Manage", items: manageItems },
     { label: "Browse", items: BROWSE_NAV_ITEMS },
-    { items: ADMIN_FOOTER_NAV_ITEMS },
+    { label: "Resources", items: RESOURCE_NAV_ITEMS },
+    { label: "Settings", items: ADMIN_FOOTER_NAV_ITEMS },
     { items: [SUPER_ADMIN_NAV_ITEM] },
   ];
 }
@@ -290,6 +316,7 @@ export function getPublicSidebarSections(): SidebarNavSection[] {
   return [
     { items: [HOME_NAV_ITEM] },
     { label: "Browse", items: PUBLIC_BROWSE_NAV_ITEMS },
+    { label: "Resources", items: PUBLIC_RESOURCE_NAV_ITEMS },
   ];
 }
 
@@ -302,6 +329,7 @@ export function getSuperAdminSidebarSections(): SidebarNavSection[] {
   return [
     { items: [HOME_NAV_ITEM] },
     { label: "Browse", items: PUBLIC_BROWSE_NAV_ITEMS },
+    { label: "Resources", items: PUBLIC_RESOURCE_NAV_ITEMS },
     { items: [SUPER_ADMIN_NAV_ITEM] },
   ];
 }
@@ -310,6 +338,7 @@ export function getMemberSidebarSections(): SidebarNavSection[] {
   return [
     { items: [HOME_NAV_ITEM] },
     { label: "Browse", items: BROWSE_NAV_ITEMS.map(({ badgeKey: _, ...item }) => item) },
+    { label: "Resources", items: RESOURCE_NAV_ITEMS },
     { items: [SUPER_ADMIN_NAV_ITEM] },
   ];
 }
@@ -355,6 +384,7 @@ export function getAllAppNavItems(): AppNavItem[] {
     HOME_NAV_ITEM,
     ...MANAGE_NAV_ITEMS,
     ...BROWSE_NAV_ITEMS,
+    ...RESOURCE_NAV_ITEMS,
     ...ADMIN_FOOTER_NAV_ITEMS,
   ];
 }
@@ -374,6 +404,7 @@ export function getActiveNavGroupLabel(pathname: string): string | undefined {
   if (active.href === HOME_NAV_ITEM.href) return undefined;
   if (MANAGE_NAV_ITEMS.some((item) => item.href === active.href)) return "Manage";
   if (BROWSE_NAV_ITEMS.some((item) => item.href === active.href)) return "Browse";
+  if (RESOURCE_NAV_ITEMS.some((item) => item.href === active.href)) return "Resources";
   if (ADMIN_FOOTER_NAV_ITEMS.some((item) => item.href === active.href)) {
     return "Settings";
   }

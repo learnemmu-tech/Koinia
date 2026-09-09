@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 
 import { SermonsTabContent } from "@/components/worship/sermons-tab-content";
 import { SermonsAdminBar } from "@/components/admin/inline/sermons-admin-bar";
+import { I18nPageHeading } from "@/components/i18n/page-heading";
 import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getPublishedSermonsCached } from "@/lib/cached-worship-data";
-import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
+import { pageContentClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
@@ -27,17 +28,7 @@ export default async function SermonsPage() {
       aria-labelledby="sermons-heading"
     >
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/60">
-            Teaching
-          </p>
-          <h1 id="sermons-heading" className={typePageTitleClass}>
-            Sermons
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Messages to strengthen your faith and deepen your walk with God.
-          </p>
-        </div>
+        <I18nPageHeading ns="sermons" headingId="sermons-heading" />
         <SermonsAdminBar
           contentScope={isPlatformPublic ? "platform_public" : "organization"}
         />

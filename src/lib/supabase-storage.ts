@@ -247,6 +247,8 @@ export function buildStorageObjectKey(
       return `events/${id}/${fileName}`;
     case "donation":
       return `donations/${id}/${fileName}`;
+    case "book":
+      return `books/${id}/cover/${fileName}`;
   }
 }
 

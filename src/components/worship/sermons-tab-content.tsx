@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import type { FirebaseSermon } from "@/types/firebase-sermon";
 
@@ -22,6 +23,7 @@ export function SermonsTabContent({
   initialSermons,
   isPlatformPublic = false,
 }: SermonsTabContentProps) {
+  const t = useTranslations("sermons");
   const { data: liveSermons, syncing, loadMore, hasMore, loadingMore } =
     useRealtimeSermons(initialSermons, { clientSync: !isPlatformPublic });
   const sermons = useMemo(
@@ -52,7 +54,7 @@ export function SermonsTabContent({
   }
 
   if (sermons.length === 0) {
-    return <TabEmptyState message="No Sermons Found" />;
+    return <TabEmptyState message={t("empty")} />;
   }
 
   return (
@@ -60,13 +62,17 @@ export function SermonsTabContent({
       <ContentListToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search sermons…"
+        searchPlaceholder={t("searchPlaceholder")}
       />
 
-      <CollectionTabHeader title="Sermons" count={filteredSermons.length} />
+      <CollectionTabHeader
+        title={t("title")}
+        count={filteredSermons.length}
+        countLabel={t("itemCount", { count: filteredSermons.length })}
+      />
 
       {filteredSermons.length === 0 ?
-        <TabEmptyState message="No sermons match your search." />
+        <TabEmptyState message={t("noMatch")} />
       : <div className={worshipContentGridClassName}>
           {filteredSermons.map((sermon) => (
             <FirebaseSermonCard key={sermon.id} sermon={sermon} />

@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { Pen } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,9 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { currentlyInDev } from "@/lib/utils";
 
 export function ProfileForm() {
+  const t = useTranslations("settings");
+  const tAuth = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const { authUser, profile, signOut } = useFirebaseAuth();
 
   const displayName =
@@ -23,9 +27,9 @@ export function ProfileForm() {
   async function handleSignOut() {
     try {
       await signOut();
-      toast.success("Signed out successfully.");
+      toast.success(tAuth("signedOut"));
     } catch {
-      toast.error("Failed to sign out.");
+      toast.error(tAuth("signOutFailed"));
     }
   }
 
@@ -34,7 +38,7 @@ export function ProfileForm() {
       <div className="space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="profile-name">Name</Label>
+            <Label htmlFor="profile-name">{t("nameLabel")}</Label>
             <Input
               id="profile-name"
               value={displayName}
@@ -44,7 +48,7 @@ export function ProfileForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="profile-email">Email</Label>
+            <Label htmlFor="profile-email">{tAuth("email")}</Label>
             <Input
               id="profile-email"
               type="email"
@@ -55,26 +59,26 @@ export function ProfileForm() {
           </div>
 
           <Button type="button" onClick={currentlyInDev} className="shadow-sm">
-            Save Changes
+            {tCommon("saveChanges")}
           </Button>
         </div>
 
         <div id="delete-account" className="space-y-4">
           <p className="text-3xl font-bold text-destructive drop-shadow">
-            Danger Zone
+            {t("dangerZone")}
           </p>
           <Separator />
 
           <div className="flex justify-between gap-4">
             <div>
-              <p className="font-medium">Sign out of your account</p>
+              <p className="font-medium">{t("signOutTitle")}</p>
               <small className="text-muted-foreground">
-                End your session on this device.
+                {t("signOutDescription")}
               </small>
             </div>
 
             <Button variant="destructive" onClick={handleSignOut}>
-              Sign Out
+              {tAuth("signOut")}
             </Button>
           </div>
         </div>
@@ -83,7 +87,7 @@ export function ProfileForm() {
       <div className="relative size-52 overflow-hidden">
         <Image
           src={authUser?.photoURL ?? "/images/placeholder/user.jpg"}
-          alt={displayName || "Profile Photo"}
+          alt={displayName || t("profilePhotoAlt")}
           fill
           className="rounded-full border p-1 shadow-sm"
         />
@@ -94,7 +98,7 @@ export function ProfileForm() {
           onClick={currentlyInDev}
           className="absolute bottom-4 left-0 gap-2 shadow-sm"
         >
-          <Pen size={14} /> Edit
+          <Pen size={14} /> {tCommon("edit")}
         </Button>
       </div>
     </div>

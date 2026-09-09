@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { EventList } from "@/components/admin/event-list";
 import { AdminChurchNotice } from "@/components/admin/admin-church-notice";
@@ -36,6 +37,8 @@ const AddEventModal = dynamic(
 type EventStatusFilter = "all" | FirebaseEvent["status"];
 
 export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean }) {
+  const t = useTranslations("events");
+  const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
@@ -81,9 +84,9 @@ export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean
     <div className={embedded ? "space-y-4" : adminSectionClass}>
       {!embedded ?
         <AdminPageHeader
-          title="Events"
-          description="Manage church events and registrations"
-          actionLabel="Create Event"
+          title={t("title")}
+          description={t("adminDescription")}
+          actionLabel={t("create")}
           onAction={() => {
             setSelectedEvent(null);
             setModalOpen(true);
@@ -97,8 +100,8 @@ export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search events…"
-        actionLabel={embedded ? "Create Event" : undefined}
+        searchPlaceholder={t("searchPlaceholder")}
+        actionLabel={embedded ? t("create") : undefined}
         onAction={
           embedded ?
             () => {
@@ -114,12 +117,12 @@ export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean
           onValueChange={(value) => setStatusFilter(value as EventStatusFilter)}
         >
           <SelectTrigger className="w-full min-w-0 sm:w-[8.75rem] rounded-full">
-            <SelectValue placeholder="Filter" />
+            <SelectValue placeholder={tCommon("filter")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            <SelectItem value="published">{tCommon("published")}</SelectItem>
+            <SelectItem value="draft">{tCommon("draft")}</SelectItem>
           </SelectContent>
         </Select>
       </AdminToolbar>

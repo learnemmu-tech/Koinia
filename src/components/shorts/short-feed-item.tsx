@@ -8,6 +8,7 @@ import { ShortVideoPlayer } from "@/components/shorts/short-video-player";
 import { ShortActionRail } from "@/components/shorts/short-action-rail";
 import { parseShortCaption } from "@/lib/short-caption";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 type ShortFeedItemProps = {
   short: VideoShort;
@@ -46,6 +47,7 @@ function CreatorCaptionBlock({
   overlay?: boolean;
   className?: string;
 }) {
+  const tc = useTranslations("common");
   const { title, description, topic } = React.useMemo(
     () => parseShortCaption(short.caption, short.category),
     [short.caption, short.category]
@@ -122,7 +124,7 @@ function CreatorCaptionBlock({
               )}
               onClick={onToggleExpanded}
             >
-              {expanded ? "Less" : "More"}
+              {expanded ? "Less" : tc("more")}
             </button>
           : null}
 

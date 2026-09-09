@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import type { FirebaseSong } from "@/types/firebase-song";
 
@@ -55,6 +56,7 @@ export function SongsTabContent({
   const visibleSongs = useMemo(() => filterPublishedSongs(songs), [songs]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const t = useTranslations("songs");
 
   const filteredSongs = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -83,7 +85,7 @@ export function SongsTabContent({
   }
 
   if (visibleSongs.length === 0) {
-    return <TabEmptyState message="No songs available yet." />;
+    return <TabEmptyState message={t("empty")} />;
   }
 
   return (
@@ -91,17 +93,17 @@ export function SongsTabContent({
       <ContentListToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search songs…"
+        searchPlaceholder={t("searchPlaceholder")}
       >
         <Select value={category} onValueChange={setCategory}>
           <SelectTrigger className="w-full min-w-0 sm:w-[10rem] rounded-full">
-            <SelectValue placeholder="Category" />
+            <SelectValue placeholder={t("category")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="all">{t("allCategories")}</SelectItem>
             {SONG_CATEGORIES.map((item) => (
               <SelectItem key={item} value={item}>
-                {item}
+                {t(`categories.${item}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -111,7 +113,7 @@ export function SongsTabContent({
       <SongsTabHeader count={filteredSongs.length} />
 
       {filteredSongs.length === 0 ?
-        <TabEmptyState message="No songs match your search." />
+        <TabEmptyState message={t("noMatch")} />
       : <div className={songsPageGridClassName}>
           {filteredSongs.map((song) => (
             <FirebaseSongCard key={song.id} song={song} />

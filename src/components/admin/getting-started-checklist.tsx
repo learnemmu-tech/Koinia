@@ -12,6 +12,7 @@ import {
   Mic2,
   Users,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ type OnboardingTask = {
 };
 
 export function GettingStartedChecklist() {
+  const t = useTranslations("onboarding");
   const analytics = useAdminAnalytics();
   const { branchesByChurch } = useOrganization();
   const hasChurch = Object.values(branchesByChurch).flat().length > 0;
@@ -46,80 +48,80 @@ export function GettingStartedChecklist() {
   const tasks: OnboardingTask[] = [
     {
       id: "church",
-      title: "Church created",
-      description: "Your ministry workspace is live and ready to customize.",
+      title: t("tasks.churchTitle"),
+      description: t("tasks.churchDescription"),
       done: hasChurch,
       href: "/dashboard/organization?tab=churches",
-      cta: hasChurch ? "View" : "Create",
+      cta: hasChurch ? t("ctaView") : t("ctaCreate"),
       icon: CheckCircle2,
       accent: "from-emerald-500/10 to-emerald-500/5 border-emerald-500/20",
     },
     {
       id: "sermon",
-      title: "Create your first sermon",
-      description: "Share messages with your congregation online.",
+      title: t("tasks.sermonTitle"),
+      description: t("tasks.sermonDescription"),
       done: analytics.counts.sermons > 0,
       href: "/dashboard/content?tab=sermons",
-      cta: "Create",
+      cta: t("ctaCreate"),
       icon: Mic2,
       accent: "from-violet-500/10 to-violet-500/5 border-violet-500/20",
     },
     {
       id: "song",
-      title: "Upload your first song",
-      description: "Build your worship library for your community.",
+      title: t("tasks.songTitle"),
+      description: t("tasks.songDescription"),
       done: analytics.counts.songs > 0,
       href: "/dashboard/content?tab=songs",
-      cta: "Upload",
+      cta: t("ctaUpload"),
       icon: ListMusic,
       accent: "from-blue-500/10 to-blue-500/5 border-blue-500/20",
     },
     {
       id: "article",
-      title: "Publish your first article",
-      description: "Share devotionals, news, and ministry updates.",
+      title: t("tasks.articleTitle"),
+      description: t("tasks.articleDescription"),
       done: analytics.counts.articles > 0,
       href: "/dashboard/content?tab=articles",
-      cta: "Publish",
+      cta: t("ctaPublish"),
       icon: BookOpen,
       accent: "from-amber-500/10 to-amber-500/5 border-amber-500/20",
     },
     {
       id: "event",
-      title: "Create your first event",
-      description: "Promote services, gatherings, and special occasions.",
+      title: t("tasks.eventTitle"),
+      description: t("tasks.eventDescription"),
       done: analytics.counts.events > 0,
       href: "/dashboard/content?tab=events",
-      cta: "Create",
+      cta: t("ctaCreate"),
       icon: CalendarDays,
       accent: "from-orange-500/10 to-orange-500/5 border-orange-500/20",
     },
     {
       id: "donations",
-      title: "Configure donations",
-      description: "Set up campaigns so supporters can give online.",
+      title: t("tasks.donationsTitle"),
+      description: t("tasks.donationsDescription"),
       done: analytics.counts.donations > 0,
       href: "/dashboard/content?tab=donations",
-      cta: "Configure",
+      cta: t("ctaConfigure"),
       icon: HeartHandshake,
       accent: "from-rose-500/10 to-rose-500/5 border-rose-500/20",
     },
     {
       id: "invite",
-      title: "Invite team members",
-      description: "Bring pastors, volunteers, and staff into your workspace.",
+      title: t("tasks.inviteTitle"),
+      description: t("tasks.inviteDescription"),
       done: analytics.counts.users > 1,
       href: "/dashboard/organization?tab=invitations",
-      cta: "Invite",
+      cta: t("ctaInvite"),
       icon: Users,
       accent: "from-cyan-500/10 to-cyan-500/5 border-cyan-500/20",
     },
   ];
 
-  const completedCount = tasks.filter((t) => t.done).length;
+  const completedCount = tasks.filter((task) => task.done).length;
   const progressPercent = Math.round((completedCount / tasks.length) * 100);
   const allDone = completedCount === tasks.length;
-  const pendingTasks = tasks.filter((t) => !t.done);
+  const pendingTasks = tasks.filter((task) => !task.done);
 
   if (allDone) return null;
 
@@ -128,10 +130,10 @@ export function GettingStartedChecklist() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="font-heading text-lg font-semibold tracking-tight">
-            Get started
+            {t("title")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {completedCount} of {tasks.length} complete — pick up where you left off.
+            {t("progress", { completed: completedCount, total: tasks.length })}
           </p>
         </div>
         <div className="w-full sm:max-w-xs">

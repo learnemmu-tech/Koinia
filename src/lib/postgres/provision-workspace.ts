@@ -33,6 +33,8 @@ export type PostgresWorkspaceProvisionResult = {
   churchId?: string;
   joinSlug?: string;
   skipped: boolean;
+  /** True only when a new `organizations` row was inserted in this call. */
+  organizationCreated: boolean;
 };
 
 function churchSlugFromName(name: string): string {
@@ -61,6 +63,7 @@ export async function provisionWorkspaceInPostgres(
       return {
         organizationId: appUser.organizationId,
         skipped: true,
+        organizationCreated: false,
       };
     }
     if (appUser.activeChurchId) {
@@ -78,6 +81,7 @@ export async function provisionWorkspaceInPostgres(
           churchId: existingChurch.id,
           joinSlug: existingChurch.joinSlug,
           skipped: true,
+          organizationCreated: false,
         };
       }
     }
@@ -119,6 +123,7 @@ export async function provisionWorkspaceInPostgres(
         return {
           organizationId: latest.organizationId,
           skipped: true,
+          organizationCreated: false,
         };
       }
       const [existingChurch] = await tx
@@ -135,11 +140,13 @@ export async function provisionWorkspaceInPostgres(
           churchId: existingChurch.id,
           joinSlug: existingChurch.joinSlug,
           skipped: true,
+          organizationCreated: false,
         };
       }
     }
 
     let organizationId = latest.organizationId;
+    let organizationCreated = false;
     if (!organizationId) {
       const [organization] = await tx
         .insert(organizations)
@@ -157,6 +164,7 @@ export async function provisionWorkspaceInPostgres(
         throw new Error("Failed to create organization.");
       }
       organizationId = organization.id;
+      organizationCreated = true;
 
       await tx.insert(organizationMemberships).values({
         organizationId,
@@ -255,6 +263,7 @@ export async function provisionWorkspaceInPostgres(
       churchId,
       joinSlug,
       skipped: false,
+      organizationCreated,
     };
   });
 }

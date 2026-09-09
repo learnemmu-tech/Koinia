@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { CalendarDays, Edit2, Loader2, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { FirebaseEvent } from "@/types/firebase-event";
@@ -37,6 +38,8 @@ export function EventList({
   onEdit,
   onDelete,
 }: EventListProps) {
+  const t = useTranslations("events");
+  const tCommon = useTranslations("common");
   const { user } = useFirebaseAuth();
   const tenantFields = useTenantNotifyFields();
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -49,10 +52,10 @@ export function EventList({
     setDeleting(selected.id);
     try {
       await deleteEvent(selected.id);
-      toast.success("Event deleted");
+      toast.success(t("deletedSuccess"));
       onDelete();
     } catch {
-      toast.error("Failed to delete event");
+      toast.error(t("deleteFailed"));
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -77,9 +80,9 @@ export function EventList({
         organizationId: tenantFields.organizationId,
       });
 
-      toast.success("Event published");
+      toast.success(t("publishedSuccess"));
     } catch {
-      toast.error("Failed to publish event");
+      toast.error(t("publishFailed"));
     } finally {
       setPublishing(null);
     }
@@ -90,7 +93,7 @@ export function EventList({
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
         <div className="flex flex-col items-center justify-center gap-3 py-20">
           <Loader2 className="h-7 w-7 animate-spin text-primary/60" />
-          <p className="text-sm text-muted-foreground">Loading events…</p>
+          <p className="text-sm text-muted-foreground">{t("loadingAdmin")}</p>
         </div>
       </div>
     );
@@ -104,9 +107,9 @@ export function EventList({
             <CalendarDays className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium">No events have been created for this church yet.</p>
+            <p className="text-sm font-medium">{t("emptyAdminTitle")}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Create your first ministry event to get started.
+              {t("emptyAdminDescription")}
             </p>
           </div>
         </div>
@@ -120,10 +123,10 @@ export function EventList({
         <div className="border-b border-border/50 bg-muted/30 px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              All Events
+              {t("allAdmin")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {events.length} {events.length === 1 ? "event" : "events"}
+              {t("itemCount", { count: events.length })}
             </p>
           </div>
         </div>
@@ -169,7 +172,7 @@ export function EventList({
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
-                      {event.status === "published" ? "Published" : "Draft"}
+                      {event.status === "published" ? tCommon("published") : tCommon("draft")}
                     </span>
                   </div>
                 </div>
@@ -189,7 +192,7 @@ export function EventList({
                     >
                       {isPublishing ?
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : "Publish"}
+                      : tCommon("publish")}
                     </Button>
                   : null}
                   <Button
@@ -199,7 +202,7 @@ export function EventList({
                     className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Edit</span>
+                    <span className="hidden sm:inline">{tCommon("edit")}</span>
                   </Button>
                   <Button
                     size="sm"
@@ -214,7 +217,7 @@ export function EventList({
                     {isDeleting ?
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     : <Trash2 className="h-3.5 w-3.5" />}
-                    <span className="hidden sm:inline">Delete</span>
+                    <span className="hidden sm:inline">{tCommon("delete")}</span>
                   </Button>
                 </div>
               </div>
@@ -226,19 +229,19 @@ export function EventList({
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Event?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{selected?.title}&quot;? This
-              action cannot be undone.
+              {tCommon("deleteConfirmNamed", { name: selected?.title ?? "" })}{" "}
+              {tCommon("cannotUndo")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2 pt-2">
-            <AlertDialogCancel className="rounded-full px-5">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full px-5">{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="rounded-full bg-destructive px-5 text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {tCommon("delete")}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

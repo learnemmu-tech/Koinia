@@ -128,8 +128,6 @@ export function DonateForm({ campaign }: DonateFormProps) {
                 orderId: response.razorpay_order_id,
                 paymentId: response.razorpay_payment_id,
                 signature: response.razorpay_signature,
-                amount: data.amount,
-                currency: data.currency,
               }),
             });
 

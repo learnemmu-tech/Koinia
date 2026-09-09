@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { adminSectionClass } from "@/lib/responsive-classes";
@@ -14,12 +15,12 @@ import { AdminSermonsPageClient } from "@/components/admin/pages/admin-sermons-p
 import { AdminSongsPageClient } from "@/components/admin/pages/admin-songs-page";
 
 const TABS = [
-  { value: "songs", label: "Songs" },
-  { value: "sermons", label: "Sermons" },
-  { value: "articles", label: "Articles" },
-  { value: "events", label: "Events" },
-  { value: "donations", label: "Donations" },
-  { value: "prayers", label: "Prayer Requests" },
+  { value: "songs", labelKey: "songs" },
+  { value: "sermons", labelKey: "sermons" },
+  { value: "articles", labelKey: "articles" },
+  { value: "events", labelKey: "events" },
+  { value: "donations", labelKey: "donations" },
+  { value: "prayers", labelKey: "prayerRequests" },
 ] as const;
 
 type TabValue = (typeof TABS)[number]["value"];
@@ -29,6 +30,8 @@ function isValidTab(value: string | null): value is TabValue {
 }
 
 export function AdminContentManagementClient() {
+  const tDashboard = useTranslations("dashboard");
+  const tNav = useTranslations("navigation");
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -54,8 +57,8 @@ export function AdminContentManagementClient() {
   return (
     <div className={adminSectionClass}>
       <AdminPageHeader
-        title="Content Management"
-        description="Add, edit and manage all your church content"
+        title={tDashboard("contentTitle")}
+        description={tDashboard("contentManageDescription")}
       />
 
       <Tabs value={activeTab} onValueChange={setTab} className="space-y-4">
@@ -66,7 +69,7 @@ export function AdminContentManagementClient() {
               value={tab.value}
               className="rounded-lg px-3 py-2 text-xs sm:text-sm"
             >
-              {tab.label}
+              {tNav(tab.labelKey)}
             </TabsTrigger>
           ))}
         </TabsList>

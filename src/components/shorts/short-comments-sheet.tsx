@@ -22,6 +22,7 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useContentAuthDialog } from "@/context/content-auth-dialog-context";
 import { fetchShortComments, postShortComment } from "@/lib/shorts-client";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 type ShortCommentsSheetProps = {
   shortId: string | null;
@@ -182,6 +183,8 @@ export function ShortCommentsSheet({
   const isDesktop = useIsDesktop();
   const { authUser, profile } = useFirebaseAuth();
   const { openDialog } = useContentAuthDialog();
+  const tc = useTranslations("common");
+  const te = useTranslations("errors");
   const [comments, setComments] = React.useState<VideoShortComment[]>([]);
   const [body, setBody] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -211,7 +214,7 @@ export function ShortCommentsSheet({
         if (!cancelled) setComments(items);
       })
       .catch(() => {
-        if (!cancelled) setError("Couldn't load comments.");
+        if (!cancelled) setError(te("generic"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -220,7 +223,7 @@ export function ShortCommentsSheet({
     return () => {
       cancelled = true;
     };
-  }, [open, shortId]);
+  }, [open, shortId, te]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -312,10 +315,10 @@ export function ShortCommentsSheet({
         )}
       >
         <SheetHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-border/60 px-4 py-3">
-          <SheetTitle className="text-base font-semibold">Comments</SheetTitle>
+          <SheetTitle className="text-base font-semibold">{tc("comment")}</SheetTitle>
           <button
             type="button"
-            aria-label="Close comments"
+            aria-label={tc("close")}
             onClick={() => onOpenChange(false)}
             className="app-interactive flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover-hover:hover:bg-muted/50 hover-hover:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           >

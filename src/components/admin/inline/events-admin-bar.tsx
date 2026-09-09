@@ -3,6 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { useIsAdmin } from "@/hooks/use-is-admin";
@@ -21,6 +22,7 @@ type EventsAdminBarProps = {
 export function EventsAdminBar({
   contentScope = "organization",
 }: EventsAdminBarProps) {
+  const t = useTranslations("events");
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsPlatformSuperAdmin();
   const workspace = useWorkspaceTenantScope();
@@ -46,7 +48,7 @@ export function EventsAdminBar({
         className="shrink-0 gap-1.5 rounded-full"
       >
         <Plus className="size-4" aria-hidden />
-        Add Event
+        {t("add")}
       </Button>
 
       {open ? (

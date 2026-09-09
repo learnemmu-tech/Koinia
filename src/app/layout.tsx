@@ -12,14 +12,23 @@ import { Analytics } from "@vercel/analytics/react";
 
 import { RootClientShell } from "@/components/root-client-shell";
 import { siteConfig } from "@/config/site";
+import { LOCALE_COOKIE, parseLocale } from "@/i18n/config";
 import { env } from "@/lib/env";
 import { SEO_KEYWORDS } from "@/lib/seo";
 import { getActiveChurchIdFromCookies } from "@/lib/church-server";
 import * as fonts from "@/lib/fonts";
 import { absoluteUrl, cn } from "@/lib/utils";
-import { Noto_Sans } from "next/font/google";
+import { Noto_Sans, Noto_Sans_Telugu } from "next/font/google";
 
-const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
+const notoSans = Noto_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const notoSansTelugu = Noto_Sans_Telugu({
+  subsets: ["telugu"],
+  variable: "--font-telugu",
+});
 
 
 type RootLayoutProps = {
@@ -36,10 +45,11 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
   ) as ThemeConfig;
 
   const initialActiveChurchId = await getActiveChurchIdFromCookies();
+  const locale = parseLocale(cookieStore.get(LOCALE_COOKIE)?.value);
 
   return (
     <React.StrictMode>
-      <html lang="en" suppressHydrationWarning className={cn("font-sans", notoSans.variable)}>
+      <html lang={locale} suppressHydrationWarning className={cn("font-sans", notoSans.variable, notoSansTelugu.variable)}>
         <body
           className={cn(
             Object.values(fonts).map((font) => font.variable),
@@ -59,7 +69,11 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
             signInFallbackRedirectUrl="/auth/continue"
             signUpFallbackRedirectUrl="/auth/continue"
           >
-            <RootClientShell initialActiveChurchId={initialActiveChurchId} modal={modal}>
+            <RootClientShell
+              initialActiveChurchId={initialActiveChurchId}
+              initialLocale={locale}
+              modal={modal}
+            >
               {children}
             </RootClientShell>
           </ClerkProvider>

@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 
 import { DonationsListClient } from "@/components/donations/donations-list-client";
 import { DonationsAdminBar } from "@/components/admin/inline/donations-admin-bar";
+import { I18nPageHeading } from "@/components/i18n/page-heading";
 import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getActiveDonationCampaignsCached } from "@/lib/cached-donation-data";
-import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
+import { pageContentClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
@@ -27,17 +28,7 @@ export default async function DonationsPage() {
       aria-labelledby="donations-heading"
     >
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/60">
-            Give
-          </p>
-          <h1 id="donations-heading" className={typePageTitleClass}>
-            Donations
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Support active ministry campaigns with secure, transparent giving.
-          </p>
-        </div>
+        <I18nPageHeading ns="donations" headingId="donations-heading" />
         <DonationsAdminBar
           contentScope={isPlatformPublic ? "platform_public" : "organization"}
         />

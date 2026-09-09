@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ export function InviteChurchAdminDialog({
   branchId,
   churchName,
 }: InviteChurchAdminDialogProps) {
+  const t = useTranslations("churches");
+  const tForms = useTranslations("forms");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -41,13 +44,13 @@ export function InviteChurchAdminDialog({
     event.preventDefault();
     const trimmed = email.trim();
     if (!trimmed) {
-      toast.error("Enter an email address");
+      toast.error(t("enterEmail"));
       return;
     }
 
     const user = firebaseAuth.currentUser;
     if (!user) {
-      toast.error("Please sign in to send invitations");
+      toast.error(t("signInToInvite"));
       return;
     }
 
@@ -76,15 +79,15 @@ export function InviteChurchAdminDialog({
       };
 
       if (!response.ok) {
-        throw new Error(body.error ?? "Failed to send invitation");
+        throw new Error(body.error ?? t("inviteFailed"));
       }
 
-      toast.success(body.message ?? `Invitation sent to ${trimmed}`);
+      toast.success(body.message ?? t("inviteSent", { email: trimmed }));
       setEmail("");
       onOpenChange(false);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to send invitation"
+        error instanceof Error ? error.message : t("inviteFailed")
       );
     } finally {
       setLoading(false);
@@ -95,23 +98,21 @@ export function InviteChurchAdminDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Invite a church admin?</DialogTitle>
+          <DialogTitle>{t("inviteTitle")}</DialogTitle>
           <DialogDescription>
-            {churchName} was created successfully. Invite someone to manage this
-            church — they will only have access to {churchName}, not your entire
-            organization.
+            {t("inviteDescription", { churchName })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleInvite} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="invite-admin-email">Admin email</Label>
+            <Label htmlFor="invite-admin-email">{tForms("adminEmail")}</Label>
             <Input
               id="invite-admin-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@yourchurch.org"
+              placeholder={tForms("placeholders.adminEmail")}
               disabled={loading}
               required
             />
@@ -124,15 +125,15 @@ export function InviteChurchAdminDialog({
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
-              Skip for now
+              {t("skipForNow")}
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ?
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Sending…
+                  {t("sending")}
                 </>
-              : "Send invitation"}
+              : t("sendInvitation")}
             </Button>
           </DialogFooter>
         </form>

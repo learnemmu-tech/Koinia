@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -67,7 +68,11 @@ export function AddDonationCampaignModal({
   churchId,
   contentScope = "organization",
 }: AddDonationCampaignModalProps) {
-  const { user, authUser } = useFirebaseAuth();
+  const t = useTranslations("donations");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
+  const tErrors = useTranslations("errors");
+  const { user } = useFirebaseAuth();
   const { invalidateDonations } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
   const [bannerFile, setBannerFile] = useState<File | undefined>();
@@ -132,7 +137,7 @@ export function AddDonationCampaignModal({
     try {
       const idToken = user ? await user.getIdToken() : undefined;
       if (!idToken) {
-        toast.error("You must be signed in to upload files.");
+        toast.error(tErrors("signedInRequired"));
         return;
       }
       const payload = {
@@ -170,7 +175,7 @@ export function AddDonationCampaignModal({
           idToken,
         });
 
-        toast.success("Campaign updated successfully");
+        toast.success(t("updatedSuccess"));
       } else {
         const campaignId = await createDonationCampaign({
           ...payload,
@@ -203,7 +208,7 @@ export function AddDonationCampaignModal({
           idToken,
         });
 
-        toast.success("Campaign created successfully");
+        toast.success(t("createdSuccess"));
       }
 
       await invalidateDonations();
@@ -213,7 +218,7 @@ export function AddDonationCampaignModal({
       setBannerPreview("");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to save campaign"
+        error instanceof Error ? error.message : t("saveFailed")
       );
     } finally {
       setLoading(false);
@@ -231,12 +236,12 @@ export function AddDonationCampaignModal({
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {initialCampaign ? "Edit Campaign" : "Create Campaign"}
+            {initialCampaign ? t("editModalTitle") : t("addModalTitle")}
           </DialogTitle>
           <DialogDescription>
             {initialCampaign
-              ? "Update campaign details and activate when ready"
-              : `Create a new giving campaign for ${siteConfig.name}`}
+              ? t("editModalDescription")
+              : t("addModalDescription", { siteName: siteConfig.name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -247,9 +252,9 @@ export function AddDonationCampaignModal({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Campaign Title</FormLabel>
+                  <FormLabel>{tForms("campaignTitle")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Building Fund 2026" disabled={loading} {...field} />
+                    <Input placeholder={tForms("placeholders.campaignTitle")} disabled={loading} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -261,10 +266,10 @@ export function AddDonationCampaignModal({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{tForms("description")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Explain how donations will be used"
+                      placeholder={tForms("placeholders.campaignDescription")}
                       rows={4}
                       disabled={loading}
                       {...field}
@@ -281,7 +286,7 @@ export function AddDonationCampaignModal({
                 name="targetAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Target Amount</FormLabel>
+                    <FormLabel>{tForms("targetAmount")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -301,7 +306,7 @@ export function AddDonationCampaignModal({
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Currency</FormLabel>
+                    <FormLabel>{tForms("currency")}</FormLabel>
                     <Select
                       disabled={loading}
                       onValueChange={field.onChange}
@@ -309,7 +314,7 @@ export function AddDonationCampaignModal({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select currency" />
+                          <SelectValue placeholder={tForms("selectCurrency")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -327,12 +332,12 @@ export function AddDonationCampaignModal({
             </div>
 
             <div className="space-y-2">
-              <FormLabel>Banner Image</FormLabel>
+              <FormLabel>{tForms("bannerImage")}</FormLabel>
               {bannerPreview ?
                 <div className="relative overflow-hidden rounded-xl border border-border/50">
                   <img
                     src={bannerPreview}
-                    alt="Campaign banner preview"
+                    alt={tForms("campaignBannerPreviewAlt")}
                     className="aspect-[16/9] w-full object-cover"
                   />
                   <Button
@@ -352,7 +357,7 @@ export function AddDonationCampaignModal({
               <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/60 px-4 py-6 text-center transition-colors hover:bg-muted/30">
                 <Upload className="size-5 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
-                  Upload banner (max {MAX_IMAGE_SIZE_LABEL})
+                  {tForms("uploadBanner", { max: MAX_IMAGE_SIZE_LABEL })}
                 </span>
                 <input
                   type="file"
@@ -364,7 +369,7 @@ export function AddDonationCampaignModal({
               </label>
               {uploadProgress > 0 && uploadProgress < 100 ?
                 <p className="text-xs text-muted-foreground">
-                  Uploading… {uploadProgress}%
+                  {tForms("uploadingProgress", { percent: uploadProgress })}
                 </p>
               : null}
             </div>
@@ -374,7 +379,7 @@ export function AddDonationCampaignModal({
               name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel>{tForms("status")}</FormLabel>
                   <Select
                     disabled={loading}
                     onValueChange={field.onChange}
@@ -382,12 +387,12 @@ export function AddDonationCampaignModal({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
+                        <SelectValue placeholder={tForms("selectStatus")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="active">{tCommon("active")}</SelectItem>
+                      <SelectItem value="inactive">{tCommon("inactive")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -397,17 +402,17 @@ export function AddDonationCampaignModal({
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading ?
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
-                    Saving…
+                    {tCommon("saving")}
                   </>
                 : initialCampaign ?
-                  "Save Changes"
-                : "Create Campaign"}
+                  tCommon("saveChanges")
+                : t("create")}
               </Button>
             </div>
           </form>

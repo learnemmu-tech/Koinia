@@ -31,16 +31,13 @@ import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
 import { getSongDisplayTitle } from "@/lib/song-firestore";
 import { cn, getSongCoverUrl } from "@/lib/utils";
 import { ImageWithFallback } from "@/components/image-with-fallback";
-
-const TYPE_LABELS = {
-  song: "Song",
-  sermon: "Sermon",
-  article: "Article",
-} as const;
+import { useTranslations } from "next-intl";
 
 type FilterTab = "all" | "songs" | "sermons" | "articles";
 
 export function RecentlyViewedPageClient() {
+  const t = useTranslations("library");
+  const tc = useTranslations("common");
   const { recentlyViewed, loading: historyLoading, clearHistory } =
     useRecentlyViewed();
   const { items, loading: itemsLoading, error } =
@@ -71,9 +68,9 @@ export function RecentlyViewedPageClient() {
     setClearing(true);
     try {
       await clearHistory();
-      toast.success("Recently viewed history cleared");
+      toast.success(t("historyCleared"));
     } catch {
-      toast.error("Unable to clear history. Please try again.");
+      toast.error(t("clearHistoryFailed"));
     } finally {
       setClearing(false);
     }
@@ -84,12 +81,11 @@ export function RecentlyViewedPageClient() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/60">
-            Your Library
+            {t("yourLibrary")}
           </p>
-          <h1 className={typePageTitleClass}>Recently Viewed</h1>
+          <h1 className={typePageTitleClass}>{t("recentlyViewed")}</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Songs, sermons, and articles you have opened recently, sorted by
-            most recent first.
+            {t("recentlyViewedDescription")}
           </p>
         </div>
 
@@ -102,24 +98,23 @@ export function RecentlyViewedPageClient() {
                 className="w-full shrink-0 rounded-full sm:w-auto"
                 disabled={clearing || loading}
               >
-                Clear history
+                {t("clearHistory")}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent className="sm:max-w-md">
               <AlertDialogHeader>
-                <AlertDialogTitle>Clear recently viewed?</AlertDialogTitle>
+                <AlertDialogTitle>{t("clearHistoryTitle")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This removes your viewing history. You can still find content
-                  by browsing songs, sermons, and articles.
+                  {t("clearHistoryDescription")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => void handleClearHistory()}
                   disabled={clearing}
                 >
-                  {clearing ? "Clearing…" : "Clear history"}
+                  {clearing ? t("clearing") : t("clearHistory")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -142,22 +137,32 @@ export function RecentlyViewedPageClient() {
         >
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-border/50 bg-muted/50 p-1 sm:max-w-2xl sm:grid-cols-4">
             <TabsTrigger value="all" className="rounded-lg text-xs sm:text-sm">
-              All ({items.length})
+              {t("all", { count: items.length })}
             </TabsTrigger>
             <TabsTrigger value="songs" className="rounded-lg text-xs sm:text-sm">
-              Songs ({songCount})
+              {t("songs", { count: songCount })}
             </TabsTrigger>
             <TabsTrigger value="sermons" className="rounded-lg text-xs sm:text-sm">
-              Sermons ({sermonCount})
+              {t("sermons", { count: sermonCount })}
             </TabsTrigger>
             <TabsTrigger value="articles" className="rounded-lg text-xs sm:text-sm">
-              Articles ({articleCount})
+              {t("articles", { count: articleCount })}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-0">
             {filteredItems.length === 0 ?
-              <EmptyTab message={`No recently viewed ${activeTab === "all" ? "items" : activeTab} yet.`} />
+              <EmptyTab
+                message={
+                  activeTab === "songs"
+                    ? t("emptyRecentlySongs")
+                    : activeTab === "sermons"
+                      ? t("emptyRecentlySermons")
+                      : activeTab === "articles"
+                        ? t("emptyRecentlyArticles")
+                        : t("emptyRecentlyAll")
+                }
+              />
             : <ul className="divide-y divide-border/50 overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
                 {filteredItems.map((entry) => (
                   <RecentlyViewedRow key={entry.entryId} entry={entry} />
@@ -172,6 +177,7 @@ export function RecentlyViewedPageClient() {
 }
 
 function RecentlyViewedRow({ entry }: { entry: ResolvedRecentlyViewedItem }) {
+  const t = useTranslations("library");
   const href = getRecentlyViewedContentPath(entry.itemType, entry.item.id);
   const viewedLabel = formatRecentlyViewedAt(entry.viewedAt);
 
@@ -182,7 +188,7 @@ function RecentlyViewedRow({ entry }: { entry: ResolvedRecentlyViewedItem }) {
     return (
       <RecentlyViewedRowLayout
         href={href}
-        typeLabel={TYPE_LABELS.song}
+        typeLabel={t("typeSong")}
         viewedLabel={viewedLabel}
         title={title}
         subtitle={entry.item.artist}
@@ -198,7 +204,7 @@ function RecentlyViewedRow({ entry }: { entry: ResolvedRecentlyViewedItem }) {
     return (
       <RecentlyViewedRowLayout
         href={href}
-        typeLabel={TYPE_LABELS.sermon}
+        typeLabel={t("typeSermon")}
         viewedLabel={viewedLabel}
         title={entry.item.title}
         subtitle={entry.item.speaker}
@@ -212,7 +218,7 @@ function RecentlyViewedRow({ entry }: { entry: ResolvedRecentlyViewedItem }) {
   return (
     <RecentlyViewedRowLayout
       href={href}
-      typeLabel={TYPE_LABELS.article}
+      typeLabel={t("typeArticle")}
       viewedLabel={viewedLabel}
       title={entry.item.title}
       subtitle={entry.item.author}
@@ -297,22 +303,23 @@ function RecentlyViewedListSkeleton() {
 }
 
 function EmptyState() {
+  const t = useTranslations("library");
   return (
     <div className="rounded-2xl border border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center">
       <Clock className="mx-auto size-8 text-muted-foreground/60" />
-      <p className="mt-4 text-sm font-medium">Nothing viewed yet</p>
+      <p className="mt-4 text-sm font-medium">{t("nothingViewedYet")}</p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Open songs, sermons, or articles and they will appear here.
+        {t("nothingViewedDescription")}
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         <Button asChild variant="outline" size="sm" className="rounded-full">
-          <Link href="/songs">Browse Songs</Link>
+          <Link href="/songs">{t("browseSongs")}</Link>
         </Button>
         <Button asChild variant="outline" size="sm" className="rounded-full">
-          <Link href="/sermons">Browse Sermons</Link>
+          <Link href="/sermons">{t("browseSermons")}</Link>
         </Button>
         <Button asChild variant="outline" size="sm" className="rounded-full">
-          <Link href="/articles">Browse Articles</Link>
+          <Link href="/articles">{t("browseArticles")}</Link>
         </Button>
       </div>
     </div>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useSignUp } from "@clerk/nextjs";
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -30,20 +31,26 @@ import {
 } from "@/lib/firebase-auth-service";
 import { cn } from "@/lib/utils";
 
-const signUpSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(8, "Password must be at least 8 characters"),
-});
+const signUpSchema = (tValidation: ReturnType<typeof useTranslations<"validation">>) =>
+  z.object({
+    firstName: z.string().min(1, tValidation("firstNameRequired")),
+    lastName: z.string().min(1, tValidation("lastNameRequired")),
+    email: z
+      .string()
+      .min(1, tValidation("emailRequired"))
+      .email(tValidation("invalidEmail")),
+    password: z
+      .string()
+      .min(1, tValidation("passwordRequired"))
+      .min(8, tValidation("passwordMinLength")),
+  });
 
-type SignUpValues = z.infer<typeof signUpSchema>;
+type SignUpValues = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+};
 
 const authInputClass =
   "h-9 py-1.5 text-sm border-input bg-background text-foreground placeholder:text-muted-foreground";
@@ -67,6 +74,13 @@ export function FirebaseSignUpForm({
   callbackUrl = CREATE_WORKSPACE_PATH,
   ...props
 }: FirebaseSignUpFormProps) {
+  const tAuth = useTranslations("auth");
+  const tValidation = useTranslations("validation");
+  const tCommon = useTranslations("common");
+  const signUpSchemaMemo = useMemo(
+    () => signUpSchema(tValidation),
+    [tValidation]
+  );
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [isResending, setIsResending] = React.useState(false);
@@ -89,7 +103,7 @@ export function FirebaseSignUpForm({
     handleSubmit,
     formState: { errors },
   } = useForm<SignUpValues>({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(signUpSchemaMemo),
   });
 
   const isDisabled = isLoading || isGoogleLoading || fetchStatus === "fetching";
@@ -113,7 +127,7 @@ export function FirebaseSignUpForm({
       profileDetailsRef.current
     );
     setAuthCookie(true, { role: profile.role, profile });
-    toast.success("Account created successfully!");
+    toast.success(tAuth("accountCreated"));
     router.replace(await fetchPostAuthDestination(redirectTo));
   }
 
@@ -147,7 +161,7 @@ export function FirebaseSignUpForm({
       }
 
       setVerificationEmail(data.email);
-      toast.success(`We sent a verification code to ${data.email}.`);
+      toast.success(tAuth("verificationCodeSentToToast", { email: data.email }));
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
       setIsCompletingAuth(false);
@@ -159,7 +173,7 @@ export function FirebaseSignUpForm({
   async function handleVerifyCode(event: React.FormEvent) {
     event.preventDefault();
     if (verificationCode.length !== 6) {
-      setVerificationError("Enter the 6-digit verification code.");
+      setVerificationError(tAuth("verificationCodeHint"));
       return;
     }
 
@@ -194,7 +208,7 @@ export function FirebaseSignUpForm({
       if (error) {
         throw error;
       }
-      toast.success("Verification code sent.");
+      toast.success(tAuth("verificationCodeSent"));
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
     } finally {
@@ -219,7 +233,7 @@ export function FirebaseSignUpForm({
 
       const { profile } = googleResult;
       setAuthCookie(true, { role: profile.role, profile });
-      toast.success("Signed up with Google!");
+      toast.success(tAuth("signedUpGoogle"));
       router.push(await fetchPostAuthDestination(redirectTo));
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
@@ -245,6 +259,10 @@ export function FirebaseSignUpForm({
         isLoading={isLoading}
         isResending={isResending}
         errorMessage={verificationError}
+        title={tAuth("verifyEmailTitle")}
+        description={tAuth("verificationCodeSentTo", {
+          email: verificationEmail || signUp.emailAddress || "",
+        })}
         {...props}
       />
     );
@@ -253,9 +271,9 @@ export function FirebaseSignUpForm({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col gap-2 text-center md:text-left">
-        <h1 className="text-2xl font-bold tracking-tight">Create an account</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{tAuth("signupTitle")}</h1>
         <p className="text-sm text-muted-foreground">
-          Join the {siteConfig.name} community
+          {tAuth("signupSubtitle", { siteName: siteConfig.name })}
         </p>
       </div>
 
@@ -263,7 +281,7 @@ export function FirebaseSignUpForm({
         <div id="clerk-captcha" />
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-2">
-            <Label htmlFor="firstName">First name</Label>
+            <Label htmlFor="firstName">{tAuth("firstName")}</Label>
             <Input
               id="firstName"
               type="text"
@@ -281,7 +299,7 @@ export function FirebaseSignUpForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="lastName">Last name</Label>
+            <Label htmlFor="lastName">{tAuth("lastName")}</Label>
             <Input
               id="lastName"
               type="text"
@@ -300,7 +318,7 @@ export function FirebaseSignUpForm({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="email">Email address</Label>
+          <Label htmlFor="email">{tAuth("emailAddress")}</Label>
           <Input
             id="email"
             type="email"
@@ -316,12 +334,12 @@ export function FirebaseSignUpForm({
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{tAuth("password")}</Label>
           <div className="relative">
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Min. 8 characters"
+              placeholder={tAuth("minPassword")}
               autoComplete="new-password"
               disabled={isDisabled}
               className={cn(authInputClass, "pr-10")}
@@ -332,7 +350,7 @@ export function FirebaseSignUpForm({
               tabIndex={-1}
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-3 my-auto text-muted-foreground hover:text-foreground"
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? tAuth("hidePassword") : tAuth("showPassword")}
             >
               {showPassword ?
                 <EyeOff className="size-4" />
@@ -352,7 +370,7 @@ export function FirebaseSignUpForm({
           disabled={isDisabled}
         >
           {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Create Account
+          {tAuth("createAccount")}
         </Button>
       </form>
 
@@ -361,7 +379,7 @@ export function FirebaseSignUpForm({
           <span className="w-full border-t border-border" />
         </div>
         <span className="relative bg-background px-2 text-xs uppercase tracking-wider text-muted-foreground">
-          Or join with
+          {tAuth("orJoinWith")}
         </span>
       </div>
 
@@ -375,16 +393,16 @@ export function FirebaseSignUpForm({
         {isGoogleLoading ?
           <Loader2 className="mr-2 size-4 animate-spin" />
         : <Google className="mr-2 size-4" />}
-        Sign up with Google
+        {tAuth("signUpWithGoogle")}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
+        {tAuth("hasAccount")}{" "}
         <Link
           href={buildAuthHref("/signin", redirectTo)}
           className="text-foreground underline underline-offset-4 hover:text-primary"
         >
-          Sign in
+          {tCommon("signIn")}
         </Link>
       </p>
     </div>

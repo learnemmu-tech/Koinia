@@ -110,6 +110,10 @@ const NOTIFICATION_PRESETS: Record<
     title: "Membership Approved",
     message: "Your church membership has been approved.",
   },
+  book: {
+    title: "New Book Published",
+    message: "A new book has been published.",
+  },
 };
 
 export type PendingDonationInput = {
@@ -1110,10 +1114,34 @@ export async function createPendingDonation(input: PendingDonationInput): Promis
   return row.id;
 }
 
+export async function setDonationCheckoutReference(input: {
+  donationId: string;
+  checkoutReference: string;
+}): Promise<void> {
+  const reference = input.checkoutReference.trim();
+  if (!reference) return;
+
+  await db
+    .update(donations)
+    .set({ transactionId: reference })
+    .where(
+      and(
+        eq(donations.id, input.donationId),
+        eq(donations.paymentStatus, "pending")
+      )
+    );
+}
+
+/**
+ * Completes a pending donation exactly once.
+ * `didComplete` is true only when this call transitioned pending → completed
+ * (safe for emails / side effects). Idempotent replays return the row with
+ * `didComplete: false`.
+ */
 export async function completeDonationPayment(input: {
   donationId: string;
   transactionId: string;
-}): Promise<FirebaseDonation | null> {
+}): Promise<{ donation: FirebaseDonation; didComplete: boolean } | null> {
   const [existing] = await db
     .select()
     .from(donations)
@@ -1121,26 +1149,49 @@ export async function completeDonationPayment(input: {
     .limit(1);
   if (!existing) return null;
 
+  if (existing.paymentStatus === "completed") {
+    return { donation: mapDonation(existing), didComplete: false };
+  }
+
+  if (existing.paymentStatus !== "pending") {
+    return null;
+  }
+
   const [updated] = await db
     .update(donations)
     .set({
       paymentStatus: "completed",
       transactionId: input.transactionId,
     })
-    .where(eq(donations.id, input.donationId))
+    .where(
+      and(
+        eq(donations.id, input.donationId),
+        eq(donations.paymentStatus, "pending")
+      )
+    )
     .returning();
 
-  if (updated) {
-    await db
-      .update(donationCampaigns)
-      .set({
-        currentAmount: sql`${donationCampaigns.currentAmount} + ${existing.amount}`,
-        updatedAt: new Date(),
-      })
-      .where(eq(donationCampaigns.id, existing.campaignId));
+  // Lost the race — another completer already finished this donation.
+  if (!updated) {
+    const [again] = await db
+      .select()
+      .from(donations)
+      .where(eq(donations.id, input.donationId))
+      .limit(1);
+    return again?.paymentStatus === "completed"
+      ? { donation: mapDonation(again), didComplete: false }
+      : null;
   }
 
-  return updated ? mapDonation(updated) : null;
+  await db
+    .update(donationCampaigns)
+    .set({
+      currentAmount: sql`${donationCampaigns.currentAmount} + ${existing.amount}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(donationCampaigns.id, existing.campaignId));
+
+  return { donation: mapDonation(updated), didComplete: true };
 }
 
 export async function listUserNotifications(

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Edit2, HeartHandshake, Loader2, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { FirebaseDonation, FirebaseDonationCampaign } from "@/types/firebase-donation";
@@ -43,6 +44,8 @@ export function DonationCampaignList({
   onEdit,
   onDelete,
 }: DonationCampaignListProps) {
+  const t = useTranslations("donations");
+  const tCommon = useTranslations("common");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -53,10 +56,10 @@ export function DonationCampaignList({
     setDeleting(selected.id);
     try {
       await deleteDonationCampaign(selected.id);
-      toast.success("Campaign deleted");
+      toast.success(t("deletedSuccess"));
       onDelete();
     } catch {
-      toast.error("Failed to delete campaign");
+      toast.error(t("deleteFailed"));
     } finally {
       setDeleting(null);
       setDeleteConfirmOpen(false);
@@ -70,10 +73,10 @@ export function DonationCampaignList({
       const nextStatus = campaign.status === "active" ? "inactive" : "active";
       await setDonationCampaignStatus(campaign.id, nextStatus);
       toast.success(
-        nextStatus === "active" ? "Campaign activated" : "Campaign deactivated"
+        nextStatus === "active" ? t("activatedSuccess") : t("deactivatedSuccess")
       );
     } catch {
-      toast.error("Failed to update campaign status");
+      toast.error(t("statusUpdateFailed"));
     } finally {
       setUpdating(null);
     }
@@ -84,7 +87,7 @@ export function DonationCampaignList({
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
         <div className="flex flex-col items-center justify-center gap-3 py-20">
           <Loader2 className="h-7 w-7 animate-spin text-primary/60" />
-          <p className="text-sm text-muted-foreground">Loading campaigns…</p>
+          <p className="text-sm text-muted-foreground">{t("loadingAdmin")}</p>
         </div>
       </div>
     );
@@ -95,14 +98,14 @@ export function DonationCampaignList({
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
         <div className="border-b border-border/50 bg-muted/30 px-4 py-3 sm:px-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Campaigns
+            {t("campaignsHeader")}
           </p>
         </div>
 
         {campaigns.length === 0 ?
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <HeartHandshake className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm font-medium">No campaigns have been created for this church yet.</p>
+            <p className="text-sm font-medium">{t("emptyAdminTitle")}</p>
           </div>
         : <div className="divide-y divide-border/40">
             {campaigns.map((campaign) => {
@@ -123,17 +126,18 @@ export function DonationCampaignList({
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-medium">{campaign.title}</h3>
                       <Badge variant={campaign.status === "active" ? "default" : "secondary"}>
-                        {campaign.status}
+                        {campaign.status === "active" ? tCommon("active") : tCommon("inactive")}
                       </Badge>
                     </div>
                     <p className="line-clamp-2 text-sm text-muted-foreground">
                       {campaign.description}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDonationAmount(campaign.currentAmount, campaign.currency)} raised
-                      {" · "}
-                      {progress}% of{" "}
-                      {formatDonationAmount(campaign.targetAmount, campaign.currency)}
+                      {t("raisedOf", {
+                        raised: formatDonationAmount(campaign.currentAmount, campaign.currency),
+                        percent: progress,
+                        target: formatDonationAmount(campaign.targetAmount, campaign.currency),
+                      })}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -143,11 +147,11 @@ export function DonationCampaignList({
                       disabled={updating === campaign.id}
                       onClick={() => handleToggleStatus(campaign)}
                     >
-                      {campaign.status === "active" ? "Deactivate" : "Activate"}
+                      {campaign.status === "active" ? tCommon("deactivate") : tCommon("activate")}
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => onEdit(campaign)}>
                       <Edit2 className="mr-1 size-3.5" />
-                      Edit
+                      {tCommon("edit")}
                     </Button>
                     <Button
                       size="sm"
@@ -159,7 +163,7 @@ export function DonationCampaignList({
                       }}
                     >
                       <Trash2 className="mr-1 size-3.5" />
-                      Delete
+                      {tCommon("delete")}
                     </Button>
                   </div>
                 </div>
@@ -172,12 +176,12 @@ export function DonationCampaignList({
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
         <div className="border-b border-border/50 bg-muted/30 px-4 py-3 sm:px-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Recent Donations
+            {t("recentDonationsHeader")}
           </p>
         </div>
         {recentDonations.length === 0 ?
           <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-6">
-            No donations recorded yet.
+            {t("noDonationsRecorded")}
           </p>
         : <div className="divide-y divide-border/40">
             {recentDonations.map((donation) => (
@@ -187,7 +191,7 @@ export function DonationCampaignList({
               >
                 <div>
                   <p className="text-sm font-medium">
-                    {donation.isAnonymous ? "Anonymous" : donation.donorName}
+                    {donation.isAnonymous ? tCommon("anonymous") : donation.donorName}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {donation.paymentStatus} · {donation.paymentProvider}
@@ -205,14 +209,14 @@ export function DonationCampaignList({
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete campaign?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the campaign. Donation records will remain.
+              {t("deleteDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>{tCommon("delete")}</AlertDialogAction>
           </div>
         </AlertDialogContent>
       </AlertDialog>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,6 +25,8 @@ import { signInWithGoogle } from "@/lib/firebase-auth-service";
 
 export function ContentAuthDialogHost() {
   const router = useRouter();
+  const tAuth = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const {
     isOpen,
     callbackPath,
@@ -52,7 +55,7 @@ export function ContentAuthDialogHost() {
 
       const { profile } = googleResult;
       setAuthCookie(true, { role: profile.role, profile });
-      toast.success("Signed in with Google!");
+      toast.success(tAuth("signedInGoogle"));
       closeDialog();
       router.push(await fetchPostAuthDestination(callbackPath));
       router.refresh();
@@ -68,10 +71,10 @@ export function ContentAuthDialogHost() {
       <DialogContent className="w-[calc(100vw-2rem)] max-w-md border-border/50 bg-card sm:rounded-2xl">
         <DialogHeader className="space-y-3 text-center sm:text-left">
           <DialogTitle className="font-heading text-xl font-bold">
-            Sign in Required
+            {tAuth("signInRequired")}
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            Please sign in to access FaithConnectHub content.
+            {tAuth("signInRequiredDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -88,18 +91,18 @@ export function ContentAuthDialogHost() {
             ) : (
               <Google className="size-4" />
             )}
-            Continue with Google
+            {tAuth("continueWithGoogle")}
           </Button>
 
           <Button asChild className="w-full">
             <Link href={signInHref} onClick={closeDialog}>
-              Sign In
+              {tCommon("signIn")}
             </Link>
           </Button>
 
           <Button asChild variant="outline" className="w-full border-border/60">
             <Link href={signUpHref} onClick={closeDialog}>
-              Create Account
+              {tAuth("createAccount")}
             </Link>
           </Button>
         </div>

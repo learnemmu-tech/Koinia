@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
   Bell,
@@ -13,6 +15,7 @@ import {
   UserCog2,
   UserX2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   Accordion,
@@ -33,100 +36,110 @@ export type SidebarNavItem = {
 };
 
 const iconClass = "mr-2 h-5 w-5";
-const sidebarNavItems: SidebarNavItem[] = [
-  {
-    section: "Account",
-    href: "/settings",
-    items: [
-      {
-        title: "Edit Profile",
-        hash: "edit-profile",
-        icon: <UserCog2 className={iconClass} />,
-      },
-      {
-        title: "Change Password",
-        hash: "change-password",
-        icon: <Key className={iconClass} />,
-      },
-      {
-        title: "Delete Account",
-        hash: "delete-account",
-        icon: <UserX2 className={iconClass} />,
-      },
-    ],
-  },
-  {
-    section: "Billing",
-    href: "/settings/billing",
-    items: [
-      {
-        title: "Subscription",
-        hash: "subscription",
-        icon: <CreditCard className={iconClass} />,
-      },
-    ],
-  },
-  {
-    section: "Notifications",
-    href: "/settings/notifications",
-    items: [
-      {
-        title: "Email Notifications",
-        hash: "email",
-        icon: <Bell className={iconClass} />,
-      },
-    ],
-  },
-  {
-    section: "Appearance",
-    href: "/settings/appearance",
-    items: [
-      {
-        title: "Mode",
-        hash: "mode",
-        icon: <SunMoon className={iconClass} />,
-      },
-      {
-        title: "Themes",
-        hash: "theme",
-        icon: <Palette className={iconClass} />,
-      },
-      {
-        title: "Radius",
-        hash: "radius",
-        icon: <Radius className={iconClass} />,
-      },
-    ],
-  },
-  {
-    section: "Preferences",
-    href: "/settings/preferences",
-    items: [
-      {
-        title: "Language",
-        hash: "language",
-        icon: <Languages className={iconClass} />,
-      },
-      {
-        title: "Stream Quality",
-        hash: "stream-quality",
-        icon: <Headphones className={iconClass} />,
-      },
-      {
-        title: "Download Quality",
-        hash: "download-quality",
-        icon: <DownloadCloud className={iconClass} />,
-      },
-      {
-        title: "Image Quality",
-        hash: "image-quality",
-        icon: <ImageDown className={iconClass} />,
-      },
-    ],
-  },
-];
+
+function useSettingsNavItems(): SidebarNavItem[] {
+  const ts = useTranslations("settings");
+  const tn = useTranslations("navigation");
+  const tb = useTranslations("billing");
+  const tc = useTranslations("common");
+
+  return [
+    {
+      section: ts("account"),
+      href: "/settings",
+      items: [
+        {
+          title: ts("editProfile"),
+          hash: "edit-profile",
+          icon: <UserCog2 className={iconClass} />,
+        },
+        {
+          title: ts("changePassword"),
+          hash: "change-password",
+          icon: <Key className={iconClass} />,
+        },
+        {
+          title: ts("deleteAccount"),
+          hash: "delete-account",
+          icon: <UserX2 className={iconClass} />,
+        },
+      ],
+    },
+    {
+      section: tn("billing"),
+      href: "/settings/billing",
+      items: [
+        {
+          title: tb("subscription"),
+          hash: "subscription",
+          icon: <CreditCard className={iconClass} />,
+        },
+      ],
+    },
+    {
+      section: ts("notifications"),
+      href: "/settings/notifications",
+      items: [
+        {
+          title: tn("notificationPreferences"),
+          hash: "email",
+          icon: <Bell className={iconClass} />,
+        },
+      ],
+    },
+    {
+      section: tc("appearance"),
+      href: "/settings/appearance",
+      items: [
+        {
+          title: ts("mode"),
+          hash: "mode",
+          icon: <SunMoon className={iconClass} />,
+        },
+        {
+          title: ts("themes"),
+          hash: "theme",
+          icon: <Palette className={iconClass} />,
+        },
+        {
+          title: ts("radius"),
+          hash: "radius",
+          icon: <Radius className={iconClass} />,
+        },
+      ],
+    },
+    {
+      section: ts("preferences"),
+      href: "/settings/preferences",
+      items: [
+        {
+          title: tc("language"),
+          hash: "language",
+          icon: <Languages className={iconClass} />,
+        },
+        {
+          title: ts("streamQuality"),
+          hash: "stream-quality",
+          icon: <Headphones className={iconClass} />,
+        },
+        {
+          title: ts("downloadQuality"),
+          hash: "download-quality",
+          icon: <DownloadCloud className={iconClass} />,
+        },
+        {
+          title: ts("imageQuality"),
+          hash: "image-quality",
+          icon: <ImageDown className={iconClass} />,
+        },
+      ],
+    },
+  ];
+}
 
 export function SideNavbar() {
+  const sidebarNavItems = useSettingsNavItems();
+
   return (
     <nav className="flex flex-col gap-2">
       {sidebarNavItems.map(({ section, href, items }, i) => (

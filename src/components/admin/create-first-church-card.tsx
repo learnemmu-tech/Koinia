@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Church, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { AddChurchModal } from "@/components/admin/add-church-modal";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { adminSectionClass } from "@/lib/responsive-classes";
 import { isMultiChurchOrgWorkspace } from "@/lib/organization/workspace-type";
 
 export function CreateFirstChurchCard() {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const { authUser } = useFirebaseAuth();
   const { organization, branchesByChurch, refetch } = useOrganization();
@@ -44,11 +46,10 @@ export function CreateFirstChurchCard() {
             </div>
             <div className="space-y-1">
               <CardTitle className="font-heading text-xl">
-                Welcome to {organization.name}
+                {t("welcomeToOrg", { name: organization.name })}
               </CardTitle>
               <CardDescription className="text-base">
-                Your organization is ready. Create your first church to start
-                managing content, members, and ministry tools.
+                {t("createFirstChurchDescription")}
               </CardDescription>
             </div>
           </div>
@@ -56,7 +57,7 @@ export function CreateFirstChurchCard() {
         <CardContent>
           <Button size="lg" onClick={() => setModalOpen(true)}>
             <Plus className="mr-2 size-4" />
-            Create Church
+            {t("createChurch")}
           </Button>
         </CardContent>
       </Card>

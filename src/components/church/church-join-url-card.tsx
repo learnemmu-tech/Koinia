@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Copy, Link2, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,8 +29,6 @@ import { firebaseAuth } from "@/lib/firebase-auth-service";
 import { buildJoinChurchUrl } from "@/lib/join-url";
 import type { BranchSettings } from "@/types/branch";
 import {
-  ENROLLMENT_MODE_DESCRIPTIONS,
-  ENROLLMENT_MODE_LABELS,
   ENROLLMENT_MODES,
   type EnrollmentMode,
 } from "@/types/enrollment";
@@ -44,6 +43,20 @@ type ChurchJoinUrlCardProps = {
   section?: "all" | "join-url" | "enrollment";
 };
 
+const ENROLLMENT_MODE_KEYS = {
+  open: "modeOpen",
+  approval_required: "modeApprovalRequired",
+  invite_only: "modeInviteOnly",
+  closed: "modeClosed",
+} as const satisfies Record<EnrollmentMode, string>;
+
+const ENROLLMENT_DESCRIPTION_KEYS = {
+  open: "modeOpenDescription",
+  approval_required: "modeApprovalRequiredDescription",
+  invite_only: "modeInviteOnlyDescription",
+  closed: "modeClosedDescription",
+} as const satisfies Record<EnrollmentMode, string>;
+
 export function ChurchJoinUrlCard({
   organizationId,
   branchId,
@@ -52,6 +65,7 @@ export function ChurchJoinUrlCard({
   settings,
   section = "all",
 }: ChurchJoinUrlCardProps) {
+  const t = useTranslations("churchJoin");
   const { refetch } = useOrganization();
   const enrollment = resolveBranchEnrollmentSettings(settings);
   const [slug, setSlug] = useState(initialSlug);
@@ -76,14 +90,14 @@ export function ChurchJoinUrlCard({
 
   const enrollmentHelp =
     enrollmentMode === "open" ?
-      "New members become active immediately after joining."
+      t("enrollmentOpenHelp")
     : enrollmentMode === "approval_required" ?
-      "New members appear in Pending Requests until you approve them."
-    : ENROLLMENT_MODE_DESCRIPTIONS[enrollmentMode];
+      t("enrollmentApprovalHelp")
+    : t(ENROLLMENT_DESCRIPTION_KEYS[enrollmentMode]);
 
   async function patchSettings(body: Record<string, unknown>) {
     const user = firebaseAuth.currentUser;
-    if (!user) throw new Error("Not signed in");
+    if (!user) throw new Error(t("notSignedIn"));
 
     const token = await user.getIdToken();
     const res = await fetch(`/api/branches/${encodeURIComponent(branchId)}/settings`, {
@@ -97,7 +111,7 @@ export function ChurchJoinUrlCard({
 
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(data.error ?? "Failed to save settings");
+      throw new Error(data.error ?? t("saveSettingsFailed"));
     }
 
     const data = (await res.json()) as {
@@ -119,10 +133,10 @@ export function ChurchJoinUrlCard({
     try {
       await navigator.clipboard.writeText(joinUrl);
       setCopied(true);
-      toast.success("Join link copied");
+      toast.success(t("joinLinkCopied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(t("copyLinkFailed"));
     }
   }
 
@@ -131,10 +145,10 @@ export function ChurchJoinUrlCard({
     setSaving(true);
     try {
       await patchSettings({ enrollmentMode: mode });
-      toast.success("Enrollment mode updated");
+      toast.success(t("enrollmentModeUpdated"));
     } catch (error) {
       setEnrollmentMode(enrollment.enrollmentMode);
-      toast.error(error instanceof Error ? error.message : "Update failed");
+      toast.error(error instanceof Error ? error.message : t("updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -145,10 +159,10 @@ export function ChurchJoinUrlCard({
     setSaving(true);
     try {
       await patchSettings({ joinUrlEnabled: enabled });
-      toast.success(enabled ? "Join link enabled" : "Join link disabled");
+      toast.success(enabled ? t("joinLinkEnabled") : t("joinLinkDisabled"));
     } catch (error) {
       setJoinUrlEnabled(enrollment.joinUrlEnabled);
-      toast.error(error instanceof Error ? error.message : "Update failed");
+      toast.error(error instanceof Error ? error.message : t("updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -158,9 +172,9 @@ export function ChurchJoinUrlCard({
     setRegenerating(true);
     try {
       await patchSettings({ regenerateSlug: true });
-      toast.success("Join link regenerated");
+      toast.success(t("linkRegenerated"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Regeneration failed");
+      toast.error(error instanceof Error ? error.message : t("regenerationFailed"));
     } finally {
       setRegenerating(false);
     }
@@ -176,14 +190,14 @@ export function ChurchJoinUrlCard({
           <Link2 className="size-5 text-primary" />
           <CardTitle className="text-base">
             {showEnrollment && !showJoinUrl ?
-              "Enrollment settings"
-            : "Join Church link"}
+              t("enrollmentSettingsTitle")
+            : t("joinLinkTitle")}
           </CardTitle>
         </div>
         <CardDescription>
           {showEnrollment && !showJoinUrl ?
-            `Control how new members join ${churchName}. ${enrollmentHelp}`
-          : `Share this permanent link so members can join ${churchName}. ${enrollmentHelp}`}
+            t("enrollmentDescription", { name: churchName, help: enrollmentHelp })
+          : t("joinLinkDescription", { name: churchName, help: enrollmentHelp })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -191,9 +205,9 @@ export function ChurchJoinUrlCard({
           <>
             <div className="flex items-center justify-between gap-4 rounded-xl border border-border/50 px-4 py-3">
               <div className="space-y-0.5">
-                <Label htmlFor="join-url-enabled">Public join link</Label>
+                <Label htmlFor="join-url-enabled">{t("publicJoinLinkLabel")}</Label>
                 <p className="text-xs text-muted-foreground">
-                  When disabled, the join URL will not accept new requests.
+                  {t("publicJoinLinkHint")}
                 </p>
               </div>
               <Switch
@@ -205,7 +219,7 @@ export function ChurchJoinUrlCard({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="join-url">Public join URL</Label>
+              <Label htmlFor="join-url">{t("publicJoinUrlLabel")}</Label>
               <div className="flex gap-2">
                 <Input
                   id="join-url"
@@ -232,7 +246,7 @@ export function ChurchJoinUrlCard({
                 {regenerating ?
                   <RefreshCw className="mr-1.5 size-4 animate-spin" />
                 : <RefreshCw className="mr-1.5 size-4" />}
-                Regenerate link
+                {t("regenerateLink")}
               </Button>
             </div>
           </>
@@ -240,7 +254,7 @@ export function ChurchJoinUrlCard({
 
         {showEnrollment ?
           <div className="space-y-2">
-            <Label htmlFor="enrollment-mode">Enrollment mode</Label>
+            <Label htmlFor="enrollment-mode">{t("enrollmentModeLabel")}</Label>
             <Select
               value={enrollmentMode}
               disabled={saving}
@@ -254,13 +268,13 @@ export function ChurchJoinUrlCard({
               <SelectContent>
                 {ENROLLMENT_MODES.map((mode) => (
                   <SelectItem key={mode} value={mode}>
-                    {ENROLLMENT_MODE_LABELS[mode]}
+                    {t(ENROLLMENT_MODE_KEYS[mode])}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {ENROLLMENT_MODE_DESCRIPTIONS[enrollmentMode]}
+              {t(ENROLLMENT_DESCRIPTION_KEYS[enrollmentMode])}
             </p>
           </div>
         : null}

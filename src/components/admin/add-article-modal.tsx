@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -48,31 +49,43 @@ import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";
 import { uploadSongFileLocal } from "@/lib/local-upload";
 import { MAX_IMAGE_SIZE_LABEL, validateImageFile } from "@/lib/upload-limits";
 
-const articleSchema = z
-  .object({
-    title: z.string().min(1, "Title is required"),
-    category: z.string().min(1, "Category is required"),
-    shortDescription: z.string().min(1, "Short description is required"),
-    scriptureReference: z.string().optional(),
-    content: z.string().min(1, "Full content is required"),
-    author: z.string().min(1, "Author is required"),
-    tags: z.string().optional(),
-    youtubeUrl: z.string().optional(),
-    featured: z.boolean(),
-    isPublished: z.boolean(),
-  })
-  .superRefine((values, ctx) => {
-    const youtube = values.youtubeUrl?.trim() ?? "";
-    if (youtube && !isValidYouTubeUrl(youtube)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Enter a valid YouTube URL (youtube.com or youtu.be)",
-        path: ["youtubeUrl"],
-      });
-    }
-  });
+const createArticleSchema = (tValidation: ReturnType<typeof useTranslations<"validation">>) =>
+  z
+    .object({
+      title: z.string().min(1, tValidation("titleRequired")),
+      category: z.string().min(1, tValidation("categoryRequired")),
+      shortDescription: z.string().min(1, tValidation("shortDescriptionRequired")),
+      scriptureReference: z.string().optional(),
+      content: z.string().min(1, tValidation("fullContentRequired")),
+      author: z.string().min(1, tValidation("authorRequired")),
+      tags: z.string().optional(),
+      youtubeUrl: z.string().optional(),
+      featured: z.boolean(),
+      isPublished: z.boolean(),
+    })
+    .superRefine((values, ctx) => {
+      const youtube = values.youtubeUrl?.trim() ?? "";
+      if (youtube && !isValidYouTubeUrl(youtube)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: tValidation("invalidYouTubeUrl"),
+          path: ["youtubeUrl"],
+        });
+      }
+    });
 
-type ArticleFormValues = z.infer<typeof articleSchema>;
+type ArticleFormValues = {
+  title: string;
+  category: string;
+  shortDescription: string;
+  scriptureReference?: string;
+  content: string;
+  author: string;
+  tags?: string;
+  youtubeUrl?: string;
+  featured: boolean;
+  isPublished: boolean;
+};
 
 type AddArticleModalProps = {
   isOpen: boolean;
@@ -118,6 +131,15 @@ export function AddArticleModal({
   churchId,
   contentScope = "organization",
 }: AddArticleModalProps) {
+  const t = useTranslations("articles");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
+  const tErrors = useTranslations("errors");
+  const tValidation = useTranslations("validation");
+  const articleSchema = useMemo(
+    () => createArticleSchema(tValidation),
+    [tValidation]
+  );
   const { user, authUser } = useFirebaseAuth();
   const { invalidateArticles } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
@@ -198,7 +220,7 @@ export function AddArticleModal({
     }
 
     if (!coverFile && !coverPreview.trim()) {
-      toast.error("Cover image is required");
+      toast.error(tErrors("coverRequired"));
       return;
     }
 
@@ -210,7 +232,7 @@ export function AddArticleModal({
     try {
       const idToken = user ? await user.getIdToken() : undefined;
       if (!idToken) {
-        toast.error("You must be signed in to upload files.");
+        toast.error(tErrors("signedInRequired"));
         return;
       }
 
@@ -245,7 +267,7 @@ export function AddArticleModal({
           organizationId: tenantFields.organizationId,
         });
 
-        toast.success("Article updated successfully");
+        toast.success(t("updatedSuccess"));
       } else {
         const articleId = await createArticle({
           ...payload,
@@ -282,7 +304,7 @@ export function AddArticleModal({
           organizationId: tenantFields.organizationId,
         });
 
-        toast.success("Article added successfully");
+        toast.success(t("addedSuccess"));
       }
 
       await invalidateArticles();
@@ -291,7 +313,7 @@ export function AddArticleModal({
       setCoverFile(undefined);
       setCoverPreview("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save article");
+      toast.error(error instanceof Error ? error.message : tErrors("saveArticleFailed"));
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -302,11 +324,11 @@ export function AddArticleModal({
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !loading) onClose(); }}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{initialArticle ? "Edit Article" : "Add Article"}</DialogTitle>
+          <DialogTitle>{initialArticle ? t("editModalTitle") : t("addModalTitle")}</DialogTitle>
           <DialogDescription>
             {initialArticle
-              ? "Update article content, media links, and cover image"
-              : `Publish a new article to ${siteConfig.name}`}
+              ? t("editModalDescription")
+              : t("addModalDescription", { siteName: siteConfig.name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -314,7 +336,7 @@ export function AddArticleModal({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Card className="border-border/50 shadow-none">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">Article Details</CardTitle>
+                <CardTitle className="text-sm font-semibold">{tForms("articleDetails")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -322,9 +344,9 @@ export function AddArticleModal({
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Title</FormLabel>
+                      <FormLabel>{tForms("title")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Article title" disabled={loading} {...field} />
+                        <Input placeholder={tForms("placeholders.articleTitle")} disabled={loading} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -336,7 +358,7 @@ export function AddArticleModal({
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>{tForms("category")}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -344,7 +366,7 @@ export function AddArticleModal({
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder={tForms("selectCategory")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -365,10 +387,10 @@ export function AddArticleModal({
                   name="shortDescription"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Short Description</FormLabel>
+                      <FormLabel>{tForms("shortDescription")}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Brief summary shown on cards..."
+                          placeholder={tForms("placeholders.articleSummary")}
                           rows={3}
                           disabled={loading}
                           {...field}
@@ -384,9 +406,9 @@ export function AddArticleModal({
                   name="scriptureReference"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Scripture Reference (optional)</FormLabel>
+                      <FormLabel>{tForms("scriptureReferenceOptional")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Psalm 23:1" disabled={loading} {...field} />
+                        <Input placeholder={tForms("placeholders.scriptureShort")} disabled={loading} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -398,10 +420,10 @@ export function AddArticleModal({
                   name="content"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Content</FormLabel>
+                      <FormLabel>{tForms("fullContent")}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Write the full article content..."
+                          placeholder={tForms("placeholders.articleContent")}
                           rows={8}
                           disabled={loading}
                           {...field}
@@ -417,9 +439,9 @@ export function AddArticleModal({
                   name="author"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Author</FormLabel>
+                      <FormLabel>{tForms("author")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Author name" disabled={loading} {...field} />
+                        <Input placeholder={tForms("placeholders.authorName")} disabled={loading} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -431,15 +453,15 @@ export function AddArticleModal({
                   name="tags"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tags (optional)</FormLabel>
+                      <FormLabel>{tForms("tagsOptional")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Prayer, Worship, Faith (comma separated)"
+                          placeholder={tForms("placeholders.articleTags")}
                           disabled={loading}
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Comma-separated tags</FormDescription>
+                      <FormDescription>{tForms("commaSeparatedTags")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -450,10 +472,10 @@ export function AddArticleModal({
                   name="youtubeUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>YouTube URL (optional)</FormLabel>
+                      <FormLabel>{tForms("youtubeUrlOptional")}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="https://youtube.com/watch?v=... or https://youtu.be/..."
+                          placeholder={tForms("placeholders.youtubeUrl")}
                           disabled={loading}
                           {...field}
                         />
@@ -467,18 +489,18 @@ export function AddArticleModal({
 
             <Card className="border-border/50 shadow-none">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">Cover Image</CardTitle>
+                <CardTitle className="text-sm font-semibold">{tForms("coverImage")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Required · Max {MAX_IMAGE_SIZE_LABEL}
+                  {tForms("requiredMax", { max: MAX_IMAGE_SIZE_LABEL })}
                 </p>
                 <div className="flex gap-4">
                   {coverPreview ? (
                     <div className="relative h-20 w-20 shrink-0">
                       <img
                         src={coverPreview}
-                        alt="Cover preview"
+                        alt={tForms("coverPreviewAlt")}
                         className="h-full w-full rounded object-cover"
                       />
                       <button
@@ -496,7 +518,7 @@ export function AddArticleModal({
                   ) : null}
                   <label className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-4 transition-colors hover:border-primary">
                     <Upload className="mb-1 h-6 w-6 text-muted-foreground" />
-                    <span className="text-xs font-medium">Click to upload</span>
+                    <span className="text-xs font-medium">{tForms("clickToUpload")}</span>
                     <input
                       type="file"
                       accept=".jpg,.jpeg,.png,.webp,.gif,.avif,image/*"
@@ -507,7 +529,7 @@ export function AddArticleModal({
                   </label>
                 </div>
                 {uploadProgress > 0 ? (
-                  <p className="text-xs text-muted-foreground">Uploading… {uploadProgress}%</p>
+                  <p className="text-xs text-muted-foreground">{tForms("uploadingProgress", { percent: uploadProgress })}</p>
                 ) : null}
               </CardContent>
             </Card>
@@ -518,9 +540,9 @@ export function AddArticleModal({
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border border-border/50 p-4">
                   <div className="space-y-0.5">
-                    <FormLabel>Featured Article</FormLabel>
+                    <FormLabel>{tForms("featuredArticle")}</FormLabel>
                     <p className="text-xs text-muted-foreground">
-                      Highlight this article for future homepage features
+                      {tForms("featuredArticleDescription")}
                     </p>
                   </div>
                   <FormControl>
@@ -540,9 +562,9 @@ export function AddArticleModal({
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border border-border/50 p-4">
                   <div className="space-y-0.5">
-                    <FormLabel>Publish</FormLabel>
+                    <FormLabel>{tCommon("publish")}</FormLabel>
                     <p className="text-xs text-muted-foreground">
-                      Make this article visible on the home page
+                      {tForms("publishArticleDescription")}
                     </p>
                   </div>
                   <FormControl>
@@ -558,16 +580,16 @@ export function AddArticleModal({
 
             <div className="flex justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={loading} className="gap-2">
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
+                    {tCommon("saving")}
                   </>
                 ) : (
-                  "Save Article"
+                  t("saveArticle")
                 )}
               </Button>
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -154,6 +155,11 @@ export function AddMusicModal({
   churchId,
   contentScope = "organization",
 }: AddMusicModalProps) {
+  const t = useTranslations("songs");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
+  const tErrors = useTranslations("errors");
+  const tValidation = useTranslations("validation");
   const { user } = useFirebaseAuth();
   const { invalidateSongs } = useInvalidateAdminQueries();
   const subscription = useSubscriptionOptional();
@@ -262,7 +268,7 @@ export function AddMusicModal({
     e.preventDefault();
 
     if (!formData.songTitle.trim()) {
-      toast.error("Song title is required");
+      toast.error(t("titleRequired"));
       return;
     }
 
@@ -277,7 +283,7 @@ export function AddMusicModal({
     }
 
     if (formData.youtubeUrl && !isValidYouTubeUrl(formData.youtubeUrl)) {
-      toast.error("YouTube URL must be a valid youtube.com or youtu.be link");
+      toast.error(tValidation("invalidYouTubeUrlSong"));
       return;
     }
 
@@ -291,7 +297,7 @@ export function AddMusicModal({
     try {
       const idToken = user ? await user.getIdToken() : undefined;
       if (!idToken) {
-        toast.error("You must be signed in to upload files.");
+        toast.error(tErrors("signedInRequired"));
         return;
       }
       const payload = buildSongPayload();
@@ -337,7 +343,7 @@ export function AddMusicModal({
           });
         }
 
-        toast.success("Song updated successfully");
+        toast.success(t("updatedSuccess"));
       } else {
         const songId = await addSong(
           contentScope === "platform_public" ? "" : (tenantFields.churchId ?? churchId),
@@ -387,7 +393,7 @@ export function AddMusicModal({
           organizationId: tenantFields.organizationId,
         });
 
-        toast.success("Song added successfully");
+        toast.success(t("addedSuccess"));
       }
 
       await invalidateSongs();
@@ -396,7 +402,7 @@ export function AddMusicModal({
       setFiles({});
       setCoverPreview("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save song");
+      toast.error(error instanceof Error ? error.message : tErrors("saveSongFailed"));
     } finally {
       setLoading(false);
       setUploadProgress({ cover: 0, audio: 0 });
@@ -412,27 +418,25 @@ export function AddMusicModal({
     >
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{initialSong ? "Edit Song" : "Add New Song"}</DialogTitle>
+          <DialogTitle>{initialSong ? t("editModalTitle") : t("addModalTitle")}</DialogTitle>
           <DialogDescription>
-            {initialSong
-              ? "Update song details, media, lyrics, and publishing options."
-              : "Add a worship song for your church or ministry library."}
+            {initialSong ? t("editModalDescription") : t("addModalDescription")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <FormSection
-            title="Basic Information"
-            description="Core details shown across the song library."
+            title={tForms("basicInformation")}
+            description={tForms("basicInformationDescription")}
           >
             <div className="space-y-2">
-              <Label htmlFor="songTitle">Song Title *</Label>
+              <Label htmlFor="songTitle">{tForms("songTitle")} *</Label>
               <Input
                 id="songTitle"
                 name="songTitle"
                 value={formData.songTitle}
                 onChange={handleInputChange}
-                placeholder="e.g. How Great Thou Art"
+                placeholder={tForms("placeholders.songTitle")}
                 required
                 disabled={loading}
               />
@@ -440,32 +444,32 @@ export function AddMusicModal({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="alternateTitle">Alternate Title</Label>
+                <Label htmlFor="alternateTitle">{tForms("alternateTitle")}</Label>
                 <Input
                   id="alternateTitle"
                   name="alternateTitle"
                   value={formData.alternateTitle}
                   onChange={handleInputChange}
-                  placeholder="Translation or local title"
+                  placeholder={tForms("placeholders.alternateTitle")}
                   disabled={loading}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="artist">Artist / Worship Team</Label>
+                <Label htmlFor="artist">{tForms("artist")}</Label>
                 <Input
                   id="artist"
                   name="artist"
                   value={formData.artist}
                   onChange={handleInputChange}
-                  placeholder="e.g. Hillsong Worship"
+                  placeholder={tForms("placeholders.artist")}
                   disabled={loading}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category">{tForms("category")}</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value: SongCategory) =>
@@ -474,12 +478,12 @@ export function AddMusicModal({
                 disabled={loading}
               >
                 <SelectTrigger id="category">
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder={tForms("selectCategory")} />
                 </SelectTrigger>
                 <SelectContent>
                   {SONG_CATEGORIES.map((category) => (
                     <SelectItem key={category} value={category}>
-                      {category}
+                      {t(`categories.${category}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -488,20 +492,20 @@ export function AddMusicModal({
           </FormSection>
 
           <FormSection
-            title="Media"
-            description="Cover art, audio recording, and optional video."
+            title={tForms("media")}
+            description={tForms("mediaDescription")}
           >
             <div className="space-y-2">
-              <Label htmlFor="cover">Cover Image</Label>
+              <Label htmlFor="cover">{tForms("coverImage")}</Label>
               <p className="text-xs text-muted-foreground">
-                Max {MAX_IMAGE_SIZE_LABEL}
+                {tForms("maxSize", { max: MAX_IMAGE_SIZE_LABEL })}
               </p>
               <div className="flex gap-4">
                 {coverPreview ? (
                   <div className="relative h-20 w-20 shrink-0">
                     <img
                       src={coverPreview}
-                      alt="Cover preview"
+                      alt={tForms("coverPreviewAlt")}
                       className="h-full w-full rounded object-cover"
                     />
                     <button
@@ -523,7 +527,7 @@ export function AddMusicModal({
                 ) : null}
                 <label className="flex flex-1 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-4 transition-colors hover:border-primary">
                   <Upload className="mb-1 h-6 w-6 text-muted-foreground" />
-                  <span className="text-xs font-medium">Click to upload</span>
+                  <span className="text-xs font-medium">{tForms("clickToUpload")}</span>
                   <input
                     type="file"
                     id="cover"
@@ -534,13 +538,13 @@ export function AddMusicModal({
                   />
                 </label>
               </div>
-              <UploadProgressBar label="Cover upload" percent={uploadProgress.cover} />
+              <UploadProgressBar label={tForms("coverUpload")} percent={uploadProgress.cover} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="audio">Audio File</Label>
+              <Label htmlFor="audio">{tForms("audioFile")}</Label>
               <p className="text-xs text-muted-foreground">
-                Max {MAX_AUDIO_SIZE_LABEL}
+                {tForms("maxSize", { max: MAX_AUDIO_SIZE_LABEL })}
               </p>
               {files.audio ? (
                 <div className="mb-2 flex items-center justify-between rounded-lg bg-muted p-2">
@@ -563,7 +567,7 @@ export function AddMusicModal({
               ) : null}
               <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/50 p-4 transition-colors hover:border-primary">
                 <Upload className="mb-1 h-6 w-6 text-muted-foreground" />
-                <span className="text-xs font-medium">Click to upload</span>
+                <span className="text-xs font-medium">{tForms("clickToUpload")}</span>
                 <input
                   type="file"
                   id="audio"
@@ -573,47 +577,47 @@ export function AddMusicModal({
                   disabled={loading}
                 />
               </label>
-              <UploadProgressBar label="Audio upload" percent={uploadProgress.audio} />
+              <UploadProgressBar label={tForms("audioUpload")} percent={uploadProgress.audio} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="youtubeUrl">YouTube Video URL</Label>
+              <Label htmlFor="youtubeUrl">{tForms("youtubeUrl")}</Label>
               <Input
                 id="youtubeUrl"
                 name="youtubeUrl"
                 value={formData.youtubeUrl}
                 onChange={handleInputChange}
-                placeholder="https://youtube.com/watch?v=... or https://youtu.be/..."
+                placeholder={tForms("placeholders.youtubeUrl")}
                 disabled={loading}
               />
             </div>
           </FormSection>
 
           <FormSection
-            title="Lyrics"
-            description="English lyrics and optional translated / transliterated lyrics."
+            title={tForms("lyricsSection")}
+            description={tForms("lyricsSectionDescription")}
           >
             <div className="space-y-2">
-              <Label htmlFor="translationLyrics">English Lyrics</Label>
+              <Label htmlFor="translationLyrics">{tForms("englishLyrics")}</Label>
               <Textarea
                 id="translationLyrics"
                 name="translationLyrics"
                 value={formData.translationLyrics}
                 onChange={handleInputChange}
-                placeholder="Enter English lyrics..."
+                placeholder={tForms("placeholders.englishLyrics")}
                 rows={5}
                 disabled={loading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="originalLyrics">Translated Lyrics</Label>
+              <Label htmlFor="originalLyrics">{tForms("translatedLyrics")}</Label>
               <Textarea
                 id="originalLyrics"
                 name="originalLyrics"
                 value={formData.originalLyrics}
                 onChange={handleInputChange}
-                placeholder="Enter transliterated or translated lyrics..."
+                placeholder={tForms("placeholders.translatedLyrics")}
                 rows={5}
                 disabled={loading}
               />
@@ -621,41 +625,41 @@ export function AddMusicModal({
           </FormSection>
 
           <FormSection
-            title="Publishing"
-            description="Metadata and visibility for the public library."
+            title={tForms("publishing")}
+            description={tForms("publishingDescription")}
           >
             <div className="space-y-2">
-              <Label htmlFor="scriptureReference">Scripture Reference</Label>
+              <Label htmlFor="scriptureReference">{tForms("scriptureReference")}</Label>
               <Input
                 id="scriptureReference"
                 name="scriptureReference"
                 value={formData.scriptureReference}
                 onChange={handleInputChange}
-                placeholder="e.g. Psalm 23:1"
+                placeholder={tForms("placeholders.scriptureReference")}
                 disabled={loading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tags">Tags</Label>
+              <Label htmlFor="tags">{tForms("tags")}</Label>
               <Input
                 id="tags"
                 name="tags"
                 value={formData.tags}
                 onChange={handleInputChange}
-                placeholder="e.g. communion, revival, Sunday service"
+                placeholder={tForms("placeholders.tags")}
                 disabled={loading}
               />
               <p className="text-xs text-muted-foreground">
-                Separate tags with commas.
+                {tForms("tagsCommaHint")}
               </p>
             </div>
 
             <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background px-4 py-3">
               <div>
-                <Label htmlFor="featured">Featured Song</Label>
+                <Label htmlFor="featured">{tForms("featuredSong")}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Highlight this song in featured areas.
+                  {tForms("featuredSongDescription")}
                 </p>
               </div>
               <Switch
@@ -670,9 +674,9 @@ export function AddMusicModal({
 
             <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background px-4 py-3">
               <div>
-                <Label htmlFor="published">Publish</Label>
+                <Label htmlFor="published">{tCommon("publish")}</Label>
                 <p className="text-xs text-muted-foreground">
-                  Make this song visible to the public library.
+                  {tForms("publishSongDescription")}
                 </p>
               </div>
               <Switch
@@ -693,18 +697,18 @@ export function AddMusicModal({
               onClick={onClose}
               disabled={loading}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={loading} className="gap-2">
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {uploadProgress.cover > 0 || uploadProgress.audio > 0
-                    ? "Uploading..."
-                    : "Saving..."}
+                    ? tCommon("uploading")
+                    : tCommon("saving")}
                 </>
               ) : (
-                "Save Song"
+                t("saveSong")
               )}
             </Button>
           </div>

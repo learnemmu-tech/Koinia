@@ -28,7 +28,8 @@ export type AdminNotificationType =
   | "donation_received"
   | "event_registration"
   | "contact_form"
-  | "join_request";
+  | "join_request"
+  | "organization_created";
 
 export type AdminNotificationPayload = {
   type: AdminNotificationType;

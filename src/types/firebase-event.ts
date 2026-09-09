@@ -15,6 +15,7 @@ export type EventStatus = "draft" | "published";
 export type FirebaseEvent = {
   id: string;
   contentScope?: "organization" | "platform_public";
+  organizationId?: string;
   churchId: string;
   title: string;
   description: string;

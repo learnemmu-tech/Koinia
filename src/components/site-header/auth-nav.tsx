@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 
 import { toast } from "sonner";
 
@@ -199,6 +200,7 @@ function UserAvatar({ authUser, profile, className }: UserAvatarProps) {
 
 export function AuthNav() {
 
+  const tCommon = useTranslations("common");
   const { authUser, profile, isAdmin, loading, signOut } = useFirebaseAuth();
 
   const { setTheme } = useTheme();
@@ -229,7 +231,7 @@ export function AuthNav() {
 
       <Button asChild size="sm" variant="outline">
 
-        <Link href="/signin">Sign In</Link>
+        <Link href="/signin">{tCommon("signIn")}</Link>
 
       </Button>
 

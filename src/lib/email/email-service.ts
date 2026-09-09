@@ -19,9 +19,22 @@ import { emailConfig } from "./config";
 import { sendEmail } from "./send-email";
 import { shouldSendUserEmail } from "./user-preferences-server";
 import type { AdminNotificationPayload, SendEmailResult } from "./types";
+import { env } from "@/lib/env";
 
-/** Contact Us inbox only. Do not reuse for other admin notifications. */
-const CONTACT_US_INBOX = "emmanuel012k@gmail.com";
+function resolveContactInbox(): string | null {
+  const dedicated = env.CONTACT_EMAIL?.trim();
+  if (dedicated) return dedicated;
+
+  const adminFallback = env.ADMIN_NOTIFICATION_EMAIL?.trim();
+  if (adminFallback) {
+    console.warn(
+      "[email] CONTACT_EMAIL is not set — using ADMIN_NOTIFICATION_EMAIL for Contact Us."
+    );
+    return adminFallback;
+  }
+
+  return null;
+}
 
 function formatDisplayName(firstName?: string, lastName?: string): string {
   const name = `${firstName ?? ""} ${lastName ?? ""}`.trim();
@@ -351,9 +364,18 @@ export const EmailService = {
     email: string;
     subject: string;
     message: string;
+    organization?: string;
   }): Promise<SendEmailResult> {
+    const inbox = resolveContactInbox();
+    if (!inbox) {
+      console.error(
+        "[email] No CONTACT_EMAIL or ADMIN_NOTIFICATION_EMAIL — Contact Us inbox send skipped."
+      );
+      return { success: false, error: "Contact inbox is not configured" };
+    }
+
     return sendEmail({
-      to: CONTACT_US_INBOX,
+      to: inbox,
       replyTo: input.email,
       subject: `New Contact Us Message — ${input.subject}`,
       react: AdminNotificationEmail({
@@ -362,6 +384,7 @@ export const EmailService = {
         details: {
           Name: input.name,
           "Visitor Email": input.email,
+          Organization: input.organization || "—",
           Subject: input.subject,
           Message: input.message,
         },

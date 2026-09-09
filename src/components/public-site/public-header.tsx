@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { publicHeaderNav } from "@/config/public-nav";
 import { siteConfig } from "@/config/site";
+import { useNavLabel } from "@/i18n/nav";
 import { buildCreateWorkspaceAuthHref } from "@/lib/auth/auth-paths";
 import { cn } from "@/lib/utils";
 
@@ -29,8 +32,11 @@ function NavLinks({
   onNavigate?: () => void;
   className?: string;
 }) {
+  const navLabel = useNavLabel();
+  const t = useTranslations("navigation");
+
   return (
-    <nav aria-label="Explore" className={className}>
+    <nav aria-label={t("sectionBrowse")} className={className}>
       <ul className="flex flex-col gap-1 md:flex-row md:items-center md:gap-3 lg:gap-5">
         {publicHeaderNav.map((item) => {
           const isActive = item.match(pathname);
@@ -46,7 +52,7 @@ function NavLinks({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {item.label}
+                {navLabel(item.label)}
               </Link>
             </li>
           );
@@ -57,6 +63,8 @@ function NavLinks({
 }
 
 export function PublicHeader() {
+  const tCommon = useTranslations("common");
+  const tNav = useTranslations("navigation");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const getStartedHref = buildCreateWorkspaceAuthHref("/signup");
@@ -72,15 +80,17 @@ export function PublicHeader() {
         />
 
         <div className="ml-auto hidden shrink-0 items-center gap-2 lg:flex">
+          <LocaleSwitcher />
           <Button asChild size="sm" variant="ghost" className="rounded-full">
-            <Link href="/signin">Sign In</Link>
+            <Link href="/signin">{tCommon("signIn")}</Link>
           </Button>
           <Button asChild size="sm" className="rounded-full">
-            <Link href={getStartedHref}>Get Started</Link>
+            <Link href={getStartedHref}>{tCommon("getStarted")}</Link>
           </Button>
         </div>
 
-        <div className="ml-auto lg:hidden">
+        <div className="ml-auto flex items-center gap-1 lg:hidden">
+          <LocaleSwitcher />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button
@@ -88,7 +98,7 @@ export function PublicHeader() {
                 variant="ghost"
                 size="icon"
                 className="size-10"
-                aria-label="Open menu"
+                aria-label={tNav("openMenu")}
               >
                 <Menu className="size-5" />
               </Button>
@@ -105,12 +115,12 @@ export function PublicHeader() {
                 <div className="flex flex-col gap-2">
                   <Button asChild variant="outline" className="rounded-full">
                     <Link href="/signin" onClick={() => setOpen(false)}>
-                      Sign In
+                      {tCommon("signIn")}
                     </Link>
                   </Button>
                   <Button asChild className="rounded-full">
                     <Link href={getStartedHref} onClick={() => setOpen(false)}>
-                      Get Started
+                      {tCommon("getStarted")}
                     </Link>
                   </Button>
                 </div>

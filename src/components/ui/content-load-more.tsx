@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +16,8 @@ export function ContentLoadMore({
   loading,
   onLoadMore,
 }: ContentLoadMoreProps) {
+  const t = useTranslations("common");
+
   if (!hasMore || !onLoadMore) return null;
 
   return (
@@ -29,9 +32,9 @@ export function ContentLoadMore({
         {loading ?
           <>
             <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-            Loading…
+            {t("loading")}
           </>
-        : "Load more"}
+        : t("loadMore")}
       </Button>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,6 +42,8 @@ const AddDonationCampaignModal = dynamic(
 type CampaignStatusFilter = "all" | FirebaseDonationCampaign["status"];
 
 export function AdminDonationsPageClient({ embedded = false }: { embedded?: boolean }) {
+  const t = useTranslations("donations");
+  const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
@@ -84,26 +87,26 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
 
   function handleExportCsv() {
     if (!adminChurchId) {
-      toast.error("Select a church before exporting donations.");
+      toast.error(t("selectChurchExport"));
       return;
     }
 
     if (donations.length === 0) {
-      toast.message("No donations to export yet.");
+      toast.message(t("noDonationsExport"));
       return;
     }
 
     downloadDonationsCsv(donations, campaigns, adminChurchId);
-    toast.success(`Exported ${donations.length} donation record(s).`);
+    toast.success(t("exportedRecords", { count: donations.length }));
   }
 
   return (
     <div className={embedded ? "space-y-4" : adminSectionClass}>
       {!embedded ?
         <AdminPageHeader
-          title="Donations"
-          description="Manage giving campaigns and track gifts"
-          actionLabel="Create Campaign"
+          title={t("title")}
+          description={t("adminDescription")}
+          actionLabel={t("create")}
           onAction={() => {
             setSelectedCampaign(null);
             setModalOpen(true);
@@ -117,8 +120,8 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search campaigns…"
-        actionLabel={embedded ? "Create Campaign" : undefined}
+        searchPlaceholder={t("searchPlaceholder")}
+        actionLabel={embedded ? t("create") : undefined}
         onAction={
           embedded ?
             () => {
@@ -134,12 +137,12 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
           onValueChange={(value) => setStatusFilter(value as CampaignStatusFilter)}
         >
           <SelectTrigger className="w-full min-w-0 sm:w-[8.75rem] rounded-full">
-            <SelectValue placeholder="Filter" />
+            <SelectValue placeholder={tCommon("filter")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            <SelectItem value="active">{tCommon("active")}</SelectItem>
+            <SelectItem value="inactive">{tCommon("inactive")}</SelectItem>
           </SelectContent>
         </Select>
         <Button
@@ -150,7 +153,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
           onClick={handleExportCsv}
         >
           <Download className="mr-2 size-4" />
-          Export CSV
+          {tCommon("exportCsv")}
         </Button>
       </AdminToolbar>
 

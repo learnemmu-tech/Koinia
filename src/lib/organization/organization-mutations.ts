@@ -7,6 +7,7 @@ import type { UpdateOrganizationInput } from "@/types/organization";
 import { updateChurch } from "@/lib/church-mutations";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { getManagedChurchIds } from "@/lib/postgres/session";
+import { triggerOrganizationCreatedAdminEmail } from "@/lib/email/triggers";
 
 import {
   canManageChurchInOrganization,
@@ -21,6 +22,7 @@ import {
   deleteChurchInOrganization,
   ensureOrganizationForUser,
   getMembershipForUser,
+  getOrganizationsForUser,
   updateBranch,
   updateOrganization,
 } from "./organization-server";
@@ -77,10 +79,25 @@ export async function ensureUserOrganizationAction(
   userId: string,
   organizationName?: string
 ): Promise<string> {
+  const hadOrganization = (await getOrganizationsForUser(userId)).length > 0;
   const org = await ensureOrganizationForUser(
     userId,
     organizationName ?? "My Organization"
   );
+
+  if (!hadOrganization) {
+    const appUser = await getAppUserByClerkId(userId);
+    const creatorName =
+      `${appUser?.firstName ?? ""} ${appUser?.lastName ?? ""}`.trim() || "—";
+    triggerOrganizationCreatedAdminEmail({
+      organizationId: org.id,
+      organizationName: org.name,
+      workspaceType: org.settings?.workspaceType ?? "independent_church",
+      creatorName,
+      creatorEmail: appUser?.email?.trim() || "—",
+    });
+  }
+
   return org.id;
 }
 

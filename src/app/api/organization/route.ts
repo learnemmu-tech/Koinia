@@ -9,6 +9,7 @@ import {
   getOrganizationsForUser,
 } from "@/lib/organization/organization-server";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { triggerOrganizationCreatedAdminEmail } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { timed } from "@/lib/perf";
 
@@ -115,10 +116,25 @@ export async function POST(request: Request) {
       // optional body
     }
 
+    const hadOrganization = (await getOrganizationsForUser(decoded.uid)).length > 0;
+
     const org = await ensureOrganizationForUser(
       decoded.uid,
       body.name?.trim() || "My Organization"
     );
+
+    if (!hadOrganization) {
+      const appUser = await getAppUserByClerkId(decoded.uid);
+      const creatorName =
+        `${appUser?.firstName ?? ""} ${appUser?.lastName ?? ""}`.trim() || "—";
+      triggerOrganizationCreatedAdminEmail({
+        organizationId: org.id,
+        organizationName: org.name,
+        workspaceType: org.settings?.workspaceType ?? "independent_church",
+        creatorName,
+        creatorEmail: decoded.email?.trim() || appUser?.email?.trim() || "—",
+      });
+    }
 
     const snapshot = await getOrganizationSnapshot(org.id, decoded.uid);
     return NextResponse.json(snapshot);

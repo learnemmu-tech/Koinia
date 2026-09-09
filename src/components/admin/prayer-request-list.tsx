@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import type {
   FirebasePrayerRequest,
@@ -51,13 +52,21 @@ function StatusBadge({
   status: PrayerRequestStatus;
   isAnswered?: boolean;
 }) {
+  const tCommon = useTranslations("common");
+
   if (isAnswered) {
     return (
       <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-blue-400">
-        Answered
+        {tCommon("answered")}
       </span>
     );
   }
+
+  const labels: Record<PrayerRequestStatus, string> = {
+    pending: tCommon("pending"),
+    approved: tCommon("approved"),
+    rejected: tCommon("rejected"),
+  };
 
   const styles: Record<PrayerRequestStatus, string> = {
     pending: "bg-amber-500/10 text-amber-400",
@@ -72,12 +81,14 @@ function StatusBadge({
         styles[status]
       )}
     >
-      {status}
+      {labels[status]}
     </span>
   );
 }
 
 function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
+  const t = useTranslations("prayer");
+  const tCommon = useTranslations("common");
   const { user } = useFirebaseAuth();
   const { invalidatePrayers } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
@@ -111,13 +122,11 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
         organizationId: tenantFields.organizationId,
       });
       toast.success(
-        status === "approved"
-          ? "Prayer request approved"
-          : "Prayer request rejected"
+        status === "approved" ? t("approveSuccess") : t("rejectSuccess")
       );
       await invalidatePrayers();
     } catch {
-      toast.error("Unable to update prayer request");
+      toast.error(t("updateFailed"));
     } finally {
       setUpdatingId(null);
     }
@@ -129,10 +138,10 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
     setDeletingId(deleteTarget.id);
     try {
       await deletePrayerRequest(deleteTarget.id);
-      toast.success("Prayer request deleted");
+      toast.success(t("deletedSuccess"));
       await invalidatePrayers();
     } catch {
-      toast.error("Failed to delete prayer request");
+      toast.error(t("deleteFailed"));
     } finally {
       setDeletingId(null);
       setDeleteTarget(null);
@@ -145,7 +154,7 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
         <div className="flex flex-col items-center justify-center gap-3 py-20">
           <Loader2 className="h-7 w-7 animate-spin text-primary/60" />
           <p className="text-sm text-muted-foreground">
-            Loading prayer requests…
+            {t("loadingAdmin")}
           </p>
         </div>
       </div>
@@ -161,16 +170,16 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
       >
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-border/50 bg-muted/50 p-1 sm:grid-cols-4">
           <TabsTrigger value="pending" className="rounded-lg text-xs sm:text-sm">
-            Pending
+            {tCommon("pending")}
           </TabsTrigger>
           <TabsTrigger value="approved" className="rounded-lg text-xs sm:text-sm">
-            Approved
+            {tCommon("approved")}
           </TabsTrigger>
           <TabsTrigger value="rejected" className="rounded-lg text-xs sm:text-sm">
-            Rejected
+            {tCommon("rejected")}
           </TabsTrigger>
           <TabsTrigger value="all" className="rounded-lg text-xs sm:text-sm">
-            All
+            {tCommon("all")}
           </TabsTrigger>
         </TabsList>
 
@@ -180,7 +189,9 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                 <HeartHandshake className="size-6 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  No {filter === "all" ? "" : `${filter} `}prayer requests found.
+                  {t("emptyFiltered", {
+                    filter: filter === "all" ? "" : `${tCommon(filter as "pending" | "approved" | "rejected")} `,
+                  })}
                 </p>
               </div>
             </div>
@@ -188,11 +199,10 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
               <div className="border-b border-border/50 bg-muted/30 px-4 py-3 sm:px-6">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Prayer Requests
+                    {t("title")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {filteredRequests.length}{" "}
-                    {filteredRequests.length === 1 ? "request" : "requests"}
+                    {t("requestCount", { count: filteredRequests.length })}
                   </p>
                 </div>
               </div>
@@ -231,7 +241,7 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
                             {request.request}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {request.prayerCount.toLocaleString()} prayers recorded
+                            {t("prayersRecorded", { count: request.prayerCount })}
                           </p>
                         </div>
 
@@ -247,7 +257,7 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
                                 className="rounded-full"
                               >
                                 <CheckCircle2 className="mr-1.5 size-4" />
-                                Approve
+                                {tCommon("approve")}
                               </Button>
                               <Button
                                 size="sm"
@@ -259,7 +269,7 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
                                 className="rounded-full"
                               >
                                 <XCircle className="mr-1.5 size-4" />
-                                Reject
+                                {tCommon("reject")}
                               </Button>
                             </>
                           : null}
@@ -272,7 +282,7 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
                             className="rounded-full text-destructive hover:text-destructive"
                           >
                             <Trash2 className="mr-1.5 size-4" />
-                            Delete
+                            {tCommon("delete")}
                           </Button>
                         </div>
                       </div>
@@ -291,18 +301,18 @@ function PrayerRequestListInner({ requests, loading }: PrayerRequestListProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete prayer request?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove &ldquo;{deleteTarget?.title}&rdquo;.
+              {t("deleteDescription", { title: deleteTarget?.title ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {tCommon("delete")}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

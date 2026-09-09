@@ -4,6 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { setCookie } from "cookies-next";
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { ImageQuality, Lang } from "@/types";
@@ -33,6 +34,7 @@ type PreferenceSettingsProps = {
 };
 
 export function PreferenceSettings(props: PreferenceSettingsProps) {
+  const t = useTranslations("settings");
   const router = useRouter();
 
   const [streamQuality, setStreamQuality] = useStreamQuality();
@@ -48,8 +50,8 @@ export function PreferenceSettings(props: PreferenceSettingsProps) {
       path: "/",
     });
 
-    toast.success("Language Preferences updated!", {
-      description: "Your language preferences have been updated.",
+    toast.success(t("languagePreferencesUpdated"), {
+      description: t("languagePreferencesUpdatedDescription"),
     });
 
     router.refresh();
@@ -59,7 +61,7 @@ export function PreferenceSettings(props: PreferenceSettingsProps) {
     <div className="space-y-8 px-6">
       <section id="language" className="space-y-4">
         <h3 className="font-heading text-lg drop-shadow-md dark:bg-gradient-to-br dark:from-neutral-200 dark:to-neutral-600 dark:bg-clip-text dark:text-transparent sm:text-xl md:text-2xl">
-          Languages
+          {t("languagesTitle")}
         </h3>
 
         <ToggleGroup
@@ -81,20 +83,20 @@ export function PreferenceSettings(props: PreferenceSettingsProps) {
         </ToggleGroup>
 
         <Button size="sm" onClick={updateLanguages}>
-          Save Preferences
+          {t("savePreferences")}
         </Button>
       </section>
 
       <section className="space-y-2">
         <h3 className="pb-4 font-heading text-lg drop-shadow-md dark:bg-gradient-to-br dark:from-neutral-200 dark:to-neutral-600 dark:bg-clip-text dark:text-transparent sm:text-xl md:text-2xl">
-          Quality Settings
+          {t("qualitySettings")}
         </h3>
 
         <div
           id="stream-quality"
           className="flex max-w-xl items-center justify-between"
         >
-          <h4 className="w-40 text-muted-foreground">Stream Quality</h4>
+          <h4 className="w-40 text-muted-foreground">{t("streamQuality")}</h4>
 
           <Separator className="w-20" />
 
@@ -125,8 +127,10 @@ export function PreferenceSettings(props: PreferenceSettingsProps) {
                   onClick={() => {
                     setStreamQuality(quality);
 
-                    toast.success("Stream Quality updated!", {
-                      description: `Stream quality set to "${quality}".`,
+                    toast.success(t("streamQualityUpdated"), {
+                      description: t("streamQualityUpdatedDescription", {
+                        quality,
+                      }),
                     });
                   }}
                   className={cn(
@@ -146,7 +150,7 @@ export function PreferenceSettings(props: PreferenceSettingsProps) {
           id="download-quality"
           className="flex max-w-xl items-center justify-between"
         >
-          <h4 className="w-40 text-muted-foreground">Download Quality</h4>
+          <h4 className="w-40 text-muted-foreground">{t("downloadQuality")}</h4>
 
           <Separator className="w-20" />
 
@@ -176,8 +180,10 @@ export function PreferenceSettings(props: PreferenceSettingsProps) {
                   onClick={() => {
                     setDownloadQuality(quality);
 
-                    toast.success("Download Quality updated!", {
-                      description: `Download quality has been set to "${quality}".`,
+                    toast.success(t("downloadQualityUpdated"), {
+                      description: t("downloadQualityUpdatedDescription", {
+                        quality,
+                      }),
                     });
                   }}
                   className={cn(
@@ -197,7 +203,7 @@ export function PreferenceSettings(props: PreferenceSettingsProps) {
           id="image-quality"
           className="flex max-w-xl items-center justify-between"
         >
-          <h4 className="w-40 text-muted-foreground">Image Quality</h4>
+          <h4 className="w-40 text-muted-foreground">{t("imageQuality")}</h4>
 
           <Separator className="w-20" />
 
@@ -219,8 +225,10 @@ export function PreferenceSettings(props: PreferenceSettingsProps) {
                   onClick={() => {
                     setImageQuality(quality);
 
-                    toast.success("Image Quality updated!", {
-                      description: `Image quality has been set to "${quality}".`,
+                    toast.success(t("imageQualityUpdated"), {
+                      description: t("imageQualityUpdatedDescription", {
+                        quality,
+                      }),
                     });
                   }}
                   className={cn(quality === imageQuality && "bg-accent/60")}

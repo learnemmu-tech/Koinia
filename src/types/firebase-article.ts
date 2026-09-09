@@ -1,6 +1,7 @@
 export type FirebaseArticle = {
   id: string;
   contentScope?: "organization" | "platform_public";
+  organizationId?: string;
   churchId: string;
   title: string;
   category: string;

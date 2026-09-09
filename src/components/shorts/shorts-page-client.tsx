@@ -14,6 +14,7 @@ import { ShortCommentsSheet } from "@/components/shorts/short-comments-sheet";
 import { CreateShortSheet } from "@/components/shorts/create-short-sheet";
 import { fetchShortsFeed, toggleShortLike } from "@/lib/shorts-client";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 type ShortsPageClientProps = {
   initialShorts: VideoShort[];
@@ -34,6 +35,8 @@ export function ShortsPageClient({
 }: ShortsPageClientProps) {
   const { user } = useFirebaseAuth();
   const { openDialog } = useContentAuthDialog();
+  const t = useTranslations("shorts");
+  const tc = useTranslations("common");
   const [shorts, setShorts] = React.useState(initialShorts);
   const [filter, setFilter] = React.useState<ShortsFeedFilter>("church");
   const [activeId, setActiveId] = React.useState<string | null>(
@@ -272,10 +275,10 @@ export function ShortsPageClient({
             comments: prev[shortId]?.comments ?? 0,
           },
         }));
-        toast.error("Couldn't like this Short. Try again.");
+        toast.error(t("likeFailed"));
       }
     },
-    [counts, getToken, likes, openDialog]
+    [counts, getToken, likes, openDialog, t]
   );
 
   const handleCommentsOpen = React.useCallback((shortId: string) => {
@@ -314,8 +317,8 @@ export function ShortsPageClient({
   }, []);
 
   const filters: { id: ShortsFeedFilter; label: string }[] = [
-    { id: "church", label: "My Church" },
-    { id: "latest", label: "Latest" },
+    { id: "church", label: t("myChurch") },
+    { id: "latest", label: t("latest") },
   ];
 
   const activeIndex = React.useMemo(
@@ -339,7 +342,7 @@ export function ShortsPageClient({
             <Video className="size-5 shrink-0 text-primary" aria-hidden />
             <div className="min-w-0 leading-none">
               <h1 className="truncate font-heading text-base font-semibold tracking-tight text-foreground">
-                Shorts
+                {t("title")}
               </h1>
               {churchName ?
                 <p className="mt-0.5 truncate text-[11px] font-medium leading-none text-muted-foreground">
@@ -349,7 +352,7 @@ export function ShortsPageClient({
             </div>
             {filterLoading ?
               <span className="hidden text-[11px] text-muted-foreground sm:inline">
-                Updating…
+                {tc("loading")}
               </span>
             : null}
           </div>
@@ -368,15 +371,15 @@ export function ShortsPageClient({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search Shorts…"
-              aria-label="Search Shorts"
+              placeholder={t("searchPlaceholder")}
+              aria-label={t("searchAria")}
               autoFocus={searchOpen}
               className="h-8 w-full min-w-0 rounded-full border border-border/80 bg-muted/40 pl-8 pr-7 text-[12px] leading-none text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/30 sm:w-[10.5rem] md:w-[13rem]"
             />
             {query ?
               <button
                 type="button"
-                aria-label="Clear search"
+                aria-label={t("clearSearch")}
                 onClick={() => {
                   setQuery("");
                   setSearchOpen(false);
@@ -391,7 +394,7 @@ export function ShortsPageClient({
           {!searchOpen ?
             <button
               type="button"
-              aria-label="Search Shorts"
+              aria-label={t("searchAria")}
               onClick={() => setSearchOpen(true)}
               className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/40 text-muted-foreground transition-colors active:bg-muted/70 sm:hidden"
             >
@@ -429,7 +432,7 @@ export function ShortsPageClient({
               className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary px-2.5 text-[12px] font-semibold leading-none text-primary-foreground transition-colors duration-200 active:bg-primary/80 hover-hover:hover:bg-primary/90"
             >
               <Plus className="size-3.5" aria-hidden />
-              Create
+              {t("create")}
             </button>
           : null}
         </div>
@@ -441,11 +444,11 @@ export function ShortsPageClient({
             <Video className="size-7 text-muted-foreground" />
           </div>
           {filterLoading ?
-            <h2 className="text-lg font-semibold text-foreground">Searching…</h2>
+            <h2 className="text-lg font-semibold text-foreground">{tc("loading")}</h2>
           : appliedQuery ?
             <>
               <h2 className="text-lg font-semibold text-foreground">
-                No Shorts found
+                {tc("noResults")}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Nothing matches “{appliedQuery}”. Try a different word.
@@ -458,17 +461,17 @@ export function ShortsPageClient({
                   setSearchOpen(false);
                 }}
               >
-                Clear search
+                {t("clearSearch")}
               </Button>
             </>
           : <>
-              <h2 className="text-lg font-semibold text-foreground">No Shorts yet</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t("empty")}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Be the first to share a moment of faith, worship, or encouragement.
               </p>
               {canPost ?
                 <Button className="mt-6" onClick={() => setCreateOpen(true)}>
-                  Create a Short
+                  {t("create")}
                 </Button>
               : null}
             </>

@@ -4,6 +4,7 @@ import {
   createPendingDonation as createPgPendingDonation,
   getDonationById,
   getDonationCampaignById,
+  setDonationCheckoutReference,
   type PendingDonationInput,
 } from "@/lib/postgres/features";
 import type {
@@ -21,6 +22,13 @@ export async function createPendingDonation(
   return createPgPendingDonation(input);
 }
 
+export async function bindDonationCheckoutReference(
+  donationId: string,
+  checkoutReference: string
+): Promise<void> {
+  await setDonationCheckoutReference({ donationId, checkoutReference });
+}
+
 export async function completeDonationPayment(input: {
   donationId: string;
   campaignId: string;
@@ -34,11 +42,24 @@ export async function completeDonationPayment(input: {
     return;
   }
 
-  const donation = await completePgDonation({
+  const existing = await getDonationById(input.donationId);
+  if (!existing) {
+    throw new Error("Donation not found.");
+  }
+  if (existing.campaignId !== input.campaignId) {
+    throw new Error("Donation does not match campaign.");
+  }
+
+  // Already completed — idempotent no-op (no duplicate emails).
+  if (existing.paymentStatus === "completed") {
+    return;
+  }
+
+  const result = await completePgDonation({
     donationId: input.donationId,
     transactionId: input.transactionId,
   });
-  if (donation) {
+  if (result?.didComplete) {
     void triggerDonationCompletedEmails(input.donationId);
   }
 }

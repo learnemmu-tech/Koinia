@@ -12,12 +12,14 @@ import { useOrganization } from "@/context/organization-context";
 import { resolveEffectiveChurchId } from "@/lib/organization/resolve-effective-church";
 import { isMultiChurchOrgWorkspace } from "@/lib/organization/workspace-type";
 import { adminSectionClass } from "@/lib/responsive-classes";
+import { useTranslations } from "next-intl";
 
 function MembersContent() {
   const { profile } = useFirebaseAuth();
   const { organization, churches } = useOrganization();
   const { activeChurchId } = useActiveChurch();
   const { activeBranch } = useActiveBranch();
+  const t = useTranslations("members");
 
   const churchId = resolveEffectiveChurchId({
     profile,
@@ -27,7 +29,7 @@ function MembersContent() {
   const church =
     churches.find((item) => item.id === churchId) ?? churches[0] ?? null;
   const churchName =
-    activeBranch?.name ?? church?.name ?? organization?.name ?? "your church";
+    activeBranch?.name ?? church?.name ?? organization?.name ?? t("yourChurch");
   const resolvedChurchId = activeBranch?.id ?? church?.id ?? churchId;
 
   if (
@@ -37,9 +39,9 @@ function MembersContent() {
     return (
       <div className={adminSectionClass}>
         <AdminPageHeader
-          eyebrow="Workspace"
-          title="Members"
-          description="Manage join requests and approved members for your churches."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("descriptionGeneric")}
         />
         <WorkspaceChurchRequiredNotice />
       </div>
@@ -49,16 +51,16 @@ function MembersContent() {
   return (
     <div className={adminSectionClass}>
       <AdminPageHeader
-        eyebrow="Workspace"
-        title="Members"
-        description={`Manage join requests and approved members for ${churchName}.`}
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("description", { name: churchName })}
       >
         <DashboardBranchSwitcher />
       </AdminPageHeader>
 
       {!organization || !resolvedChurchId ?
         <p className="text-sm text-muted-foreground">
-          Select a church workspace to manage members.
+          {t("selectChurch")}
         </p>
       : <ChurchMembersPanel
           branchId={resolvedChurchId}

@@ -13,6 +13,7 @@ import { useChurchManagementAccess } from "@/hooks/use-church-management-access"
 import { useOrganizationOptional } from "@/context/organization-context";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
+import { useAuth } from "@clerk/nextjs";
 
 import { SidebarNavSections } from "./sidebar-nav-section";
 
@@ -20,6 +21,7 @@ export function SidebarNavigation() {
   const { canAccessChurchManagement, canManageOrganization } =
     useChurchManagementAccess();
   const { user, profile, loading } = useFirebaseAuth();
+  const { isSignedIn } = useAuth();
   const organizationContext = useOrganizationOptional();
   const organization = organizationContext?.organization;
   const churches = organizationContext?.churches ?? [];
@@ -41,9 +43,9 @@ export function SidebarNavigation() {
     );
   }
 
-  if (!loading && !user) {
+  if (!loading && !user && !isSignedIn) {
     return <SidebarNavSections sections={getPublicSidebarSections()} />;
   }
 
-  return <SidebarNavSections sections={getMemberSidebarSections()} />;
+  return <SidebarNavSections sections={getMemberSidebarSections()} isAuthenticated />;
 }

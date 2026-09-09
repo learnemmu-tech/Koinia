@@ -21,7 +21,9 @@ import {
   isPublicPrayerRequest,
 } from "@/lib/prayer-request-firestore";
 import { getSongArtistLine } from "@/lib/song-firestore";
+import type { WorkspaceType } from "@/types/organization";
 
+import { emailConfig } from "./config";
 import { dispatchEmail, EmailService } from "./index";
 import {
   canSendPreferenceEmail,
@@ -91,6 +93,43 @@ export function triggerWelcomeEmails(input: {
         Email: input.email,
       },
       actionUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://faithconnecthub.com"}/dashboard/users`,
+    })
+  );
+}
+
+export function triggerOrganizationCreatedAdminEmail(input: {
+  organizationId: string;
+  organizationName: string;
+  workspaceType: WorkspaceType;
+  creatorName: string;
+  creatorEmail: string;
+  churchName?: string;
+}): void {
+  const workspaceLabel =
+    input.workspaceType === "multi_church_org"
+      ? "Multi-Church Organization"
+      : "Independent Church";
+
+  const details: Record<string, string> = {
+    "Organization name": input.organizationName.trim() || "—",
+    "Organization type": workspaceLabel,
+    "Creator name": input.creatorName.trim() || "—",
+    "Creator email": input.creatorEmail.trim() || "—",
+    "Organization ID": input.organizationId,
+    "Created at": new Date().toISOString(),
+  };
+
+  if (input.churchName?.trim()) {
+    details["Church name"] = input.churchName.trim();
+  }
+
+  dispatchEmail("admin-organization-created", () =>
+    EmailService.notifyAdmin({
+      type: "organization_created",
+      title: "New organization created — FaithConnectHub",
+      summary: `A new ${workspaceLabel} workspace was created.`,
+      details,
+      actionUrl: `${emailConfig.appUrl}/super-admin/organizations/${encodeURIComponent(input.organizationId)}`,
     })
   );
 }
@@ -524,12 +563,14 @@ export async function triggerContactEmails(input: {
   email: string;
   subject: string;
   message: string;
+  organization?: string;
 }): Promise<SendEmailResult> {
   const inboxResult = await EmailService.sendContactUsInbox({
     name: input.name,
     email: input.email,
     subject: input.subject,
     message: input.message,
+    organization: input.organization,
   });
 
   if (inboxResult.success) {

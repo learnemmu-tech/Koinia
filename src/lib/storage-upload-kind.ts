@@ -7,4 +7,5 @@ export type StorageUploadKind =
   | "sermon"
   | "article"
   | "event"
-  | "donation";
+  | "donation"
+  | "book";

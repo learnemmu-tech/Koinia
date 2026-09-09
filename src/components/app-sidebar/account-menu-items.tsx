@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import {
   DropdownMenuItem,
@@ -27,13 +28,14 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 
 export function useAccountMenuActions() {
   const { signOut } = useFirebaseAuth();
+  const ta = useTranslations("auth");
 
   async function handleSignOut() {
     try {
       await signOut();
-      toast.success("Signed out successfully.");
+      toast.success(ta("signedOut"));
     } catch {
-      toast.error("Failed to sign out.");
+      toast.error(ta("signOutFailed"));
     }
   }
 
@@ -47,37 +49,40 @@ type AccountMenuItemsProps = {
 export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
   const { setTheme } = useTheme();
   const { handleSignOut } = useAccountMenuActions();
+  const tn = useTranslations("navigation");
+  const tc = useTranslations("common");
+  const ta = useTranslations("auth");
 
   return (
     <>
       <DropdownMenuItem asChild className="cursor-pointer">
         <Link href="/profile" onClick={onNavigate}>
           <User2 className="mr-2 size-4" />
-          My Profile
+          {tn("myProfile")}
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild className="cursor-pointer">
         <Link href="/settings" onClick={onNavigate}>
           <Settings2 className="mr-2 size-4" />
-          Account Settings
+          {tn("accountSettings")}
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild className="cursor-pointer">
         <Link href="/settings/notifications" onClick={onNavigate}>
           <Bell className="mr-2 size-4" />
-          Notification Preferences
+          {tn("notificationPreferences")}
         </Link>
       </DropdownMenuItem>
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
           <Palette className="mr-2 size-4" />
-          Appearance
+          {tc("appearance")}
         </DropdownMenuSubTrigger>
         <DropdownMenuPortal>
           <DropdownMenuSubContent>
             <DropdownMenuItem asChild className="cursor-pointer">
               <Link href="/settings/appearance" onClick={onNavigate}>
-                Theme settings
+                {tn("themeSettings")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -89,7 +94,7 @@ export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
               }}
             >
               <Sun className="mr-2 size-4" />
-              Light
+              {tc("themeLight")}
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer"
@@ -99,7 +104,7 @@ export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
               }}
             >
               <Moon className="mr-2 size-4" />
-              Dark
+              {tc("themeDark")}
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer"
@@ -109,7 +114,7 @@ export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
               }}
             >
               <Monitor className="mr-2 size-4" />
-              System
+              {tc("themeSystem")}
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuPortal>
@@ -117,7 +122,7 @@ export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
       <DropdownMenuItem asChild className="cursor-pointer">
         <Link href="/about" onClick={onNavigate}>
           <CircleHelp className="mr-2 size-4" />
-          Help
+          {tc("help")}
         </Link>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
@@ -129,7 +134,7 @@ export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
         className="cursor-pointer"
       >
         <LogOut className="mr-2 size-4" />
-        Sign Out
+        {ta("signOut")}
       </DropdownMenuItem>
     </>
   );

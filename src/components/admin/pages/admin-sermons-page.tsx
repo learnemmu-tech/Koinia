@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { SermonList } from "@/components/admin/sermon-list";
 import { AdminChurchNotice } from "@/components/admin/admin-church-notice";
@@ -39,6 +40,8 @@ const AddSermonModal = dynamic(
 );
 
 export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolean }) {
+  const t = useTranslations("sermons");
+  const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
@@ -101,9 +104,9 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
     <div className={embedded ? "space-y-4" : adminSectionClass}>
       {!embedded ?
         <AdminPageHeader
-          title="Sermons"
-          description="Manage sermon library and publishing"
-          actionLabel="Add Sermon"
+          title={t("title")}
+          description={t("adminDescription")}
+          actionLabel={t("add")}
           onAction={() => {
             setSelectedSermon(null);
             setModalOpen(true);
@@ -117,8 +120,8 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search sermons…"
-        actionLabel={embedded ? "Add Sermon" : undefined}
+        searchPlaceholder={t("searchPlaceholder")}
+        actionLabel={embedded ? t("add") : undefined}
         onAction={
           embedded ?
             () => {
@@ -134,12 +137,12 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
           onValueChange={(value) => setPublishFilter(value as PublishFilter)}
         >
           <SelectTrigger className="w-full min-w-0 sm:w-[8.75rem] rounded-full">
-            <SelectValue placeholder="Filter" />
+            <SelectValue placeholder={tCommon("filter")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All status</SelectItem>
-            <SelectItem value="published">Published</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="all">{tCommon("all")}</SelectItem>
+            <SelectItem value="published">{tCommon("published")}</SelectItem>
+            <SelectItem value="draft">{tCommon("draft")}</SelectItem>
           </SelectContent>
         </Select>
       </AdminToolbar>

@@ -241,6 +241,7 @@ export function mapSermon(row: SermonRow, createdByClerkId: string): FirebaseSer
   return {
     id: row.id,
     contentScope: row.contentScope,
+    organizationId: row.organizationId ?? undefined,
     churchId: row.churchId ?? "",
     title: row.title,
     subtitle: optionalText(row.subtitle),
@@ -262,6 +263,7 @@ export function mapArticle(row: ArticleRow, createdByClerkId: string): FirebaseA
   return {
     id: row.id,
     contentScope: row.contentScope,
+    organizationId: row.organizationId ?? undefined,
     churchId: row.churchId ?? "",
     title: row.title,
     category: row.category,
@@ -284,6 +286,7 @@ export function mapEvent(row: EventRow): FirebaseEvent {
   return {
     id: row.id,
     contentScope: row.contentScope,
+    organizationId: row.organizationId ?? undefined,
     churchId: row.churchId ?? "",
     title: row.title,
     description: row.description,

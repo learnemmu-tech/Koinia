@@ -20,10 +20,12 @@ import { useAdminChurchBlocked } from "@/hooks/use-admin-collections";
 import { useAdminUsers } from "@/hooks/use-admin-users";
 import { adminSectionClass } from "@/lib/responsive-classes";
 import { filterBySearch, paginateItems } from "@/lib/admin-list-utils";
+import { useTranslations } from "next-intl";
 
 export function AdminUsersPageClient() {
   const blocked = useAdminChurchBlocked();
   const { users, loading } = useAdminUsers();
+  const t = useTranslations("members");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -51,8 +53,8 @@ export function AdminUsersPageClient() {
   return (
     <div className={adminSectionClass}>
       <AdminPageHeader
-        title="Users"
-        description="View registered members and their roles"
+        title={t("usersTitle")}
+        description={t("usersDescription")}
       />
 
       {blocked ? <AdminChurchNotice /> : null}
@@ -60,7 +62,7 @@ export function AdminUsersPageClient() {
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search users…"
+        searchPlaceholder={t("searchPlaceholder")}
       />
 
       {loading ?
@@ -71,7 +73,7 @@ export function AdminUsersPageClient() {
         <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/60 py-20 text-center">
           <Users className="size-8 text-muted-foreground" aria-hidden />
           <p className="text-sm text-muted-foreground">
-            {search ? "No users match your search." : "No users found yet."}
+            {search ? t("noMatch") : t("empty")}
           </p>
         </div>
       : <>
@@ -79,10 +81,10 @@ export function AdminUsersPageClient() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="hidden md:table-cell">Joined</TableHead>
+                  <TableHead>{t("name")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("email")}</TableHead>
+                  <TableHead>{t("role")}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t("joined")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

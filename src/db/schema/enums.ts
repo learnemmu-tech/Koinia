@@ -160,6 +160,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "prayer",
   "prayer_request_submitted",
   "membership_approved",
+  "book",
 ]);
 
 export const favoriteItemTypeEnum = pgEnum("favorite_item_type", [
@@ -198,3 +199,53 @@ export const contentScopeEnum = pgEnum("content_scope", [
 ]);
 
 export type ContentScope = (typeof contentScopeEnum.enumValues)[number];
+
+export const bookStatusEnum = pgEnum("book_status", [
+  "draft",
+  "published",
+  "archived",
+]);
+
+export const bookVisibilityEnum = pgEnum("book_visibility", [
+  "public",
+  "members_only",
+]);
+
+export const bookTypeEnum = pgEnum("book_type", [
+  "digital",
+  "physical",
+  "both",
+]);
+
+export const bookDigitalAccessModeEnum = pgEnum("book_digital_access_mode", [
+  "free",
+  "paid",
+]);
+
+export const bookDigitalEntitlementSourceEnum = pgEnum(
+  "book_digital_entitlement_source",
+  ["purchase", "grant"]
+);
+
+export const bookOrderPaymentStatusEnum = pgEnum("book_order_payment_status", [
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+  "cancelled",
+]);
+
+export const bookOrderFulfillmentStatusEnum = pgEnum(
+  "book_order_fulfillment_status",
+  ["pending", "processing", "shipped", "delivered", "cancelled"]
+);
+
+export type BookStatus = (typeof bookStatusEnum.enumValues)[number];
+export type BookVisibility = (typeof bookVisibilityEnum.enumValues)[number];
+export type BookType = (typeof bookTypeEnum.enumValues)[number];
+export type BookDigitalAccessMode =
+  (typeof bookDigitalAccessModeEnum.enumValues)[number];
+export type BookOrderPaymentStatus =
+  (typeof bookOrderPaymentStatusEnum.enumValues)[number];
+export type BookOrderFulfillmentStatus =
+  (typeof bookOrderFulfillmentStatusEnum.enumValues)[number];

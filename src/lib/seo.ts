@@ -279,6 +279,7 @@ export const STATIC_SITEMAP_PATHS = [
   { path: "/songs", priority: 0.9, changeFrequency: "daily" as const },
   { path: "/sermons", priority: 0.9, changeFrequency: "daily" as const },
   { path: "/articles", priority: 0.9, changeFrequency: "daily" as const },
+  { path: "/books", priority: 0.8, changeFrequency: "daily" as const },
   { path: "/prayer-requests", priority: 0.8, changeFrequency: "daily" as const },
   { path: "/events", priority: 0.8, changeFrequency: "daily" as const },
   { path: "/donations", priority: 0.7, changeFrequency: "weekly" as const },

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, Loader2, Trash2, XCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type {
@@ -39,6 +40,8 @@ export function PrayerModerationBar({
 }: {
   request: FirebasePrayerRequest;
 }) {
+  const t = useTranslations("prayer");
+  const tCommon = useTranslations("common");
   const { user } = useFirebaseAuth();
   const tenantFields = useTenantNotifyFields();
   const [updating, setUpdating] = useState(false);
@@ -46,6 +49,12 @@ export function PrayerModerationBar({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const busy = updating || deleting;
+
+  const statusLabels: Record<PrayerRequestStatus, string> = {
+    pending: tCommon("pending"),
+    approved: tCommon("approved"),
+    rejected: tCommon("rejected"),
+  };
 
   async function handleStatusChange(status: PrayerRequestStatus) {
     setUpdating(true);
@@ -62,12 +71,10 @@ export function PrayerModerationBar({
         organizationId: tenantFields.organizationId,
       });
       toast.success(
-        status === "approved"
-          ? "Prayer request approved"
-          : "Prayer request rejected"
+        status === "approved" ? t("approveSuccess") : t("rejectSuccess")
       );
     } catch {
-      toast.error("Unable to update prayer request");
+      toast.error(t("updateFailed"));
     } finally {
       setUpdating(false);
     }
@@ -77,10 +84,10 @@ export function PrayerModerationBar({
     setDeleting(true);
     try {
       await deletePrayerRequest(request.id);
-      toast.success("Prayer request deleted");
+      toast.success(t("deletedSuccess"));
       setConfirmOpen(false);
     } catch {
-      toast.error("Failed to delete prayer request");
+      toast.error(t("deleteFailed"));
     } finally {
       setDeleting(false);
     }
@@ -94,7 +101,7 @@ export function PrayerModerationBar({
           STATUS_STYLES[request.status]
         )}
       >
-        {request.status}
+        {statusLabels[request.status]}
       </span>
 
       <div className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -111,7 +118,7 @@ export function PrayerModerationBar({
             ) : (
               <CheckCircle2 className="size-3.5" aria-hidden />
             )}
-            <span className="ml-1.5 text-xs">Approve</span>
+            <span className="ml-1.5 text-xs">{tCommon("approve")}</span>
           </Button>
         ) : null}
 
@@ -125,7 +132,7 @@ export function PrayerModerationBar({
             className="h-8 rounded-full px-3"
           >
             <XCircle className="size-3.5" aria-hidden />
-            <span className="ml-1.5 text-xs">Reject</span>
+            <span className="ml-1.5 text-xs">{tCommon("reject")}</span>
           </Button>
         ) : null}
 
@@ -138,7 +145,7 @@ export function PrayerModerationBar({
           className="h-8 rounded-full px-3 text-destructive hover:text-destructive"
         >
           <Trash2 className="size-3.5" aria-hidden />
-          <span className="ml-1.5 text-xs">Delete</span>
+          <span className="ml-1.5 text-xs">{tCommon("delete")}</span>
         </Button>
       </div>
 
@@ -150,15 +157,15 @@ export function PrayerModerationBar({
       >
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete prayer request?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove &ldquo;{request.title}&rdquo;. This
-              action cannot be undone.
+              {t("deleteDescription", { title: request.title })}{" "}
+              {tCommon("cannotUndo")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2 pt-2">
             <AlertDialogCancel className="rounded-full px-5" disabled={deleting}>
-              Cancel
+              {tCommon("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={deleting}
@@ -171,10 +178,10 @@ export function PrayerModerationBar({
               {deleting ? (
                 <>
                   <Loader2 className="mr-1.5 size-4 animate-spin" />
-                  Deleting…
+                  {tCommon("deleting")}
                 </>
               ) : (
-                "Delete"
+                tCommon("delete")
               )}
             </AlertDialogAction>
           </div>

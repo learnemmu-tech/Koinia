@@ -7,6 +7,12 @@ export const contactFormSchema = z.object({
     .min(2, "Name must be at least 2 characters.")
     .max(100, "Name must be 100 characters or less."),
   email: z.string().trim().email("Please enter a valid email address."),
+  organization: z
+    .string()
+    .trim()
+    .max(120, "Organization must be 120 characters or less.")
+    .optional()
+    .or(z.literal("")),
   subject: z
     .string()
     .trim()

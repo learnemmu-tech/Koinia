@@ -22,6 +22,7 @@ import {
   User2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { LucideIcon } from "lucide-react";
@@ -163,6 +164,7 @@ function NavRow({
 }
 
 export function MobileHeader() {
+  const tCommon = useTranslations("common");
   const pathname = usePathname();
   const { authUser, profile, isAdmin, loading, signOut } = useFirebaseAuth();
   const { theme, setTheme } = useTheme();
@@ -235,7 +237,7 @@ export function MobileHeader() {
             </button>
           </>
         : <Button asChild size="sm" variant="outline" className="h-9">
-            <Link href="/signin">Sign In</Link>
+            <Link href="/signin">{tCommon("signIn")}</Link>
           </Button>
         }
       </div>
@@ -346,7 +348,7 @@ export function MobileHeader() {
               ) : null}
             </div>
           ) : (
-            <NavRow href="/signin" label="Sign In" icon={User2} />
+            <NavRow href="/signin" label={tCommon("signIn")} icon={User2} />
           )}
 
           <Separator className="my-3 bg-border/50" />

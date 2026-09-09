@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, UserCheck, UserX } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,8 @@ type PendingResponse = {
 };
 
 export function PendingMembersPanel({ branchId }: PendingMembersPanelProps) {
+  const t = useTranslations("churchMembers");
+  const tCommon = useTranslations("common");
   const { organization } = useOrganization();
   const { invalidateMembers } = useInvalidateAdminQueries();
   const [data, setData] = useState<PendingResponse | null>(null);
@@ -81,13 +84,15 @@ export function PendingMembersPanel({ branchId }: PendingMembersPanelProps) {
         }),
       });
       if (!res.ok) {
-        throw new Error("Failed to update member");
+        throw new Error(t("memberUpdateFailed"));
       }
-      toast.success(action === "approve" ? "Member approved" : "Member rejected");
+      toast.success(
+        action === "approve" ? t("memberApproved") : t("memberRejected")
+      );
       await invalidateMembers();
       await load();
     } catch {
-      toast.error("Failed to update member");
+      toast.error(t("memberUpdateFailed"));
     } finally {
       setBusyId(null);
     }
@@ -103,11 +108,8 @@ export function PendingMembersPanel({ branchId }: PendingMembersPanelProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Pending members</CardTitle>
-        <CardDescription>
-          Members who joined via your church link. Approve them to grant access
-          to private church content.
-        </CardDescription>
+        <CardTitle className="text-base">{t("pendingMembersTitle")}</CardTitle>
+        <CardDescription>{t("pendingMembersDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ?
@@ -116,7 +118,7 @@ export function PendingMembersPanel({ branchId }: PendingMembersPanelProps) {
           </div>
         : !data?.pending.length ?
           <p className="text-sm text-muted-foreground">
-            No pending members right now.
+            {t("noPendingMembers")}
           </p>
         : <ul className="space-y-3">
             {data.pending.map((member) => (
@@ -137,7 +139,7 @@ export function PendingMembersPanel({ branchId }: PendingMembersPanelProps) {
                     onClick={() => void review(member.id, "approve")}
                   >
                     <UserCheck className="mr-1.5 size-4" />
-                    Approve
+                    {tCommon("approve")}
                   </Button>
                   <Button
                     size="sm"
@@ -146,7 +148,7 @@ export function PendingMembersPanel({ branchId }: PendingMembersPanelProps) {
                     onClick={() => void review(member.id, "reject")}
                   >
                     <UserX className="mr-1.5 size-4" />
-                    Reject
+                    {tCommon("reject")}
                   </Button>
                 </div>
               </li>

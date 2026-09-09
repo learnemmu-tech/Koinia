@@ -1,6 +1,7 @@
 "use client";
 
 import { CreditCard } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { RequireAuth } from "@/components/auth/require-auth";
 import { BillingOverview } from "@/components/subscription/billing-overview";
@@ -9,6 +10,7 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useSubscriptionQuery } from "@/hooks/use-subscription-query";
 
 export function BillingSettingsClient() {
+  const t = useTranslations("billing");
   const { profile } = useFirebaseAuth();
   const organizationId = profile?.organizationId?.trim() || null;
   const { data, isLoading, error, refetch } = useSubscriptionQuery(organizationId);
@@ -20,11 +22,11 @@ export function BillingSettingsClient() {
           <div className="flex items-center gap-2">
             <CreditCard className="size-5 text-primary" aria-hidden />
             <h2 className="font-heading text-lg drop-shadow-md dark:bg-gradient-to-br dark:from-neutral-200 dark:to-neutral-600 dark:bg-clip-text dark:text-transparent sm:text-xl md:text-2xl">
-              Billing & Subscription
+              {t("titleFull")}
             </h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            View your plan, usage limits, and available features.
+            {t("settingsDescription")}
           </p>
         </div>
         {data?.subscription.planId ?

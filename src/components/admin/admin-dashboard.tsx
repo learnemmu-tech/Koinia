@@ -10,6 +10,7 @@ import {
   Mic2,
   Users,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { MultiOrgDashboard } from "@/components/admin/multi-org-dashboard";
 import { WelcomeCard } from "@/components/admin/welcome-card";
@@ -41,6 +42,7 @@ const TAB_REDIRECTS: Record<string, string> = {
 };
 
 export function AdminDashboard() {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { organization } = useOrganization();
@@ -62,43 +64,50 @@ export function AdminDashboard() {
   const statCards: AnalyticsStatDefinition[] = [
     {
       key: "songs",
-      label: "Songs",
+      label: t("statSongs"),
       value: analytics.counts.songs,
       icon: ListMusic,
     },
     {
       key: "sermons",
-      label: "Sermons",
+      label: t("statSermons"),
       value: analytics.counts.sermons,
       icon: Mic2,
     },
     {
       key: "articles",
-      label: "Articles",
+      label: t("statArticles"),
       value: analytics.counts.articles,
       icon: FileText,
     },
     {
       key: "events",
-      label: "Events",
+      label: t("statEvents"),
       value: analytics.counts.events,
       icon: CalendarDays,
     },
     {
       key: "users",
-      label: "Members",
+      label: t("statMembers"),
       value: analytics.counts.users,
       icon: Users,
     },
   ];
 
+  const scopeLabel =
+    analytics.scopeLabel === "Platform-wide" ? t("scopePlatform")
+    : analytics.scopeLabel === "Church scope" ? t("scopeChurch")
+    : analytics.scopeLabel === "Organization scope" ? t("scopeOrganization")
+    : analytics.scopeLabel === "No church selected" ? t("scopeNone")
+    : analytics.scopeLabel;
+
   return (
     <div className={adminSectionClass}>
       <DashboardQueryPrefetch />
       <AdminPageHeader
-        eyebrow="Overview"
-        title="Dashboard"
-        description={`${analytics.scopeLabel} · ministry overview`}
+        eyebrow={t("overview")}
+        title={t("title")}
+        description={t("ministryOverview", { scope: scopeLabel })}
       >
         <DashboardBranchSwitcher />
         <PlanBadgeFromContext />
@@ -108,8 +117,7 @@ export function AdminDashboard() {
 
       {blocked ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-          Your church workspace is still loading. Select a church to view
-          analytics and manage content.
+          {t("workspaceLoading")}
         </div>
       ) : null}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -66,6 +67,10 @@ export function AddEventModal({
   churchId,
   contentScope = "organization",
 }: AddEventModalProps) {
+  const t = useTranslations("events");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
+  const tErrors = useTranslations("errors");
   const { user } = useFirebaseAuth();
   const { invalidateEvents } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
@@ -145,7 +150,7 @@ export function AddEventModal({
     try {
       const idToken = user ? await user.getIdToken() : undefined;
       if (!idToken) {
-        toast.error("You must be signed in to upload files.");
+        toast.error(tErrors("signedInRequired"));
         return;
       }
 
@@ -191,7 +196,7 @@ export function AddEventModal({
           organizationId: tenantFields.organizationId,
         });
 
-        toast.success("Event updated successfully");
+        toast.success(t("updatedSuccess"));
       } else {
         const eventId = await createEvent({
           ...payload,
@@ -225,7 +230,7 @@ export function AddEventModal({
           organizationId: tenantFields.organizationId,
         });
 
-        toast.success("Event created successfully");
+        toast.success(t("createdSuccess"));
       }
 
       await invalidateEvents();
@@ -234,7 +239,7 @@ export function AddEventModal({
       setBannerFile(undefined);
       setBannerPreview("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save event");
+      toast.error(error instanceof Error ? error.message : t("saveFailed"));
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -250,11 +255,11 @@ export function AddEventModal({
     >
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{initialEvent ? "Edit Event" : "Create Event"}</DialogTitle>
+          <DialogTitle>{initialEvent ? t("editModalTitle") : t("addModalTitle")}</DialogTitle>
           <DialogDescription>
             {initialEvent
-              ? "Update event details and publish when ready"
-              : `Add a new ministry event to ${siteConfig.name}`}
+              ? t("editModalDescription")
+              : t("addModalDescription", { siteName: siteConfig.name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -265,10 +270,10 @@ export function AddEventModal({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Event Title</FormLabel>
+                  <FormLabel>{tForms("eventTitle")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Sunday Worship Service"
+                      placeholder={tForms("placeholders.eventTitle")}
                       disabled={loading}
                       {...field}
                     />
@@ -283,10 +288,10 @@ export function AddEventModal({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{tForms("description")}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Full event description"
+                      placeholder={tForms("placeholders.eventDescription")}
                       rows={4}
                       disabled={loading}
                       {...field}
@@ -302,7 +307,7 @@ export function AddEventModal({
               name="eventType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Event Type</FormLabel>
+                  <FormLabel>{tForms("eventType")}</FormLabel>
                   <Select
                     disabled={loading}
                     onValueChange={field.onChange}
@@ -310,7 +315,7 @@ export function AddEventModal({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select event type" />
+                        <SelectValue placeholder={tForms("selectEventType")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -331,10 +336,10 @@ export function AddEventModal({
               name="speakerName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Speaker Name</FormLabel>
+                  <FormLabel>{tForms("speakerName")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Pastor name or guest speaker"
+                      placeholder={tForms("placeholders.eventSpeaker")}
                       disabled={loading}
                       {...field}
                     />
@@ -350,7 +355,7 @@ export function AddEventModal({
                 name="eventDate"
                 render={({ field, fieldState }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Event Date</FormLabel>
+                    <FormLabel>{tForms("eventDate")}</FormLabel>
                     <FormControl>
                       <EventDatePicker
                         value={field.value}
@@ -369,7 +374,7 @@ export function AddEventModal({
                 name="eventTime"
                 render={({ field, fieldState }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Event Time</FormLabel>
+                    <FormLabel>{tForms("eventTime")}</FormLabel>
                     <FormControl>
                       <EventTimePicker
                         value={field.value}
@@ -385,12 +390,12 @@ export function AddEventModal({
             </div>
 
             <div className="space-y-2">
-              <FormLabel>Banner Image</FormLabel>
+              <FormLabel>{tForms("bannerImage")}</FormLabel>
               {bannerPreview ?
                 <div className="relative overflow-hidden rounded-xl border border-border/50">
                   <img
                     src={bannerPreview}
-                    alt="Event banner preview"
+                    alt={tForms("bannerPreviewAlt")}
                     className="aspect-[16/9] w-full object-cover"
                   />
                   <Button
@@ -410,7 +415,7 @@ export function AddEventModal({
               <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/60 px-4 py-6 text-center transition-colors hover:bg-muted/30">
                 <Upload className="size-5 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
-                  Upload banner (max {MAX_IMAGE_SIZE_LABEL})
+                  {tForms("uploadBanner", { max: MAX_IMAGE_SIZE_LABEL })}
                 </span>
                 <input
                   type="file"
@@ -422,7 +427,7 @@ export function AddEventModal({
               </label>
               {uploadProgress > 0 && uploadProgress < 100 ?
                 <p className="text-xs text-muted-foreground">
-                  Uploading… {uploadProgress}%
+                  {tForms("uploadingProgress", { percent: uploadProgress })}
                 </p>
               : null}
             </div>
@@ -432,10 +437,10 @@ export function AddEventModal({
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>{tForms("location")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Church sanctuary or venue"
+                      placeholder={tForms("placeholders.eventLocation")}
                       disabled={loading}
                       {...field}
                     />
@@ -450,7 +455,7 @@ export function AddEventModal({
               name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel>{tForms("status")}</FormLabel>
                   <Select
                     disabled={loading}
                     onValueChange={field.onChange}
@@ -458,12 +463,12 @@ export function AddEventModal({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
+                        <SelectValue placeholder={tForms("selectStatus")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="draft">{tCommon("draft")}</SelectItem>
+                      <SelectItem value="published">{tCommon("published")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -473,17 +478,17 @@ export function AddEventModal({
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading ?
                   <>
                     <Loader2 className="mr-2 size-4 animate-spin" />
-                    Saving…
+                    {tCommon("saving")}
                   </>
                 : initialEvent ?
-                  "Save Changes"
-                : "Create Event"}
+                  tCommon("saveChanges")
+                : t("create")}
               </Button>
             </div>
           </form>
