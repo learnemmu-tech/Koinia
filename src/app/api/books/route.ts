@@ -114,8 +114,10 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ book }, { status: 201 });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not create the book.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    console.error("[api/books]", error);
+    return NextResponse.json(
+      { error: "Could not create the book." },
+      { status: 400 }
+    );
   }
 }

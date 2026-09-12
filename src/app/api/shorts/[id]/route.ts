@@ -111,9 +111,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
     return NextResponse.json({ id: updated.id });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Update failed.";
-    const status = message === "Unauthorized" ? 403 : message === "Short not found" ? 404 : 500;
-    return NextResponse.json({ error: message }, { status });
+    console.error("[api/shorts PATCH]", error);
+    const raw = error instanceof Error ? error.message : "";
+    if (raw === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+    if (raw === "Short not found") {
+      return NextResponse.json({ error: "Short not found." }, { status: 404 });
+    }
+    return NextResponse.json({ error: "Update failed." }, { status: 500 });
   }
 }
 
@@ -132,8 +138,14 @@ export async function DELETE(_request: Request, context: RouteContext) {
     });
     return NextResponse.json({ success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Delete failed.";
-    const status = message === "Unauthorized" ? 403 : message === "Short not found" ? 404 : 500;
-    return NextResponse.json({ error: message }, { status });
+    console.error("[api/shorts DELETE]", error);
+    const raw = error instanceof Error ? error.message : "";
+    if (raw === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+    if (raw === "Short not found") {
+      return NextResponse.json({ error: "Short not found." }, { status: 404 });
+    }
+    return NextResponse.json({ error: "Delete failed." }, { status: 500 });
   }
 }

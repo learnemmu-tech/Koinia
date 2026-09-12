@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import {
+  ContentDetailLayout,
+  ContentListenWatchLink,
+  formatDetailDate,
+  type ContentDetailSidebarItem,
+} from "@/components/content-detail-layout";
+import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { RecordRecentlyViewed } from "@/components/recently-viewed/record-recently-viewed";
-import { ReadingDetailLayout } from "@/components/reading-detail-layout";
 import { SermonMediaSection } from "@/components/sermons/sermon-media-section";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ShareContentButton } from "@/components/share-content-button";
@@ -61,6 +67,31 @@ export default async function SermonPage({ params }: SermonPageProps) {
 
   const coverUrl = getSongCoverUrl(sermon.coverImage);
   const path = `/sermons/${encodeURIComponent(sermon.id)}`;
+  const dateLabel = formatDetailDate(sermon.dateCreated);
+  const speaker = sermon.speaker?.trim() || "";
+  const scripture = sermon.scriptureReference?.trim() || "";
+  const excerpt = sermon.shortDescription?.trim() || "";
+  const hasVideo = Boolean(sermon.youtubeUrl?.trim());
+  const hasAudio = Boolean(sermon.audioUrl?.trim());
+  const hasMedia = hasVideo || hasAudio;
+
+  const metadata = [dateLabel, scripture || null].filter(Boolean) as string[];
+
+  const sidebarItems: ContentDetailSidebarItem[] = [];
+  if (dateLabel) {
+    sidebarItems.push({ label: "Date", value: dateLabel, icon: "calendar" });
+  }
+  if (scripture) {
+    sidebarItems.push({ label: "Scripture", value: scripture, icon: "book" });
+  }
+  if (speaker) {
+    sidebarItems.push({ label: "Speaker", value: speaker, icon: "user" });
+  }
+
+  const listenLabel =
+    hasVideo && hasAudio ? "Listen / Watch"
+    : hasVideo ? "Watch Sermon"
+    : "Listen to Sermon";
 
   return (
     <article aria-label={sermon.title}>
@@ -82,29 +113,52 @@ export default async function SermonPage({ params }: SermonPageProps) {
         ]}
       />
       <RecordRecentlyViewed itemType="sermon" itemId={sermon.id} />
-      <ReadingDetailLayout
+      <ContentDetailLayout
+        kind="sermon"
+        kindLabel="Sermon"
+        backLabel="Back to Sermons"
+        backHref="/sermons"
         coverUrl={coverUrl}
         coverAlt={sermon.title}
-        category={sermon.scriptureReference || undefined}
         title={sermon.title}
-        subtitle={sermon.subtitle}
-        shortDescription={sermon.shortDescription}
-        author={sermon.speaker}
-        dateCreated={sermon.dateCreated}
+        author={speaker || undefined}
+        metadata={metadata}
+        excerpt={excerpt || sermon.subtitle?.trim() || undefined}
         content={sermon.content}
-        beforeContent={
-          <SermonMediaSection
-            title={sermon.title}
-            youtubeUrl={sermon.youtubeUrl}
-            audioUrl={sermon.audioUrl}
-          />
-        }
+        contentHeading={sermon.content.trim() ? "Notes" : undefined}
+        sidebarTitle="About this sermon"
+        sidebarItems={sidebarItems}
+        scriptureReference={scripture || undefined}
+        tags={sermon.tags}
+        hasMedia={hasMedia}
+        showPlayAffordance={hasMedia}
         headerAction={
           <ShareContentButton
             title={sermon.title}
-            description={sermon.shortDescription}
+            description={excerpt || undefined}
             path={path}
+            className="h-9 rounded-xl px-4"
+            label="Share"
           />
+        }
+        heroActions={
+          <>
+            {hasMedia ? <ContentListenWatchLink label={listenLabel} /> : null}
+            <FavoriteButton
+              itemType="sermon"
+              itemId={sermon.id}
+              appearance="button"
+            />
+          </>
+        }
+        media={
+          hasMedia ?
+            <SermonMediaSection
+              title={sermon.title}
+              youtubeUrl={sermon.youtubeUrl}
+              audioUrl={sermon.audioUrl}
+            />
+          : null
         }
       />
     </article>

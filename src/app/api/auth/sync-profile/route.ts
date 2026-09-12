@@ -127,14 +127,10 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("[api/auth/sync-profile] PostgreSQL user sync failed", error);
-    const message =
-      error instanceof Error &&
-      (error.message.startsWith("Missing") ||
-        error.message.startsWith("Failed to create") ||
-        error.message.startsWith("Failed to update"))
-        ? error.message
-        : "Failed to save user profile.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to save user profile." },
+      { status: 500 }
+    );
   }
 
   if (syncResult.created && email?.trim()) {

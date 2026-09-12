@@ -33,7 +33,8 @@ export const donationCheckoutFormSchema = z
       .email("Please enter a valid email address."),
     amount: z.coerce
       .number({ invalid_type_error: "Amount must be a number." })
-      .positive("Donation amount must be greater than zero."),
+      .positive("Donation amount must be greater than zero.")
+      .max(1_000_000, "Donation amount is too large."),
     isAnonymous: z.boolean(),
   })
   .superRefine((values, ctx) => {
@@ -60,7 +61,8 @@ export const donationCheckoutApiSchema = z
       .email("Please enter a valid email address."),
     amount: z.coerce
       .number({ invalid_type_error: "Amount must be a number." })
-      .positive("Donation amount must be greater than zero."),
+      .positive("Donation amount must be greater than zero.")
+      .max(1_000_000, "Donation amount is too large."),
     isAnonymous: z.boolean(),
     idempotencyKey: z.string().trim().min(8).max(128).optional(),
   })

@@ -29,7 +29,11 @@ const config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          strong: "hsl(var(--border-strong))",
+          muted: "hsl(var(--border-muted))",
+        },
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
@@ -37,6 +41,9 @@ const config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
+          active: "hsl(var(--primary-active))",
+          subtle: "hsl(var(--primary-subtle))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -73,6 +80,36 @@ const config = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        surface: {
+          raised: "hsl(var(--surface-raised))",
+        },
+        gold: "hsl(var(--gold))",
+        shepherd: {
+          DEFAULT: "hsl(var(--shepherd-primary))",
+          foreground: "hsl(var(--shepherd-primary-foreground))",
+          subtle: "hsl(var(--shepherd-subtle))",
+          border: "hsl(var(--shepherd-border))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          subtle: "hsl(var(--success-subtle))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          subtle: "hsl(var(--warning-subtle))",
+        },
+        error: {
+          DEFAULT: "hsl(var(--error))",
+          subtle: "hsl(var(--error-subtle))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          subtle: "hsl(var(--info-subtle))",
+        },
+      },
+      boxShadow: {
+        dropdown: "var(--shadow-dropdown)",
+        modal: "var(--shadow-modal)",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { FirebaseSong } from "@/types/firebase-song";
 
 import { FirebaseSongCard, songsPageGridClassName } from "@/components/music/firebase-song-card";
+import { ContentAreaLoading } from "@/components/content-area-loading";
 import { ContentListToolbar } from "@/components/worship/content-list-toolbar";
 import { SongsTabHeader } from "@/components/worship/songs-tab-header";
 import {
@@ -15,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ContentLoadMore } from "@/components/ui/content-load-more";
 import { WorkspaceChurchRequiredNotice } from "@/components/workspace/workspace-church-required-notice";
 import { useContentTenantScope } from "@/hooks/use-workspace-tenant-scope";
@@ -26,20 +26,6 @@ import {
   getSongDisplayTitle,
 } from "@/lib/song-firestore";
 import { SONG_CATEGORIES } from "@/types/firebase-song";
-
-function SongsPageGridSkeleton() {
-  return (
-    <div className={songsPageGridClassName}>
-      {Array.from({ length: 12 }).map((_, index) => (
-        <div key={index} className="space-y-3 rounded-lg p-2.5">
-          <Skeleton className="aspect-square w-full rounded-md" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-3 w-1/2" />
-        </div>
-      ))}
-    </div>
-  );
-}
 
 type SongsTabContentProps = {
   initialSongs: FirebaseSong[];
@@ -81,7 +67,7 @@ export function SongsTabContent({
   }
 
   if (syncing && visibleSongs.length === 0) {
-    return <SongsPageGridSkeleton />;
+    return <ContentAreaLoading />;
   }
 
   if (visibleSongs.length === 0) {

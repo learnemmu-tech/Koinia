@@ -23,6 +23,7 @@ const PROTECTED_PREFIXES = [
   "/me",
   "/settings",
   "/recently-viewed",
+  "/shepherd",
 ];
 
 function isProtectedPath(pathname: string) {

@@ -91,7 +91,7 @@ export const themes = [
     name: "violet",
     label: "Violet",
     activeColor: {
-      light: "262.1 83.3% 57.8%",
+      light: "18 53.6% 49%",
       dark: "263.4 70% 50.4%",
     },
   },

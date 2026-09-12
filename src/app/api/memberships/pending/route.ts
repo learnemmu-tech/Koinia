@@ -139,10 +139,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[api/memberships/pending]", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to review member",
-      },
+      { error: "Failed to review member." },
       { status: 500 }
     );
   }

@@ -2,6 +2,9 @@
 
 export const CREATE_WORKSPACE_PATH = "/onboarding";
 export const POST_AUTH_CONTINUE_PATH = "/auth/continue";
+/** Safe SSO/Clerk fallback when redirectUrlComplete is dropped — preserves callbackUrl. */
+export const POST_AUTH_CONTINUE_HOME =
+  `${POST_AUTH_CONTINUE_PATH}?callbackUrl=${encodeURIComponent("/")}` as const;
 export const WAITING_APPROVAL_PATH = "/waiting-approval";
 export const ACCESS_DENIED_PATH = "/access-denied";
 export const MEMBERSHIP_REMOVED_PATH = "/membership-removed";

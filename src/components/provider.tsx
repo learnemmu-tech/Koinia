@@ -71,16 +71,16 @@ export default function Providers({
         <FirebaseAuthProvider>
           <EmailVerificationBanner />
           <QueryClientProvider client={queryClient}>
-            <OrganizationProvider>
-              <OrganizationChurchBridge />
-              <WorkspaceSessionBridge />
-              <ActiveBranchProvider>
-                <WorkspaceBootstrapGate>
-                  <OnboardingGuard />
-                  <MembershipStatusGuard />
-                  <FavoritesProvider>
-                    <RecentlyViewedProvider>
-                      <ContentAuthDialogProvider>
+            <ContentAuthDialogProvider>
+              <FavoritesProvider>
+                <RecentlyViewedProvider>
+                  <OrganizationProvider>
+                    <OrganizationChurchBridge />
+                    <WorkspaceSessionBridge />
+                    <ActiveBranchProvider>
+                      <WorkspaceBootstrapGate>
+                        <OnboardingGuard />
+                        <MembershipStatusGuard />
                         <SubscriptionShell>
                           <TooltipProvider>
                             <AudioPlayerProvider>
@@ -90,12 +90,12 @@ export default function Providers({
                             </AudioPlayerProvider>
                           </TooltipProvider>
                         </SubscriptionShell>
-                      </ContentAuthDialogProvider>
-                    </RecentlyViewedProvider>
-                  </FavoritesProvider>
-                </WorkspaceBootstrapGate>
-              </ActiveBranchProvider>
-            </OrganizationProvider>
+                      </WorkspaceBootstrapGate>
+                    </ActiveBranchProvider>
+                  </OrganizationProvider>
+                </RecentlyViewedProvider>
+              </FavoritesProvider>
+            </ContentAuthDialogProvider>
           </QueryClientProvider>
         </FirebaseAuthProvider>
       </ActiveChurchProvider>

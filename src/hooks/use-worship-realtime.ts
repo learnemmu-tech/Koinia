@@ -50,6 +50,8 @@ function useContentListQuery<T>(input: {
       pageParams: [0],
     },
     initialDataUpdatedAt: Date.now(),
+    // SSR already hydrated page 0; do not refetch on mount/key settle.
+    refetchOnMount: false,
     queryFn: async ({ pageParam }) => {
       const page = await fetchTenantContentPage<T>({
         collection: input.collectionName,

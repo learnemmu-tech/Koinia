@@ -69,3 +69,8 @@ export function useContentAuthDialog() {
   }
   return context;
 }
+
+/** Safe for components that may render outside the provider (falls back to null). */
+export function useContentAuthDialogOptional() {
+  return React.useContext(ContentAuthDialogContext);
+}

@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import type { FirebaseEvent } from "@/types/firebase-event";
 
 import { EventCard } from "@/components/events/event-card";
+import { ContentAreaLoading } from "@/components/content-area-loading";
 import { ContentListToolbar } from "@/components/worship/content-list-toolbar";
 import {
   Select,
@@ -19,8 +19,6 @@ import { ContentLoadMore } from "@/components/ui/content-load-more";
 import { WorkspaceChurchRequiredNotice } from "@/components/workspace/workspace-church-required-notice";
 import { usePublishedEvents } from "@/hooks/use-published-events";
 import { useContentTenantScope } from "@/hooks/use-workspace-tenant-scope";
-import { contentCardGridClassName } from "@/lib/responsive-classes";
-
 type EventsListClientProps = {
   initialUpcoming: FirebaseEvent[];
   initialPast: FirebaseEvent[];
@@ -66,11 +64,7 @@ export function EventsListClient({
   }
 
   if (loading && upcoming.length === 0 && past.length === 0) {
-    return (
-      <div className="flex items-center justify-center rounded-2xl border border-dashed border-border/50 py-16">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <ContentAreaLoading />;
   }
 
   const showUpcoming = scheduleFilter === "all" || scheduleFilter === "upcoming";
@@ -148,7 +142,7 @@ function EventsSection({
         <div className="rounded-2xl border border-dashed border-border/50 px-6 py-12 text-center">
           <p className="text-sm text-muted-foreground">{emptyMessage}</p>
         </div>
-      : <div className={contentCardGridClassName}>
+      : <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {events.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}

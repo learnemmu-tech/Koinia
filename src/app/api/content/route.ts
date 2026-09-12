@@ -196,9 +196,11 @@ export async function POST(request: Request) {
           break;
       }
       marks.mutate = Date.now() - mutateStarted;
-      console.info(
-        `[PERF] POST /api/content create/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
-      );
+      if (process.env.NODE_ENV !== "production") {
+        console.info(
+          `[PERF] POST /api/content create/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
+        );
+      }
       return NextResponse.json({ id });
     }
 
@@ -223,9 +225,11 @@ export async function POST(request: Request) {
           break;
       }
       marks.mutate = Date.now() - mutateStarted;
-      console.info(
-        `[PERF] POST /api/content delete/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
-      );
+      if (process.env.NODE_ENV !== "production") {
+        console.info(
+          `[PERF] POST /api/content delete/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
+        );
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -244,14 +248,16 @@ export async function POST(request: Request) {
         break;
     }
     marks.mutate = Date.now() - mutateStarted;
-    console.info(
-      `[PERF] POST /api/content update/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.info(
+        `[PERF] POST /api/content update/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
+      );
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[api/content]", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to save content." },
+      { error: "Failed to save content." },
       { status: 500 }
     );
   }

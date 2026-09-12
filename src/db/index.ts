@@ -19,11 +19,12 @@ function getPool(): Pool {
 
   const pool = new Pool({
     connectionString: normalizeDatabaseUrl(env.DATABASE_URL),
-    // Serverless invocations should not hold a large pool. Neon connection
-    // exhaustion shows up as slow/failing queries under Vercel concurrency.
-    max: process.env.VERCEL ? 1 : 5,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
+    // Keep serverless pools tiny. Locally allow more concurrency so bootstrap
+    // API fan-out (org + routing + subscription + badges) does not queue for
+    // tens of seconds behind a 5-connection stampede.
+    max: process.env.VERCEL ? 1 : 10,
+    idleTimeoutMillis: 20_000,
+    connectionTimeoutMillis: 8_000,
     keepAlive: true,
   });
 

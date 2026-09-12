@@ -71,10 +71,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     console.error("[api/join]", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to join church",
-      },
+      { error: "Failed to join church." },
       { status: 500 }
     );
   }

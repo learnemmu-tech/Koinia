@@ -1,13 +1,14 @@
+import Image from "next/image";
 import {
   BookOpen,
   CalendarDays,
+  Gift,
   Heart,
-  HeartHandshake,
   Music2,
   Play,
 } from "lucide-react";
 
-import { siteConfig } from "@/config/site";
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { cn } from "@/lib/utils";
 
 const MINISTRY_PILLS = [
@@ -15,96 +16,98 @@ const MINISTRY_PILLS = [
   { icon: BookOpen, label: "Sermons" },
   { icon: Heart, label: "Prayer Requests" },
   { icon: CalendarDays, label: "Events" },
-  { icon: HeartHandshake, label: "Giving" },
+  { icon: Gift, label: "Giving" },
   { icon: Play, label: "Shorts" },
 ] as const;
 
-function DecorativeCross({
-  size,
-  opacity,
-  className,
-}: {
-  size: number;
-  opacity: number;
-  className?: string;
-}) {
-  return (
-    <div
-      aria-hidden
-      className={cn("pointer-events-none absolute", className)}
-      style={{ width: size, height: size, opacity }}
-    >
-      <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white" />
-      <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white" />
-    </div>
-  );
-}
+const chipClass = cn(
+  "inline-flex h-[30px] items-center gap-1.5 rounded-full border border-[rgba(255,255,255,0.72)] bg-[rgba(255,255,255,0.88)] px-2.5 text-[12px] font-medium leading-none text-[#1C2B3A] shadow-none",
+  "transition-[background-color,border-color] duration-150 ease-out",
+  "hover:border-[#C0623A] hover:bg-white hover:text-[#1C2B3A]"
+);
+
+const localeClass = cn(
+  "h-8 border-white/75 bg-white/95 px-2.5 text-[#1C2B3A] shadow-none",
+  "hover:bg-white hover:text-[#1C2B3A]",
+  "focus-visible:bg-white focus-visible:text-[#1C2B3A]",
+  "data-[state=open]:bg-white data-[state=open]:text-[#1C2B3A]",
+  "dark:border-white/75 dark:bg-white/95 dark:text-[#1C2B3A]",
+  "dark:hover:bg-white dark:hover:text-[#1C2B3A]",
+  "dark:focus-visible:bg-white dark:focus-visible:text-[#1C2B3A]",
+  "dark:data-[state=open]:bg-white dark:data-[state=open]:text-[#1C2B3A]"
+);
 
 export function AuthBrandPanel() {
   return (
-    <div className="relative hidden min-h-svh overflow-hidden border-l border-border bg-[hsl(var(--background))] lg:block">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-24 -top-24 size-[420px] rounded-full bg-white/[0.035] blur-[90px]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-20 -left-16 size-[320px] rounded-full bg-white/[0.025] blur-[70px]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(255,255,255,0.04),transparent_70%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.45]"
-        style={{
-          backgroundImage:
-            "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)",
-          backgroundSize: "22px 22px",
-        }}
+    <aside className="relative hidden min-h-0 overflow-hidden lg:block lg:h-full lg:min-h-0">
+      <Image
+        src="/images/auth-hero.png"
+        alt=""
+        fill
+        priority
+        quality={95}
+        sizes="50vw"
+        className="object-cover object-[32%_38%]"
       />
 
-      <DecorativeCross size={24} opacity={0.1} className="right-8 top-8" />
-      <DecorativeCross size={18} opacity={0.07} className="bottom-12 left-12" />
+      {/* Subtle left readability wash only — photograph stays sharp */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 w-[58%] bg-gradient-to-r from-[#F6F1E7]/28 via-[#F6F1E7]/08 to-transparent"
+      />
 
-      <div className="relative z-[1] flex min-h-svh items-center justify-center px-8 py-12 lg:px-12 lg:py-16">
-        <div className="mx-auto flex w-full max-w-[420px] flex-col items-center text-center">
-          <span className="mb-7 rounded-full border border-white/[0.1] bg-white/[0.05] px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            {siteConfig.name}
-          </span>
+      <div className="relative z-[1] flex h-full flex-col px-10 py-8 xl:px-12 xl:py-9">
+        <div className="flex shrink-0 justify-end">
+          <LocaleSwitcher className={localeClass} />
+        </div>
 
-          <h2 className="font-heading mb-5 max-w-[360px] text-[2rem] font-extrabold leading-[1.12] tracking-[-0.02em] text-foreground lg:text-[2.65rem]">
-            Where your church gathers, worships, and grows.
+        <div className="mt-[8vh] flex max-w-[32rem] flex-col xl:mt-[9vh]">
+          <h2
+            className="font-heading text-[1.75rem] font-semibold leading-[1.18] tracking-[-0.02em] text-[#1C2B3A] xl:text-[2.05rem]"
+            style={{ textShadow: "0 1px 12px rgba(246,241,231,0.55)" }}
+          >
+            Where your church gathers,
+            <br />
+            worships, and grows.
           </h2>
 
-          <p className="mb-10 max-w-[340px] text-sm leading-relaxed text-muted-foreground">
-            One organized home for worship, teaching, prayer, events, and
-            giving — built for congregations in India and around the world.
+          <p
+            className="mt-3.5 max-w-[30rem] text-[0.9rem] leading-[1.5] text-[#2F3B4A] xl:text-[0.95rem]"
+            style={{ textShadow: "0 1px 10px rgba(246,241,231,0.45)" }}
+          >
+            One organized home for worship, teaching, prayer, events, and giving
+            — built for congregations in India and around the world.
           </p>
 
-          <div className="flex w-full flex-wrap justify-center gap-2">
+          <div className="mt-4 flex max-w-[32rem] flex-wrap content-start gap-x-2 gap-y-2">
             {MINISTRY_PILLS.map(({ icon: Icon, label }) => (
-              <span
-                key={label}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-foreground/75 backdrop-blur-sm"
-              >
+              <span key={label} className={chipClass}>
                 <Icon
-                  className="size-3.5 shrink-0 text-foreground/60"
-                  strokeWidth={1.75}
+                  className="size-[14px] shrink-0 text-[#C0623A]"
+                  strokeWidth={1.85}
+                  aria-hidden
                 />
                 {label}
               </span>
             ))}
           </div>
+        </div>
 
-          <div className="mt-12 w-full max-w-[360px] border-t border-white/[0.06] pt-8">
-            <p className="text-[11px] tracking-wide text-muted-foreground/50">
-              Your church, connected.
+        <div className="mt-auto flex justify-end pb-0.5">
+          <div className="flex flex-col items-end gap-2">
+            <div
+              aria-hidden
+              className="h-px w-12 bg-[rgba(255,255,255,0.45)]"
+            />
+            <p
+              className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(255,255,255,0.92)]"
+              style={{ textShadow: "0 1px 10px rgba(28,43,58,0.4)" }}
+            >
+              A stronger church together
             </p>
           </div>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

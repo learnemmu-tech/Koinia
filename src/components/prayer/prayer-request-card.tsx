@@ -30,7 +30,7 @@ const categoryStyles: Record<PrayerRequestCategory, string> = {
   health: "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
   family: "bg-sky-500/10 text-sky-800 dark:text-sky-300",
   finances: "bg-amber-500/10 text-amber-800 dark:text-amber-300",
-  salvation: "bg-violet-500/10 text-violet-800 dark:text-violet-300",
+  salvation: "bg-teal-500/10 text-teal-800 dark:text-teal-300",
   guidance: "bg-indigo-500/10 text-indigo-800 dark:text-indigo-300",
   thanksgiving: "bg-orange-500/10 text-orange-800 dark:text-orange-300",
   other: "bg-muted text-muted-foreground",

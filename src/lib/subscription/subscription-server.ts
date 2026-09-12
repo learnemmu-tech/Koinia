@@ -43,9 +43,12 @@ export async function getSubscriptionByChurchId(
 }
 
 export async function getSubscriptionSnapshot(
-  organizationId: string
+  organizationId: string,
+  preloadedSubscription?: ChurchSubscription
 ): Promise<SubscriptionSnapshot> {
-  const subscription = await getSubscriptionByOrganizationId(organizationId);
+  const subscription =
+    preloadedSubscription ??
+    (await getSubscriptionByOrganizationId(organizationId));
   const plan = getPlan(subscription.planId);
   const limits = getPlanLimits(subscription.planId);
   const features = resolveFeatureFlagsFromSubscription(subscription);

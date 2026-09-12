@@ -8,8 +8,8 @@ import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 
 import {
   PrayerWallCard,
-  PrayerWallCardSkeleton,
 } from "@/components/prayer/prayer-wall-card";
+import { ContentAreaLoading } from "@/components/content-area-loading";
 import { SubmitPrayerRequestButton } from "@/components/prayer/submit-prayer-request-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -154,11 +154,7 @@ export function PrayerRequestsListClient({
       : null}
 
       {loading && requests.length === 0 ?
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <PrayerWallCardSkeleton key={index} />
-          ))}
-        </div>
+        <ContentAreaLoading />
       : requests.length === 0 ?
         <PrayerRequestsEmptyState />
       : filteredRequests.length === 0 ?

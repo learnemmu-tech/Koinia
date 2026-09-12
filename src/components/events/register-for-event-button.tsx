@@ -8,15 +8,21 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { hasRegisteredForEvent } from "@/lib/event-registration-actions";
+import { cn } from "@/lib/utils";
 
 type RegisterForEventButtonProps = {
   eventId: string;
   eventTitle: string;
+  className?: string;
+  /** Prefer primary CTA styling on Event Detail. */
+  priority?: boolean;
 };
 
 export function RegisterForEventButton({
   eventId,
   eventTitle,
+  className,
+  priority = false,
 }: RegisterForEventButtonProps) {
   const { authUser, profile, loading, user } = useFirebaseAuth();
   const [registering, setRegistering] = useState(false);
@@ -100,7 +106,12 @@ export function RegisterForEventButton({
 
   if (loading || checkingRegistration) {
     return (
-      <Button variant="outline" size="sm" className="rounded-full" disabled>
+      <Button
+        variant={priority ? "default" : "outline"}
+        size="sm"
+        className={cn("rounded-full", className)}
+        disabled
+      >
         <Loader2 className="mr-2 size-4 animate-spin" />
         Loading...
       </Button>
@@ -109,7 +120,12 @@ export function RegisterForEventButton({
 
   if (!authUser) {
     return (
-      <Button asChild variant="default" size="sm" className="rounded-full">
+      <Button
+        asChild
+        variant={priority ? "default" : "outline"}
+        size="sm"
+        className={cn("rounded-full", className)}
+      >
         <Link href={`/signin?callbackUrl=/events/${eventId}`}>
           <Ticket className="mr-2 size-4" />
           Sign in to Register
@@ -123,7 +139,10 @@ export function RegisterForEventButton({
       <Button
         variant="outline"
         size="sm"
-        className="rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+        className={cn(
+          "rounded-full border-emerald-500/30 text-emerald-600 dark:text-emerald-400",
+          className
+        )}
         disabled
       >
         <CheckCircle2 className="mr-2 size-4" />
@@ -135,9 +154,9 @@ export function RegisterForEventButton({
   return (
     <Button
       type="button"
-      variant="default"
+      variant={priority ? "default" : "outline"}
       size="sm"
-      className="rounded-full"
+      className={cn("rounded-full", className)}
       disabled={registering}
       onClick={handleRegister}
     >

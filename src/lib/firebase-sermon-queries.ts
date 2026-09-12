@@ -23,7 +23,12 @@ export async function getPublishedSermons(
   scope: ContentQueryInput,
   options?: { limit?: number }
 ): Promise<FirebaseSermon[]> {
-  return listSermons(scope, { publishedOnly: true, limit: options?.limit });
+  return listSermons(scope, {
+    publishedOnly: true,
+    limit: options?.limit,
+    // Catalog cards do not need creator Clerk ids — skip an extra Neon round-trip.
+    resolveCreatorClerkIds: false,
+  });
 }
 
 export async function getSermonById(

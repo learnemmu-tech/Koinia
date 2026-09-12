@@ -46,11 +46,11 @@ export async function HomeFeed({
 
   return (
     <div className="space-y-8">
+      {showEvents ? <HomeEventsSection events={upcomingEvents} /> : null}
       <HomeSongsSection songs={catalog.songs} />
       <HomeShortsSection shorts={shorts} />
       <HomeSermonsSection sermons={catalog.sermons} />
       <HomeArticlesSection articles={catalog.articles} />
-      {showEvents ? <HomeEventsSection events={upcomingEvents} /> : null}
       {showMission ? <HomePrayerCommunitySection /> : null}
       {showMission ? <HomeDonationsSection campaigns={campaigns} /> : null}
     </div>

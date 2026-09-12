@@ -9,7 +9,6 @@ import { EventCard } from "@/components/events/event-card";
 import { WorshipGridSkeleton } from "@/components/skeletons/worship-grid-skeleton";
 import { Button } from "@/components/ui/button";
 import { usePublishedEvents } from "@/hooks/use-published-events";
-import { contentCardGridClassName } from "@/lib/responsive-classes";
 
 type DashboardUpcomingEventsSectionProps = {
   initialEvents?: FirebaseEvent[];
@@ -57,7 +56,7 @@ export function DashboardUpcomingEventsSection({
             Check back soon for worship and community gatherings.
           </p>
         </div>
-      : <div className={contentCardGridClassName}>
+      : <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {events.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}

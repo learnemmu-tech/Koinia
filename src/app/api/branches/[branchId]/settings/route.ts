@@ -116,9 +116,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       settings: mapped.settings ?? nextSettings,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Update failed";
-    const status = message === "Forbidden" ? 403 : 500;
     console.error("[api/branches/settings]", error);
-    return NextResponse.json({ error: message }, { status });
+    const raw = error instanceof Error ? error.message : "";
+    if (raw === "Forbidden") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.json({ error: "Update failed." }, { status: 500 });
   }
 }

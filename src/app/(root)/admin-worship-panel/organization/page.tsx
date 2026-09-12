@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { AdminOrganizationPageClient } from "@/components/admin/pages/admin-organization-page";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ContentAreaLoading } from "@/components/content-area-loading";
 
 export const metadata = {
   title: "Admin · Organization",
@@ -10,9 +10,7 @@ export const metadata = {
 
 export default function AdminOrganizationPage() {
   return (
-    <Suspense
-      fallback={<Skeleton className="mx-4 my-8 h-64 rounded-2xl sm:mx-6" />}
-    >
+    <Suspense fallback={<ContentAreaLoading />}>
       <AdminOrganizationPageClient />
     </Suspense>
   );

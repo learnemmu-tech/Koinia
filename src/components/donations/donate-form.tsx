@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Lock } from "lucide-react";
+import { ArrowRight, Heart, Loader2, Lock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -49,9 +49,9 @@ type CheckoutResponse = {
 };
 
 const fieldClassName =
-  "h-12 rounded-[10px] border border-border bg-background text-base text-foreground shadow-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring";
+  "h-12 rounded-xl border border-border/80 bg-background text-base text-foreground shadow-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary/40 focus-visible:ring-ring";
 
-const labelClassName = "text-sm font-medium text-muted-foreground";
+const labelClassName = "text-sm font-medium text-foreground/80";
 
 export function DonateForm({ campaign }: DonateFormProps) {
   const [processing, setProcessing] = useState(false);
@@ -156,9 +156,9 @@ export function DonateForm({ campaign }: DonateFormProps) {
 
     try {
       const idempotencyKey =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random()}`;
+        typeof crypto !== "undefined" && "randomUUID" in crypto ?
+          crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`;
 
       const response = await fetch("/api/donations/checkout", {
         method: "POST",
@@ -202,9 +202,9 @@ export function DonateForm({ campaign }: DonateFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-        <div className="space-y-3">
-          <FormLabel className={labelClassName}>Suggested Amount</FormLabel>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="space-y-2.5">
+          <FormLabel className={labelClassName}>Suggested amount</FormLabel>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {suggestedAmounts.map((amount) => {
               const isSelected = selectedAmount === amount;
               return (
@@ -217,10 +217,12 @@ export function DonateForm({ campaign }: DonateFormProps) {
                     form.setValue("amount", amount, { shouldValidate: true });
                   }}
                   className={cn(
-                    "flex h-[52px] items-center justify-center rounded-[10px] border text-base font-bold transition-all duration-200",
+                    "flex h-12 items-center justify-center rounded-xl border text-sm font-semibold transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     isSelected ?
                       "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-accent text-foreground hover:border-border hover:bg-card"
+                    : "border-border/80 bg-card text-foreground hover:border-primary/35 hover:bg-muted/30",
+                    "disabled:cursor-not-allowed disabled:opacity-60"
                   )}
                 >
                   {formatDonationAmount(amount, campaign.currency)}
@@ -235,10 +237,12 @@ export function DonateForm({ campaign }: DonateFormProps) {
           name="amount"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className={labelClassName}>Or enter custom amount</FormLabel>
+              <FormLabel className={labelClassName}>
+                Or enter custom amount
+              </FormLabel>
               <FormControl>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-muted-foreground">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-muted-foreground">
                     {currencyPrefix}
                   </span>
                   <Input
@@ -262,36 +266,40 @@ export function DonateForm({ campaign }: DonateFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="donorEmail"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className={labelClassName}>Email Address</FormLabel>
-              <FormControl>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  disabled={processing}
-                  className={fieldClassName}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="space-y-3.5 border-t border-border/60 pt-4">
+          <p className="text-sm font-semibold text-foreground">Your details</p>
 
-        {!isAnonymous ?
+          {!isAnonymous ?
+            <FormField
+              control={form.control}
+              name="donorName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className={labelClassName}>Full name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Your name"
+                      disabled={processing}
+                      className={fieldClassName}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          : null}
+
           <FormField
             control={form.control}
-            name="donorName"
+            name="donorEmail"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelClassName}>Your Name</FormLabel>
+                <FormLabel className={labelClassName}>Email address</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Your name"
+                    type="email"
+                    placeholder="you@example.com"
                     disabled={processing}
                     className={fieldClassName}
                     {...field}
@@ -301,40 +309,55 @@ export function DonateForm({ campaign }: DonateFormProps) {
               </FormItem>
             )}
           />
-        : null}
 
-        <FormField
-          control={form.control}
-          name="isAnonymous"
-          render={({ field }) => (
-            <FormItem className="flex items-center gap-3 space-y-0">
-              <FormControl>
-                <input
-                  type="checkbox"
-                  className="size-4 rounded border border-border accent-white"
-                  checked={field.value}
-                  disabled={processing}
-                  onChange={(event) => field.onChange(event.target.checked)}
-                />
-              </FormControl>
-              <FormLabel className="text-sm font-normal text-muted-foreground">
-                Donate anonymously
-              </FormLabel>
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="isAnonymous"
+            render={({ field }) => (
+              <FormItem className="space-y-1.5">
+                <div className="flex items-center gap-3 space-y-0">
+                  <FormControl>
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border border-border accent-primary"
+                      checked={field.value}
+                      disabled={processing}
+                      onChange={(event) => field.onChange(event.target.checked)}
+                    />
+                  </FormControl>
+                  <FormLabel className="text-sm font-medium text-foreground">
+                    Donate anonymously
+                  </FormLabel>
+                </div>
+                <p className="pl-7 text-xs text-muted-foreground">
+                  Your name will not be shared publicly.
+                </p>
+              </FormItem>
+            )}
+          />
+        </div>
 
         <button
           type="submit"
           disabled={processing}
-          className="flex h-[52px] w-full items-center justify-center rounded-[10px] bg-primary text-base font-bold text-primary-foreground transition-all duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+          className={cn(
+            "flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-semibold text-primary-foreground",
+            "transition-colors hover:bg-[hsl(var(--primary-hover))]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "disabled:cursor-not-allowed disabled:opacity-70"
+          )}
         >
           {processing ?
             <>
-              <Loader2 className="mr-2 size-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
               Processing…
             </>
-          : `Donate ${formatDonationAmount(buttonAmount, campaign.currency)} →`}
+          : <>
+              <Heart className="size-4" aria-hidden />
+              Donate {formatDonationAmount(buttonAmount, campaign.currency)}
+              <ArrowRight className="size-4" aria-hidden />
+            </>
+          }
         </button>
 
         <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">

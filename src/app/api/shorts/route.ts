@@ -127,11 +127,20 @@ export async function POST(request: Request) {
       organizationId: short.organizationId,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create Short.";
-    const status =
-      message.includes("member") || message === "Forbidden" ? 403
-      : message.includes("church context") ? 400
-      : 500;
-    return NextResponse.json({ error: message }, { status });
+    console.error("[api/shorts]", error);
+    const raw = error instanceof Error ? error.message : "";
+    if (raw === "Forbidden" || raw.toLowerCase().includes("member")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (raw.toLowerCase().includes("church context")) {
+      return NextResponse.json(
+        { error: "No active church context." },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      { error: "Failed to create Short." },
+      { status: 500 }
+    );
   }
 }

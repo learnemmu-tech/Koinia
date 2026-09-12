@@ -179,11 +179,14 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[api/invitations] POST", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to create invitation";
-    const forbidden = message.toLowerCase().includes("permission");
+    const raw = error instanceof Error ? error.message : "";
+    const forbidden = raw.toLowerCase().includes("permission");
     return NextResponse.json(
-      { error: message },
+      {
+        error: forbidden
+          ? "You do not have permission to create invitations."
+          : "Failed to create invitation.",
+      },
       { status: forbidden ? 403 : 500 }
     );
   }

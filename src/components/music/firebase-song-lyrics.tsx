@@ -179,7 +179,7 @@ function DetailLyricsPanel({
       <div className="px-5 pt-5 sm:px-6">
         <header className="mb-3 flex items-center gap-2">
           <Music2
-            className="size-[18px] shrink-0 text-violet-400 dark:text-violet-400"
+            className="size-[18px] shrink-0 text-primary dark:text-violet-400"
             aria-hidden
           />
           <h2 className="text-base font-semibold text-foreground sm:text-lg">Lyrics</h2>

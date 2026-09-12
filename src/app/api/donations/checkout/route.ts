@@ -7,6 +7,7 @@ import {
 } from "@/lib/donation-server";
 import { getDonationCampaignById } from "@/lib/firebase-donation-queries";
 import { getConfiguredPaymentProvider } from "@/lib/payments";
+import { rateLimitDonationCheckout } from "@/lib/rate-limit";
 
 function getBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
@@ -18,8 +19,24 @@ function getBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+function clientIp(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown"
+  );
+}
+
 export async function POST(request: Request) {
   try {
+    const rate = await rateLimitDonationCheckout(clientIp(request));
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many donation attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const parsed = donationCheckoutApiSchema.safeParse(body);
 
@@ -89,7 +106,12 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to start checkout.";
-    const status = message.includes("not configured") ? 503 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const notConfigured = message.toLowerCase().includes("not configured");
+    const status = notConfigured ? 503 : 500;
+    // Never return provider/DB internals to clients in production.
+    const safeMessage = notConfigured
+      ? "Donations are temporarily unavailable. Payment provider is not configured."
+      : "Unable to start checkout.";
+    return NextResponse.json({ error: safeMessage }, { status });
   }
 }

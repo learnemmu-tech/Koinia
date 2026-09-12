@@ -146,20 +146,22 @@ export async function getMembershipForClerkUser(
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return null;
 
-  const orgRow = await getOrgMembershipRow(appUser.id, organizationId);
+  const [orgRow, churchRows] = await Promise.all([
+    getOrgMembershipRow(appUser.id, organizationId),
+    db
+      .select()
+      .from(churchMemberships)
+      .where(
+        and(
+          eq(churchMemberships.userId, appUser.id),
+          eq(churchMemberships.organizationId, organizationId)
+        )
+      ),
+  ]);
+
   if (orgRow) {
     return mapOrgMembership(orgRow, clerkId);
   }
-
-  const churchRows = await db
-    .select()
-    .from(churchMemberships)
-    .where(
-      and(
-        eq(churchMemberships.userId, appUser.id),
-        eq(churchMemberships.organizationId, organizationId)
-      )
-    );
 
   const adminChurch = churchRows.find(
     (row) =>
@@ -216,27 +218,26 @@ export async function userCanReviewChurchMemberships(
 ): Promise<boolean> {
   if (!isPostgresUuid(churchId)) return false;
 
-  const appUser = await getAppUserByClerkId(clerkId);
+  const [appUser, churchRows] = await Promise.all([
+    getAppUserByClerkId(clerkId),
+    db.select().from(churches).where(eq(churches.id, churchId)).limit(1),
+  ]);
   if (!appUser) return false;
   if (isPlatformSuperAdmin(appUser.platformRole)) return true;
 
-  const [church] = await db
-    .select()
-    .from(churches)
-    .where(eq(churches.id, churchId))
-    .limit(1);
+  const church = churchRows[0];
   if (!church) return false;
 
-  if (
-    !(await organizationAllowsWorkspaceAccess(
+  const [orgAllowed, orgRow, churchRow] = await Promise.all([
+    organizationAllowsWorkspaceAccess(
       church.organizationId,
       appUser.platformRole
-    ))
-  ) {
-    return false;
-  }
+    ),
+    getOrgMembershipRow(appUser.id, church.organizationId),
+    getChurchMembershipRow(appUser.id, churchId),
+  ]);
+  if (!orgAllowed) return false;
 
-  const orgRow = await getOrgMembershipRow(appUser.id, church.organizationId);
   if (
     orgRow?.status === "active" &&
     roleMeetsMinimum(orgRow.role as MembershipRole, "org_admin")
@@ -244,7 +245,6 @@ export async function userCanReviewChurchMemberships(
     return true;
   }
 
-  const churchRow = await getChurchMembershipRow(appUser.id, churchId);
   if (!churchRow || churchRow.status !== "active") return false;
   return roleMeetsMinimum(churchRow.role as MembershipRole, "church_admin");
 }
@@ -256,30 +256,27 @@ export const userCanManageChurch = cache(async function userCanManageChurch(
 ): Promise<boolean> {
   if (!isPostgresUuid(churchId)) return false;
 
-  const appUser = await getAppUserByClerkId(clerkId);
+  const [appUser, churchRows] = await Promise.all([
+    getAppUserByClerkId(clerkId),
+    db.select().from(churches).where(eq(churches.id, churchId)).limit(1),
+  ]);
   if (!appUser) return false;
   if (isPlatformSuperAdmin(appUser.platformRole)) return true;
 
-  const [church] = await db
-    .select()
-    .from(churches)
-    .where(eq(churches.id, churchId))
-    .limit(1);
+  const church = churchRows[0];
   if (!church) return false;
 
-  if (
-    !(await organizationAllowsWorkspaceAccess(
+  const [orgAllowed, orgRow, churchRow] = await Promise.all([
+    organizationAllowsWorkspaceAccess(
       church.organizationId,
       appUser.platformRole
-    ))
-  ) {
-    return false;
-  }
-
-  const orgRow = await getOrgMembershipRow(appUser.id, church.organizationId);
+    ),
+    getOrgMembershipRow(appUser.id, church.organizationId),
+    getChurchMembershipRow(appUser.id, churchId),
+  ]);
+  if (!orgAllowed) return false;
   if (orgRow?.status === "active") return true;
 
-  const churchRow = await getChurchMembershipRow(appUser.id, churchId);
   if (!churchRow || churchRow.status !== "active") return false;
   return roleMeetsMinimum(churchRow.role as MembershipRole, "editor");
 });
@@ -291,30 +288,33 @@ export const userCanAccessChurchContent = cache(async function userCanAccessChur
 ): Promise<boolean> {
   if (!isPostgresUuid(churchId)) return false;
 
-  const appUser = await getAppUserByClerkId(clerkId);
+  const [appUser, churchRows] = await Promise.all([
+    getAppUserByClerkId(clerkId),
+    db
+      .select({
+        id: churches.id,
+        organizationId: churches.organizationId,
+      })
+      .from(churches)
+      .where(eq(churches.id, churchId))
+      .limit(1),
+  ]);
   if (!appUser) return false;
   if (isPlatformSuperAdmin(appUser.platformRole)) return true;
 
-  const [church] = await db
-    .select()
-    .from(churches)
-    .where(eq(churches.id, churchId))
-    .limit(1);
+  const church = churchRows[0];
   if (!church) return false;
 
-  if (
-    !(await organizationAllowsWorkspaceAccess(
+  const [orgAllowed, orgRow, churchRow] = await Promise.all([
+    organizationAllowsWorkspaceAccess(
       church.organizationId,
       appUser.platformRole
-    ))
-  ) {
-    return false;
-  }
-
-  const orgRow = await getOrgMembershipRow(appUser.id, church.organizationId);
+    ),
+    getOrgMembershipRow(appUser.id, church.organizationId),
+    getChurchMembershipRow(appUser.id, churchId),
+  ]);
+  if (!orgAllowed) return false;
   if (orgRow?.status === "active") return true;
-
-  const churchRow = await getChurchMembershipRow(appUser.id, churchId);
   return churchRow?.status === "active";
 });
 
@@ -329,16 +329,12 @@ export const userCanManageOrganization = cache(async function userCanManageOrgan
   if (!appUser) return false;
   if (isPlatformSuperAdmin(appUser.platformRole)) return true;
 
-  if (
-    !(await organizationAllowsWorkspaceAccess(
-      organizationId,
-      appUser.platformRole
-    ))
-  ) {
-    return false;
-  }
+  const [orgAllowed, orgRow] = await Promise.all([
+    organizationAllowsWorkspaceAccess(organizationId, appUser.platformRole),
+    getOrgMembershipRow(appUser.id, organizationId),
+  ]);
+  if (!orgAllowed) return false;
 
-  const orgRow = await getOrgMembershipRow(appUser.id, organizationId);
   return (
     orgRow?.status === "active" &&
     roleMeetsMinimum(orgRow.role as MembershipRole, "org_admin")

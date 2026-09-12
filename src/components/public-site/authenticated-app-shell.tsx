@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { WelcomeMemberBanner } from "@/components/auth/welcome-member-banner";
 import { AppSidebar } from "@/components/app-sidebar/app-sidebar";
 import { AppSiteHeader } from "@/components/app-sidebar/app-site-header";
+import { ShepherdLauncher } from "@/components/shepherd/shepherd-launcher";
 import { pageShellClass } from "@/lib/responsive-classes";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ export function AuthenticatedAppShell({ children }: { children: ReactNode }) {
             {children}
           </div>
         </div>
+        <ShepherdLauncher />
       </SidebarInset>
     </SidebarProvider>
   );

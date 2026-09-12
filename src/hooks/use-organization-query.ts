@@ -41,6 +41,8 @@ export function useOrganizationQuery(
     queryKey: ["organization", organizationId ?? "default"],
     queryFn: () => fetchOrganization(organizationId),
     staleTime: QUERY_STALE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 1,
     enabled: enabled && organizationId !== null,
   });

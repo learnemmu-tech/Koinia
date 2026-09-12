@@ -35,7 +35,7 @@ export const FirebaseArticleCard = React.memo(function FirebaseArticleCard({
   return (
     <article
       className={cn(
-        "app-interactive app-interactive-lift app-mobile-card group flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-card/40 text-left",
+        "app-interactive app-interactive-lift app-mobile-card group flex h-full w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left dark:border-border/50 dark:bg-card/40",
         className
       )}
     >

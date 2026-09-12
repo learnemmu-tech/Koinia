@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 type HomeSectionHeaderProps = {
   id: string;
   title: string;
   description?: string;
   href?: string;
   viewAllLabel?: string;
+  className?: string;
+  viewAllClassName?: string;
 };
 
 export function HomeSectionHeader({
@@ -15,9 +19,11 @@ export function HomeSectionHeader({
   description,
   href,
   viewAllLabel = "View all",
+  className,
+  viewAllClassName,
 }: HomeSectionHeaderProps) {
   return (
-    <div className="space-y-1">
+    <div className={cn("space-y-1", className)}>
       <div className="flex items-center justify-between gap-3">
         <h2
           id={id}
@@ -28,7 +34,10 @@ export function HomeSectionHeader({
         {href ?
           <Link
             href={href}
-            className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm",
+              viewAllClassName
+            )}
           >
             {viewAllLabel}
             <ArrowRight className="size-3.5" aria-hidden />

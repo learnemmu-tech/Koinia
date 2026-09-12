@@ -58,7 +58,7 @@ export function MembershipStatusGuard() {
     if (!authUser || authLoading || !profileReady || routingLoading || !routing) return;
     if (redirectingRef.current) return;
 
-    const { status, destination } = routing;
+  const { destination: _destination, status } = routing;
 
     if (status === "pending") {
       if (!isWaitingApprovalPath(pathname) && !isExemptMembershipPath(pathname)) {

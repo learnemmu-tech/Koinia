@@ -11,17 +11,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 type ShareContentButtonProps = {
   title: string;
   path: string;
   description?: string;
+  className?: string;
+  label?: string;
 };
 
 export function ShareContentButton({
   title,
   path,
   description,
+  className,
+  label = "Share",
 }: ShareContentButtonProps) {
   const [copied, setCopied] = useState(false);
   const [hasNativeShare, setHasNativeShare] = useState(false);
@@ -64,11 +69,11 @@ export function ShareContentButton({
         type="button"
         variant="outline"
         size="sm"
-        className="h-9 gap-2 rounded-full px-4 text-sm"
+        className={cn("h-9 gap-2 rounded-full px-4 text-sm", className)}
         onClick={handleNativeShare}
       >
-        <Share2 className="size-3.5" />
-        Share
+        <Share2 className="size-3.5" aria-hidden />
+        {label}
       </Button>
     );
   }
@@ -80,10 +85,10 @@ export function ShareContentButton({
           type="button"
           variant="outline"
           size="sm"
-          className="h-9 gap-2 rounded-full px-4 text-sm"
+          className={cn("h-9 gap-2 rounded-full px-4 text-sm", className)}
         >
-          <Share2 className="size-3.5" />
-          Share
+          <Share2 className="size-3.5" aria-hidden />
+          {label}
         </Button>
       </DropdownMenuTrigger>
 

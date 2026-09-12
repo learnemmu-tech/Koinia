@@ -84,8 +84,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to verify Razorpay payment.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[donations/verify-razorpay]", error);
+    return NextResponse.json(
+      { error: "Unable to verify payment." },
+      { status: 500 }
+    );
   }
 }

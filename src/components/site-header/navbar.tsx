@@ -10,7 +10,7 @@ import { MobileHeader } from "../site-header/mobile-header";
 export async function Navbar() {
   return (
     <header
-      className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 dark:border-border/40 dark:bg-background/95 dark:supports-[backdrop-filter]:bg-background/80"
       suppressHydrationWarning
     >
       {/* ── Desktop / tablet — single row ── */}

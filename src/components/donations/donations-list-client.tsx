@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
 
 import { DonationCampaignCard } from "@/components/donations/donation-campaign-card";
+import { ContentAreaLoading } from "@/components/content-area-loading";
 import { ContentListToolbar } from "@/components/worship/content-list-toolbar";
 import {
   Select,
@@ -57,11 +57,7 @@ export function DonationsListClient({
   );
 
   if (loading && campaigns.length === 0) {
-    return (
-      <div className="flex items-center justify-center rounded-2xl border border-dashed border-border/50 py-16">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <ContentAreaLoading />;
   }
 
   if (!loading && active.length === 0 && completed.length === 0) {
@@ -138,9 +134,11 @@ function CampaignSection({
 }) {
   return (
     <section className="space-y-4">
-      <h2 className="font-heading text-lg font-bold sm:text-xl">{title}</h2>
+      <h2 className="font-heading text-lg font-semibold tracking-tight sm:text-xl">
+        {title}
+      </h2>
       {campaigns.length === 0 ?
-        <div className="rounded-2xl border border-dashed border-border/50 px-6 py-12 text-center">
+        <div className="rounded-2xl border border-dashed border-border/50 px-6 py-10 text-center">
           <p className="text-sm text-muted-foreground">{emptyMessage}</p>
         </div>
       : <div className={contentCardGridClassName}>

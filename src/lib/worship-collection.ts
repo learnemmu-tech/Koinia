@@ -10,7 +10,7 @@ export function getContentTypeFromPathname(
 }
 
 export const GLOBAL_SEARCH_PLACEHOLDER =
-  "Search songs, sermons, articles, events...";
+  "Search songs, sermons, articles, events, books...";
 
 export function getSearchPlaceholder(tab: WorshipCollectionTab): string {
   switch (tab) {

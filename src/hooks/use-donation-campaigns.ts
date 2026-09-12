@@ -35,8 +35,12 @@ export function useActiveDonationCampaigns(
       pageSize,
     ],
     enabled: clientSync && !scope.blocked,
+    // Trust SSR payload for first paint; avoid competing with shell APIs.
+    initialData: initialData.length > 0 ? initialData : undefined,
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const page = await fetchTenantContentPage<FirebaseDonationCampaign>({
         collection: "donationCampaigns",

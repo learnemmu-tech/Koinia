@@ -20,7 +20,7 @@ export async function POST(_request: Request, context: RouteContext) {
     });
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Like failed.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    console.error("[api/shorts/like]", error);
+    return NextResponse.json({ error: "Like failed." }, { status: 400 });
   }
 }

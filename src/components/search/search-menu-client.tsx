@@ -1,28 +1,45 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { Loader2, Search } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Loader2, Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useEventListener } from "@/hooks/use-event-listner";
+import { useSearchableNavItems } from "@/hooks/use-searchable-nav-items";
 import { useIsTyping } from "@/hooks/use-store";
+import { useNavLabel } from "@/i18n/nav";
 import { fetchWorshipCatalogAction } from "@/lib/actions/worship-catalog";
-import type { TenantScope } from "@/lib/organization/tenant-scope";
-import { getGlobalSearchPlaceholder } from "@/lib/worship-collection";
-import { cn, isMacOs } from "@/lib/utils";
-
 import type { WorshipCatalog } from "@/lib/cached-worship-data";
-import { WorshipCatalogProvider } from "@/context/worship-catalog-context";
+import {
+  buildGlobalSearchResults,
+  toGlobalSearchSections,
+} from "@/lib/global-search";
+import { filterNavDestinations } from "@/lib/nav-search";
+import type { TenantScope } from "@/lib/organization/tenant-scope";
+import { cn, isMacOs } from "@/lib/utils";
+import { getGlobalSearchPlaceholder } from "@/lib/worship-collection";
+import {
+  filterArticlesLocal,
+  filterEventsLocal,
+  filterSermonsLocal,
+  filterSongsLocal,
+} from "@/lib/worship-search-utils";
 
-import { GlobalSearchResults } from "./global-search-results";
-import { WorshipTopItemsClient } from "./firebase-worship-top-items";
-
-const TOP_ITEMS_LIMIT = 12;
+import { SearchResultRow } from "./search-result-row";
 
 const EMPTY_CATALOG: WorshipCatalog = {
   songs: [],
@@ -37,40 +54,17 @@ export type SearchMenuProps = {
   placeholder?: string;
   enableShortcut?: boolean;
 };
-type SearchMenuTriggerProps = {
-  className?: string;
-  searchPlaceholder: string;
-  shortcutKey: string;
-  onOpen: () => void;
-};
 
-function SearchMenuTrigger({
-  className,
-  searchPlaceholder,
-  shortcutKey,
-  onOpen,
-}: SearchMenuTriggerProps) {
-  return (
-    <Button
-      size="sm"
-      variant="outline"
-      type="button"
-      aria-haspopup="dialog"
-      aria-expanded={false}
-      onClick={onOpen}
-      className={cn(
-        "flex h-11 w-full min-w-0 max-w-full justify-start gap-2 px-3 shadow-sm sm:h-10",
-        className
-      )}
-    >
-      <Search aria-hidden="true" className="size-4 shrink-0" />
-      <span className="truncate text-muted-foreground">{searchPlaceholder}</span>
-      <kbd className="pointer-events-none ml-auto hidden h-6 shrink-0 select-none items-center rounded border bg-muted px-1.5 font-mono text-[10px] font-medium md:inline-flex">
-        <span className="text-xs">{shortcutKey}</span>K
-      </kbd>
-    </Button>
-  );
-}
+type FlatResult = {
+  id: string;
+  href: string;
+  title: string;
+  subtitle?: string;
+  coverUrl?: string;
+  kind: "page" | "content";
+  sectionLabel: string;
+  icon?: ComponentType<{ className?: string }>;
+};
 
 export function SearchMenuClient({
   scope,
@@ -79,134 +73,438 @@ export function SearchMenuClient({
   enableShortcut = true,
 }: SearchMenuProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const tCommon = useTranslations("common");
+  const navLabel = useNavLabel();
+  const inputId = useId();
+  const panelId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navItems = useSearchableNavItems();
 
   const [mounted, setMounted] = useState(false);
-  const [pendingOpen, setPendingOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [catalog, setCatalog] = useState<WorshipCatalog>(EMPTY_CATALOG);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogLoaded, setCatalogLoaded] = useState(false);
-  const debouncedQuery = useDebounce(query.trim(), 500);
-
+  const debouncedQuery = useDebounce(query.trim(), 280);
   const [_, setIsTyping] = useIsTyping();
 
   const searchPlaceholder = placeholder ?? getGlobalSearchPlaceholder();
+  const searchLabel = tCommon("search");
   const shortcutKey = mounted && isMacOs() ? "⌘" : "Ctrl";
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted && pendingOpen) {
-      setIsOpen(true);
-      setPendingOpen(false);
-    }
-  }, [mounted, pendingOpen]);
-
-  function openSearch() {
-    if (!mounted) {
-      setPendingOpen(true);
-      return;
-    }
-    setIsOpen(true);
-  }
-
   const loadCatalog = useCallback(async () => {
     if (catalogLoaded || catalogLoading) return;
     setCatalogLoading(true);
     try {
-      const nextCatalog = await fetchWorshipCatalogAction(scope);
+      // Scope is resolved server-side from the session (not client IDs).
+      const nextCatalog = await fetchWorshipCatalogAction();
       setCatalog(nextCatalog);
-      setCatalogLoaded(true);
     } catch {
       toast.error("Unable to load search catalog");
+      setCatalog(EMPTY_CATALOG);
     } finally {
+      setCatalogLoaded(true);
       setCatalogLoading(false);
     }
-  }, [catalogLoaded, catalogLoading, scope]);
+  }, [catalogLoaded, catalogLoading]);
 
   useEffect(() => {
-    if (isOpen) {
-      void loadCatalog();
-    }
+    setCatalog(EMPTY_CATALOG);
+    setCatalogLoaded(false);
+  }, [scope.organizationId, scope.churchId, scope.branchId]);
+
+  useEffect(() => {
+    if (isOpen) void loadCatalog();
   }, [isOpen, loadCatalog]);
+
+  useEffect(() => {
+    setIsOpen(false);
+    setQuery("");
+  }, [pathname]);
+
+  useEffect(() => {
+    setIsTyping(isOpen && debouncedQuery.length > 0);
+    return () => setIsTyping(false);
+  }, [debouncedQuery, isOpen, setIsTyping]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [debouncedQuery]);
+
+  const queryReady = debouncedQuery.length >= 2;
+
+  const pageRows = useMemo(() => {
+    if (!queryReady) return [] as FlatResult[];
+    const byHref = new Map(navItems.map((item) => [item.href, item]));
+    return filterNavDestinations(navItems, debouncedQuery).map((result) => ({
+      id: result.resultId,
+      href: result.href,
+      title: navLabel(result.title),
+      subtitle: "Go to page",
+      kind: "page" as const,
+      sectionLabel: "Pages",
+      icon: byHref.get(result.href)?.icon,
+    }));
+  }, [debouncedQuery, navItems, navLabel, queryReady]);
+
+  const contentRows = useMemo(() => {
+    if (!queryReady || !catalogLoaded) return [] as FlatResult[];
+
+    const grouped = buildGlobalSearchResults({
+      songs: filterSongsLocal(catalog.songs, debouncedQuery).slice(0, 5),
+      sermons: filterSermonsLocal(catalog.sermons, debouncedQuery).slice(0, 5),
+      articles: filterArticlesLocal(catalog.articles, debouncedQuery).slice(0, 5),
+      events: filterEventsLocal(catalog.events, debouncedQuery).slice(0, 5),
+    });
+
+    return toGlobalSearchSections(grouped).flatMap((section) =>
+      section.results.map((result) => ({
+        id: result.resultId,
+        href: result.href,
+        title: result.title,
+        subtitle: result.subtitle ?? section.label,
+        coverUrl: result.coverUrl,
+        kind: "content" as const,
+        sectionLabel: "Content",
+      }))
+    );
+  }, [catalog, catalogLoaded, debouncedQuery, queryReady]);
+
+  const flatResults = useMemo(
+    () => [...pageRows, ...contentRows],
+    [contentRows, pageRows]
+  );
+
+  const groupedForRender = useMemo(() => {
+    const order: string[] = [];
+    const map = new Map<string, FlatResult[]>();
+    for (const row of flatResults) {
+      if (!map.has(row.sectionLabel)) {
+        map.set(row.sectionLabel, []);
+        order.push(row.sectionLabel);
+      }
+      map.get(row.sectionLabel)!.push(row);
+    }
+    return order.map((label) => ({ label, results: map.get(label)! }));
+  }, [flatResults]);
+
+  const showHint =
+    Boolean(debouncedQuery) && debouncedQuery.length < 2 && isOpen;
+
+  const showEmptyFinal =
+    queryReady &&
+    !catalogLoading &&
+    catalogLoaded &&
+    flatResults.length === 0;
+
+  function openSearch() {
+    setIsOpen(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  function closeSearch() {
+    setIsOpen(false);
+    setQuery("");
+    setActiveIndex(0);
+    inputRef.current?.blur();
+  }
+
+  function navigateTo(href: string) {
+    closeSearch();
+    router.push(href);
+  }
+
   useEventListener("keydown", (e: KeyboardEvent) => {
     if (!enableShortcut) return;
     if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      if (isOpen) {
-        setIsOpen(false);
-      } else {
-        openSearch();
-      }
+      if (isOpen) closeSearch();
+      else openSearch();
     }
   });
 
   useEffect(() => {
-    if (isOpen) {
-      setIsTyping(debouncedQuery.length > 0);
+    if (!isOpen) return;
+
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (containerRef.current?.contains(target)) return;
+      setIsOpen(false);
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [isOpen]);
+
+  function onInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSearch();
       return;
     }
 
-    setIsTyping(false);
-    setQuery("");
-  }, [debouncedQuery, isOpen, setIsTyping]);
+    if (!flatResults.length) return;
 
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((index) => (index + 1) % flatResults.length);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((index) =>
+        index <= 0 ? flatResults.length - 1 : index - 1
+      );
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const active = flatResults[activeIndex] ?? flatResults[0];
+      if (active) navigateTo(active.href);
+    }
+  }
+
+  const indexById = useMemo(() => {
+    const map = new Map<string, number>();
+    flatResults.forEach((row, index) => map.set(row.id, index));
+    return map;
+  }, [flatResults]);
 
   return (
-    <>
-      <SearchMenuTrigger
-        className={className}
-        searchPlaceholder={searchPlaceholder}
-        shortcutKey={shortcutKey}
-        onOpen={openSearch}
-      />
+    <div ref={containerRef} className={cn("relative w-full", className)}>
+      {!isOpen ?
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label={searchLabel}
+          aria-haspopup="listbox"
+          aria-expanded={false}
+          onClick={openSearch}
+          className={cn(
+            "size-9 shrink-0 rounded-full border-border bg-surface-raised text-foreground shadow-none",
+            "hover:bg-card hover:text-foreground",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "dark:bg-background dark:hover:bg-accent",
+            "sm:hidden"
+          )}
+        >
+          <Search aria-hidden className="size-4" />
+        </Button>
+      : null}
 
-      {mounted ?
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent
+      <div
+        className={cn(
+          isOpen ?
+            "fixed inset-x-0 top-0 z-[60] border-b border-border bg-card p-3 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-dropdown sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0 sm:pt-0 sm:shadow-none"
+          : "hidden sm:block"
+        )}
+      >
+        <div className="relative mx-auto w-full max-w-[40rem] sm:max-w-none">
+          <label htmlFor={inputId} className="sr-only">
+            {searchLabel}
+          </label>
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[hsl(var(--text-muted))]"
+            aria-hidden
+          />
+          <Input
+            ref={inputRef}
+            id={inputId}
+            role="combobox"
+            aria-expanded={isOpen}
+            aria-controls={panelId}
+            aria-autocomplete="list"
+            aria-activedescendant={
+              flatResults[activeIndex] ?
+                `${panelId}-${flatResults[activeIndex]!.id}`
+              : undefined
+            }
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIsOpen(true);
+            }}
+            onFocus={() => setIsOpen(true)}
+            onKeyDown={onInputKeyDown}
+            placeholder={searchPlaceholder}
             className={cn(
-              "flex max-h-[100dvh] w-full max-w-none flex-col gap-0 overflow-hidden p-0 shadow-md",
-              "fixed inset-0 left-0 top-0 translate-x-0 translate-y-0 rounded-none border-0",
-              "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[85vh] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:border sm:p-6",
+              "h-11 w-full rounded-full border-border bg-surface-raised pl-9 pr-20 text-foreground shadow-none sm:h-9",
+              "placeholder:text-[hsl(var(--text-muted))]",
+              "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "dark:bg-background"
+            )}
+          />
+
+          <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
+            {query ?
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => {
+                  setQuery("");
+                  inputRef.current?.focus();
+                }}
+                className="flex size-8 items-center justify-center rounded-full text-[hsl(var(--text-muted))] transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-accent"
+              >
+                <X className="size-3.5" aria-hidden />
+              </button>
+            : <kbd className="pointer-events-none hidden h-5 select-none items-center rounded border border-border bg-card px-1.5 font-mono text-[10px] font-medium text-[hsl(var(--text-muted))] md:inline-flex dark:bg-muted">
+                <span className="text-[10px]">{shortcutKey}</span>K
+              </kbd>
+            }
+            {isOpen ?
+              <button
+                type="button"
+                aria-label="Close search"
+                onClick={closeSearch}
+                className="flex size-8 items-center justify-center rounded-full text-[hsl(var(--text-muted))] transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:hidden dark:hover:bg-accent"
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+            : null}
+          </div>
+        </div>
+      </div>
+
+      {isOpen && mounted ?
+        <>
+          <button
+            type="button"
+            aria-label="Close search"
+            className="fixed inset-0 z-[55] bg-background/40 sm:hidden"
+            onClick={closeSearch}
+          />
+          <div
+            id={panelId}
+            role="listbox"
+            aria-label={searchLabel}
+            className={cn(
+              "z-[60] overflow-hidden border border-border bg-card shadow-dropdown dark:bg-popover dark:shadow-md",
+              "fixed inset-x-0 top-[calc(3.75rem+env(safe-area-inset-top,0px))] max-h-[min(70dvh,28rem)] sm:absolute sm:inset-x-0 sm:top-[calc(100%+0.5rem)] sm:max-h-[min(60vh,28rem)] sm:rounded-xl"
             )}
           >
-            <div className="relative shrink-0 border-b border-border/40 px-4 pb-3 pt-4 sm:mr-4 sm:mt-4 sm:border-0 sm:p-0">
-              <Search className="absolute left-6 top-7 size-4 text-muted-foreground sm:left-2 sm:top-3" />
+            <div className="max-h-[inherit] overflow-y-auto p-2">
+              {!debouncedQuery ?
+                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  Search pages, songs, sermons, articles, events, and more.
+                </p>
+              : null}
 
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="w-full pl-8"
-                autoFocus
-              />
-            </div>
+              {showHint ?
+                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  Type at least 2 characters to search.
+                </p>
+              : null}
 
-            <div className="min-h-0 flex-1 overflow-hidden px-4 sm:px-0">
-              {catalogLoading && !catalogLoaded ?
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+              {queryReady && catalogLoading && !catalogLoaded && pageRows.length === 0 ?
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                  Searching…
                 </div>
-              : <WorshipCatalogProvider catalog={catalog}>
-                  {debouncedQuery.length ?
-                    <GlobalSearchResults query={debouncedQuery} />
-                  : <WorshipTopItemsClient
-                      songs={catalog.songs.slice(0, TOP_ITEMS_LIMIT)}
-                      sermons={catalog.sermons.slice(0, TOP_ITEMS_LIMIT)}
-                      articles={catalog.articles.slice(0, TOP_ITEMS_LIMIT)}
-                    />
-                  }
-                </WorshipCatalogProvider>
-              }
-            </div>          </DialogContent>
-        </Dialog>
+              : null}
+
+              {queryReady && catalogLoading && !catalogLoaded && pageRows.length > 0 ?
+                <div className="flex items-center gap-2 px-2 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                  Searching content…
+                </div>
+              : null}
+
+              {showEmptyFinal ?
+                <div className="space-y-1 px-3 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No results found for &ldquo;{debouncedQuery}&rdquo;
+                  </p>
+                  <p className="text-xs text-[hsl(var(--text-muted))]">
+                    Try searching for a song, sermon, article, event, or book.
+                  </p>
+                </div>
+              : null}
+
+              {groupedForRender.map((section) => (
+                <section key={section.label} className="mb-2 last:mb-0">
+                  <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    {section.label}
+                  </p>
+                  <div className="flex flex-col gap-0.5">
+                    {section.results.map((result) => {
+                      const index = indexById.get(result.id) ?? 0;
+                      const selected = index === activeIndex;
+                      const Icon = result.icon;
+
+                      if (result.kind === "page") {
+                        return (
+                          <button
+                            key={result.id}
+                            type="button"
+                            id={`${panelId}-${result.id}`}
+                            role="option"
+                            aria-selected={selected}
+                            onMouseEnter={() => setActiveIndex(index)}
+                            onClick={() => navigateTo(result.href)}
+                            className={cn(
+                              "flex min-h-11 w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors",
+                              selected ?
+                                "bg-primary-subtle text-foreground"
+                              : "hover:bg-surface-raised dark:hover:bg-accent"
+                            )}
+                          >
+                            {Icon ?
+                              <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-card text-foreground dark:bg-background">
+                                <Icon className="size-4" aria-hidden />
+                              </span>
+                            : null}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium">
+                                {result.title}
+                              </span>
+                              <span className="block text-xs text-muted-foreground">
+                                {result.subtitle}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={result.id}
+                          id={`${panelId}-${result.id}`}
+                          role="option"
+                          aria-selected={selected}
+                          onMouseEnter={() => setActiveIndex(index)}
+                          className={cn(selected && "rounded-lg ring-2 ring-ring/40")}
+                        >
+                          <SearchResultRow
+                            href={result.href}
+                            title={result.title}
+                            subtitle={result.subtitle}
+                            coverUrl={result.coverUrl}
+                            highlightQuery={debouncedQuery}
+                            onNavigate={closeSearch}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </div>
+        </>
       : null}
-    </>
+    </div>
   );
 }

@@ -2,10 +2,9 @@
 
 import type { FirebaseEvent } from "@/types/firebase-event";
 
-import { getEventScheduleInfo, getHomeDisplayEvents } from "@/lib/event-schedule";
+import { getHomeDisplayEvents } from "@/lib/event-schedule";
 import { useEventScheduleNow } from "@/hooks/use-event-schedule-now";
 
-import { HomeCollectionRail, homeRailItemClass, HOME_RAIL_LANDSCAPE } from "./home-collection-rail";
 import { HomeEmptyState } from "./home-empty-state";
 import { HomeEventCard } from "./home-event-card";
 import { HomeSectionHeader } from "./home-section-header";
@@ -16,42 +15,28 @@ type HomeEventsSectionProps = {
 
 export function HomeEventsSection({ events }: HomeEventsSectionProps) {
   const now = useEventScheduleNow();
-  const { highlight, rest, visible } = getHomeDisplayEvents(events, now, 3);
+  const { visible } = getHomeDisplayEvents(events, now, 4);
 
   return (
-    <section aria-labelledby="home-events-heading" className="space-y-3">
+    <section aria-labelledby="home-events-heading" className="space-y-4">
       <HomeSectionHeader
         id="home-events-heading"
         title="Upcoming Events"
         description="Gather with the community for worship, teaching, and fellowship."
         href="/events"
         viewAllLabel="View All Events"
+        viewAllClassName="text-primary hover:text-primary-hover"
       />
       {visible.length === 0 ?
         <HomeEmptyState
           title="No upcoming events"
           description="Check back soon for new gatherings."
         />
-      : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-3 md:items-stretch md:overflow-visible md:px-0">
-          {highlight ?
-            <div className={`${homeRailItemClass(HOME_RAIL_LANDSCAPE)} md:h-full`}>
-              <HomeEventCard
-                event={highlight}
-                highlight
-                schedule={getEventScheduleInfo(highlight, now)}
-                now={now}
-              />
-            </div>
-          : null}
-          {rest.map((event) => (
-            <div
-              key={event.id}
-              className={`${homeRailItemClass(HOME_RAIL_LANDSCAPE)} md:h-full`}
-            >
-              <HomeEventCard event={event} now={now} />
-            </div>
+      : <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {visible.map((event) => (
+            <HomeEventCard key={event.id} event={event} />
           ))}
-        </HomeCollectionRail>
+        </div>
       }
     </section>
   );

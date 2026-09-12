@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { emailConfig } from "@/lib/email/config";
 import { EmailService } from "@/lib/email/email-service";
+import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 
 const bodySchema = z.object({
   type: z.enum(["welcome", "article"]).default("welcome"),
@@ -10,12 +13,22 @@ const bodySchema = z.object({
 });
 
 /**
- * Dev-only endpoint to verify Resend + EmailService end-to-end.
+ * Dev email verification — Super Admin only, never available in production.
  * POST /api/email/test { "type": "welcome" | "article", "to": "optional@email.com" }
  */
 export async function POST(request: Request) {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const authUser = await verifyBearerToken(request);
+  if (!authUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const appUser = await getAppUserByClerkId(authUser.uid);
+  if (!isPlatformSuperAdmin(appUser?.platformRole)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   let body: z.infer<typeof bodySchema>;

@@ -4,15 +4,45 @@ import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { BookStatus } from "@/types/book";
-import type { BookEditionFilter } from "@/lib/books/filters";
+import type {
+  BookCatalogFilter,
+  BookEditionFilter,
+  BookSortOption,
+} from "@/lib/books/filters";
 
-const EDITION_FILTER_IDS = ["all", "digital", "physical", "both"] as const satisfies ReadonlyArray<BookEditionFilter>;
+const CATALOG_FILTER_IDS = [
+  "all",
+  "digital",
+  "physical",
+  "free",
+  "paid",
+] as const satisfies ReadonlyArray<BookCatalogFilter>;
+
+const EDITION_FILTER_IDS = [
+  "all",
+  "digital",
+  "physical",
+  "both",
+] as const satisfies ReadonlyArray<BookEditionFilter>;
 
 const STATUS_FILTER_IDS = ["all", "draft", "published", "archived"] as const;
 
-function SegmentedControl<T extends string>({
+const SORT_OPTIONS = [
+  { id: "latest" as const, labelKey: "sortLatest" as const },
+  { id: "title" as const, labelKey: "sortTitle" as const },
+  { id: "author" as const, labelKey: "sortAuthor" as const },
+];
+
+function FilterPills<T extends string>({
   label,
   value,
   onChange,
@@ -31,7 +61,7 @@ function SegmentedControl<T extends string>({
       <div
         role="group"
         aria-label={ariaLabel}
-        className="flex h-9 min-w-0 items-center overflow-x-auto rounded-md border border-border bg-muted/40 p-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex min-w-0 flex-wrap items-center gap-2"
       >
         {options.map((item) => (
           <button
@@ -40,11 +70,11 @@ function SegmentedControl<T extends string>({
             aria-pressed={value === item.id}
             onClick={() => onChange(item.id)}
             className={cn(
-              "h-8 shrink-0 rounded px-2.5 text-xs font-medium transition-colors",
+              "inline-flex h-9 shrink-0 items-center rounded-full border px-3.5 text-xs font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               value === item.id ?
-                "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+                "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-card text-foreground hover:bg-muted/60"
             )}
           >
             {item.label}
@@ -63,16 +93,31 @@ export function BooksToolbar({
   statusFilter,
   onStatusFilterChange,
   showStatusFilter = false,
+  catalogFilter,
+  onCatalogFilterChange,
+  sort,
+  onSortChange,
+  variant = "admin",
 }: {
   search: string;
   onSearchChange: (value: string) => void;
-  editionFilter: BookEditionFilter;
-  onEditionFilterChange: (value: BookEditionFilter) => void;
+  editionFilter?: BookEditionFilter;
+  onEditionFilterChange?: (value: BookEditionFilter) => void;
   statusFilter?: "all" | BookStatus;
   onStatusFilterChange?: (value: "all" | BookStatus) => void;
   showStatusFilter?: boolean;
+  catalogFilter?: BookCatalogFilter;
+  onCatalogFilterChange?: (value: BookCatalogFilter) => void;
+  sort?: BookSortOption;
+  onSortChange?: (value: BookSortOption) => void;
+  variant?: "admin" | "catalog";
 }) {
   const t = useTranslations("books");
+
+  const catalogFilters = CATALOG_FILTER_IDS.map((id) => ({
+    id,
+    label: t(id),
+  }));
 
   const editionFilters = EDITION_FILTER_IDS.map((id) => ({
     id,
@@ -85,35 +130,69 @@ export function BooksToolbar({
   }));
 
   return (
-    <div className="flex w-full flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div className="relative w-full shrink-0 md:max-w-sm md:flex-1 lg:max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+    <div className="flex w-full flex-col gap-3.5">
+      <div className="relative w-full">
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={t("searchPlaceholder")}
           aria-label={t("searchAria")}
-          className="h-9 rounded-md pl-9 text-sm"
+          className="h-11 rounded-xl border-border/70 bg-card pl-10 text-sm shadow-sm"
         />
       </div>
 
-      <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:shrink-0 md:items-end">
-        <SegmentedControl
-          label={t("edition")}
-          value={editionFilter}
-          onChange={onEditionFilterChange}
-          options={editionFilters}
-          ariaLabel={t("filterEdition")}
-        />
-        {showStatusFilter && statusFilter != null && onStatusFilterChange ?
-          <SegmentedControl
-            label={t("status")}
-            value={statusFilter}
-            onChange={onStatusFilterChange}
-            options={statusFilters}
-            ariaLabel={t("filterStatus")}
+      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {variant === "catalog" && catalogFilter != null && onCatalogFilterChange ?
+          <FilterPills
+            label={t("edition")}
+            value={catalogFilter}
+            onChange={onCatalogFilterChange}
+            options={catalogFilters}
+            ariaLabel={t("filterEdition")}
+          />
+        : editionFilter != null && onEditionFilterChange ?
+          <FilterPills
+            label={t("edition")}
+            value={editionFilter}
+            onChange={onEditionFilterChange}
+            options={editionFilters}
+            ariaLabel={t("filterEdition")}
           />
         : null}
+
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          {showStatusFilter && statusFilter != null && onStatusFilterChange ?
+            <FilterPills
+              label={t("status")}
+              value={statusFilter}
+              onChange={onStatusFilterChange}
+              options={statusFilters}
+              ariaLabel={t("filterStatus")}
+            />
+          : null}
+
+          {variant === "catalog" && sort != null && onSortChange ?
+            <Select
+              value={sort}
+              onValueChange={(value) => onSortChange(value as BookSortOption)}
+            >
+              <SelectTrigger
+                aria-label={t("sortAria")}
+                className="h-9 w-auto min-w-[9.5rem] gap-1.5 rounded-lg border-border/70 bg-card px-3 text-xs font-medium shadow-sm"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {t(option.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          : null}
+        </div>
       </div>
     </div>
   );

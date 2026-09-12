@@ -1,11 +1,5 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { ContentAreaLoading } from "@/components/content-area-loading";
 
 export default function SuperAdminMembersLoading() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-10 w-48" />
-      <Skeleton className="h-24 w-full rounded-xl" />
-      <Skeleton className="h-96 w-full rounded-xl" />
-    </div>
-  );
+  return <ContentAreaLoading />;
 }

@@ -19,8 +19,21 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function SermonsPage() {
+  const resolveStarted = performance.now();
   const { contentQuery, isPlatformPublic } = await resolvePageContentQuery();
+  if (process.env.PERF_TIMING === "1") {
+    console.info(
+      `[perf] sermons.resolvePageContentQuery: ${Math.round(performance.now() - resolveStarted)}ms`
+    );
+  }
+
+  const sermonsStarted = performance.now();
   const sermons = await getPublishedSermonsCached(contentQuery);
+  if (process.env.PERF_TIMING === "1") {
+    console.info(
+      `[perf] sermons.getPublishedSermonsCached: ${Math.round(performance.now() - sermonsStarted)}ms count=${sermons.length}`
+    );
+  }
 
   return (
     <section

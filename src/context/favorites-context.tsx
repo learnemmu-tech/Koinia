@@ -106,3 +106,8 @@ export function useFavorites(): FavoritesContextValue {
   }
   return context;
 }
+
+/** Safe when a tree mounts without FavoritesProvider (falls back to null). */
+export function useFavoritesOptional(): FavoritesContextValue | null {
+  return React.useContext(FavoritesContext);
+}

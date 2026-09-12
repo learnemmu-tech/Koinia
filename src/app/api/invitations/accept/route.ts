@@ -30,10 +30,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[api/invitations/accept]", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to accept invitation",
-      },
+      { error: "Failed to accept invitation." },
       { status: 400 }
     );
   }

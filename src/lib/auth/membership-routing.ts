@@ -1,7 +1,7 @@
 import type { FirestoreUser } from "@/lib/firebase-auth-service";
 import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
 import type { FirebaseBranchMembership } from "@/types/branch-membership";
-import type { FirebaseMembership, MembershipStatus } from "@/types/membership";
+import type { MembershipStatus } from "@/types/membership";
 import { roleMeetsMinimum } from "@/types/membership";
 
 import { isOrganizationAccessSuspended } from "@/lib/auth/organization-workspace-access";
@@ -24,6 +24,7 @@ import {
   WAITING_APPROVAL_PATH,
 } from "./auth-paths";
 import {
+  canAccessChurchManagement,
   hasActiveWorkspace,
   isMembershipPending,
   type WorkspaceAccessInput,
@@ -49,6 +50,9 @@ export type MembershipRoutingResult = {
   status: MembershipRoutingStatus;
   destination: string;
 };
+
+/** Regular approved members land on the public/member home, not the admin workspace. */
+export const MEMBER_HOME_PATH = "/";
 
 const TERMINAL_BRANCH_STATUSES = new Set<MembershipStatus>([
   "rejected",
@@ -99,6 +103,29 @@ export function resolvePrimaryBranchMembership(
     (m) => !TERMINAL_BRANCH_STATUSES.has(m.status)
   );
   return nonTerminal ?? branchMemberships[0] ?? null;
+}
+
+/**
+ * Church/org admins → dashboard; regular members → home.
+ * Role is derived only from PostgreSQL-backed membership objects (never client role).
+ */
+function resolveActiveWorkspaceDestination(
+  accessInput: WorkspaceAccessInput,
+  branchMemberships: FirebaseBranchMembership[]
+): string {
+  if (canAccessChurchManagement(accessInput)) {
+    return WORKSPACE_BASE;
+  }
+
+  const hasAdminBranch = branchMemberships.some(
+    (m) =>
+      m.status === "active" && roleMeetsMinimum(m.role, "church_admin")
+  );
+  if (hasAdminBranch) {
+    return WORKSPACE_BASE;
+  }
+
+  return MEMBER_HOME_PATH;
 }
 
 export type ResolveMembershipRoutingInput = WorkspaceAccessInput & {
@@ -182,6 +209,7 @@ export function resolveMembershipRouting({
   const accessInput: WorkspaceAccessInput = {
     profile,
     membership,
+    branchMembership: primaryBranch,
     churchesCount,
     branchesCount,
     workspaceType,
@@ -199,8 +227,15 @@ export function resolveMembershipRouting({
     return { status: "none", destination: CREATE_WORKSPACE_PATH };
   }
 
+  const roleAwareDefault = resolveActiveWorkspaceDestination(
+    accessInput,
+    branchMemberships
+  );
+
+  // Completed users who landed with an onboarding callback (e.g. Sign Up Google)
+  // must not be forced into workspace creation — use role-aware home/dashboard.
   if (isCreateWorkspacePathInternal(sanitized, sanitizeCallbackUrl)) {
-    return { status: "active", destination: WORKSPACE_BASE };
+    return { status: "active", destination: roleAwareDefault };
   }
 
   if (
@@ -216,7 +251,7 @@ export function resolveMembershipRouting({
     ) {
       return { status: "active", destination: sanitized };
     }
-    return { status: "active", destination: WORKSPACE_BASE };
+    return { status: "active", destination: roleAwareDefault };
   }
 
   if (
@@ -227,7 +262,7 @@ export function resolveMembershipRouting({
     return { status: "active", destination: sanitized };
   }
 
-  return { status: "active", destination: WORKSPACE_BASE };
+  return { status: "active", destination: roleAwareDefault };
 }
 
 export function resolveMembershipRoutingDestination(

@@ -3,6 +3,13 @@ import { z } from "zod";
 
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { createPublishNotificationServer } from "@/lib/firebase-notification-server";
+import {
+  getArticleById,
+  getEventById,
+  getPrayerRequestById,
+  getSermonById,
+  getSongById,
+} from "@/lib/postgres/features";
 import { userCanManageChurch } from "@/lib/postgres/session";
 
 const bodySchema = z.object({
@@ -22,6 +29,31 @@ const bodySchema = z.object({
   organizationId: z.string().optional(),
   branchId: z.string().nullable().optional(),
 });
+
+async function contentBelongsToChurch(
+  type: z.infer<typeof bodySchema>["type"],
+  contentId: string,
+  churchId: string
+): Promise<boolean> {
+  switch (type) {
+    case "song":
+      return (await getSongById(contentId))?.churchId === churchId;
+    case "article":
+      return (await getArticleById(contentId))?.churchId === churchId;
+    case "sermon":
+      return (await getSermonById(contentId))?.churchId === churchId;
+    case "event":
+      return (await getEventById(contentId))?.churchId === churchId;
+    case "prayer":
+    case "prayer_request_submitted":
+      return (await getPrayerRequestById(contentId))?.churchId === churchId;
+    case "membership_approved":
+      // Server triggers use branchId or churchId as contentId (not membership row id).
+      return contentId === churchId;
+    default:
+      return false;
+  }
+}
 
 export async function POST(request: Request) {
   const authUser = await verifyBearerToken(request);
@@ -43,6 +75,18 @@ export async function POST(request: Request) {
   );
   if (!canPublish) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const belongs = await contentBelongsToChurch(
+    body.type,
+    body.contentId,
+    body.churchId
+  );
+  if (!belongs) {
+    return NextResponse.json(
+      { error: "Content does not belong to this church." },
+      { status: 403 }
+    );
   }
 
   try {

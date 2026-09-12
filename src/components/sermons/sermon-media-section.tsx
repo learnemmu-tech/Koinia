@@ -20,12 +20,20 @@ export function SermonMediaSection({
   if (!hasVideo && !audio) return null;
 
   return (
-    <div className="space-y-6">
-      <YouTubeEmbed title={title} youtubeUrl={youtubeUrl} />
+    <div className="space-y-5">
+      {hasVideo ?
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+          <div className="aspect-video w-full">
+            <YouTubeEmbed title={title} youtubeUrl={youtubeUrl} framed={false} />
+          </div>
+        </div>
+      : null}
 
-      {audio ? (
-        <FirebaseSongPlayer audioUrl={audio} title={title} />
-      ) : null}
+      {audio ?
+        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
+          <FirebaseSongPlayer audioUrl={audio} title={title} />
+        </div>
+      : null}
     </div>
   );
 }

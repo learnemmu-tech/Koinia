@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CreditCard, MoreHorizontal, Unlock, Users } from "lucide-react";
+import { ArrowRight, BookOpen, MoreHorizontal, Smartphone, Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import {
@@ -13,24 +14,40 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DEFAULT_SONG_COVER } from "@/config/site";
-import { bookAccessLines, editionBadgeLabel } from "@/lib/books/display";
+import {
+  bookDigitalPriceDisplay,
+  bookPhysicalPriceDisplay,
+  editionBadgeLabel,
+  type BookPriceDisplay,
+} from "@/lib/books/display";
 import { cn } from "@/lib/utils";
 import type { BookRecord } from "@/types/book";
-import { useTranslations } from "next-intl";
 
-function AccessLineIcon({ book, line }: { book: BookRecord; line: string }) {
-  const className = "size-3 shrink-0 text-[#6B7280]";
-  if (book.visibility === "members_only") {
-    return <Users className={className} aria-hidden />;
-  }
-  const lower = line.toLowerCase();
-  if (lower.includes("free")) {
-    return <Unlock className={className} aria-hidden />;
-  }
-  if (/^[A-Z]{3}\s[\d.]/.test(line)) {
-    return <CreditCard className={className} aria-hidden />;
-  }
-  return <Unlock className={className} aria-hidden />;
+function PriceBox({
+  item,
+  icon,
+}: {
+  item: BookPriceDisplay;
+  icon: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-[2.75rem] min-w-0 flex-1 items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1.5">
+      <span className="text-muted-foreground" aria-hidden>
+        {icon}
+      </span>
+      <div className="min-w-0 leading-tight">
+        <p className="text-[11px] text-muted-foreground">{item.label}</p>
+        <p
+          className={cn(
+            "truncate text-xs font-semibold",
+            item.isFree ? "text-emerald-700" : "text-foreground"
+          )}
+        >
+          {item.value}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function BookCard({
@@ -49,8 +66,10 @@ export function BookCard({
   onDelete?: () => void;
 }) {
   const tc = useTranslations("common");
+  const t = useTranslations("books");
   const canManage = Boolean(onEdit || onArchive || onDelete);
-  const accessLines = bookAccessLines(book);
+  const digital = bookDigitalPriceDisplay(book);
+  const physical = bookPhysicalPriceDisplay(book);
   const statusLabel =
     book.status === "draft"
       ? tc("draft")
@@ -63,96 +82,113 @@ export function BookCard({
   return (
     <article
       className={cn(
-        "group relative flex w-full max-w-[210px] cursor-pointer flex-col overflow-hidden rounded-lg border border-[#1F1F1F] bg-[#111111]",
-        "transition-all duration-200 ease-in-out",
-        "hover:-translate-y-[3px] hover:border-[#2A2A2A] hover:bg-[#141414] hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+        "group relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm",
+        "transition-[box-shadow,transform,border-color] duration-200 ease-out",
+        "hover:-translate-y-0.5 hover:border-border hover:shadow-md"
       )}
     >
-      <Link
-        href={href}
-        className="flex min-w-0 flex-col outline-none focus-visible:ring-2 focus-visible:ring-[#2A2A2A] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0A]"
-      >
-        <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden bg-[#1A1A1A]">
+      <div className="relative px-3 pt-3">
+        <Link
+          href={href}
+          className="relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
           <ImageWithFallback
             src={book.coverImageUrl || DEFAULT_SONG_COVER}
             fallback={DEFAULT_SONG_COVER}
             fill
-            sizes="(max-width: 640px) 44vw, 200px"
-            alt=""
-            className="object-cover transition-transform duration-300 ease-in-out group-hover:scale-[1.03]"
+            sizes="(max-width: 640px) 90vw, (max-width: 1024px) 40vw, 280px"
+            alt={book.title}
+            className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
           />
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.7) 100%)",
-            }}
-            aria-hidden
-          />
-        </div>
-        <div className="flex flex-col bg-[#111111] px-2.5 pb-2.5 pt-2 text-left">
-          <span className="mb-1.5 inline-flex w-fit rounded border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium leading-none text-[#9CA3AF]">
-            {editionBadgeLabel(book)}
-          </span>
-          <h3 className="mb-0.5 line-clamp-2 text-[12px] font-semibold leading-snug text-white">
-            {book.title}
-          </h3>
-          <p className="mb-1 truncate text-[11px] text-[#6B7280]">
-            {book.authorName}
-          </p>
-          {showStatus ?
-            <p className="mb-1 text-[10px] capitalize text-[#6B7280]">
-              {statusLabel}
-            </p>
-          : null}
-          <div className="space-y-0.5 text-[10px] leading-snug text-[#4B5563]">
-            {accessLines.map((line) => (
-              <p key={line} className="flex min-w-0 items-center gap-1">
-                <AccessLineIcon book={book} line={line} />
-                <span className="truncate">{line}</span>
-              </p>
-            ))}
-          </div>
-        </div>
-      </Link>
+        </Link>
 
-      {canManage ?
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label="Book actions"
-              className={cn(
-                "absolute right-2 top-2 z-10 flex size-7 items-center justify-center rounded-md border border-white/10 bg-black/70 text-white",
-                "opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
-                "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2A2A2A]"
-              )}
-            >
-              <MoreHorizontal className="size-3.5" aria-hidden />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuItem asChild>
-              <Link href={href}>{tc("view")}</Link>
-            </DropdownMenuItem>
-            {onEdit ?
-              <DropdownMenuItem onSelect={onEdit}>{tc("edit")}</DropdownMenuItem>
-            : null}
-            {onArchive || onDelete ? <DropdownMenuSeparator /> : null}
-            {onArchive && book.status !== "archived" ?
-              <DropdownMenuItem onSelect={onArchive}>{tc("archive")}</DropdownMenuItem>
-            : null}
-            {onDelete ?
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onSelect={onDelete}
+        {canManage ?
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Book actions"
+                className={cn(
+                  "absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-md border border-border/70 bg-card/95 text-foreground shadow-sm",
+                  "opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
+                  "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                )}
               >
-                {tc("delete")}
+                <MoreHorizontal className="size-3.5" aria-hidden />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem asChild>
+                <Link href={href}>{tc("view")}</Link>
               </DropdownMenuItem>
+              {onEdit ?
+                <DropdownMenuItem onSelect={onEdit}>{tc("edit")}</DropdownMenuItem>
+              : null}
+              {onArchive || onDelete ? <DropdownMenuSeparator /> : null}
+              {onArchive && book.status !== "archived" ?
+                <DropdownMenuItem onSelect={onArchive}>{tc("archive")}</DropdownMenuItem>
+              : null}
+              {onDelete ?
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={onDelete}
+                >
+                  {tc("delete")}
+                </DropdownMenuItem>
+              : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        : null}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-3 px-3 pb-3 pt-2.5">
+        <div className="space-y-1.5">
+          <span className="inline-flex h-6 max-w-full items-center gap-1 rounded-md bg-sky-50 px-2 text-[11px] font-medium text-sky-800 ring-1 ring-inset ring-sky-100">
+            <Sparkles className="size-3 shrink-0 opacity-70" aria-hidden />
+            <span className="truncate">{editionBadgeLabel(book)}</span>
+          </span>
+
+          <Link href={href} className="block outline-none focus-visible:underline">
+            <h3 className="line-clamp-2 font-heading text-[1.05rem] font-semibold leading-snug tracking-tight text-foreground">
+              {book.title}
+            </h3>
+          </Link>
+          <p className="truncate text-[13px] text-muted-foreground">{book.authorName}</p>
+          {showStatus ?
+            <p className="text-[11px] capitalize text-muted-foreground">{statusLabel}</p>
+          : null}
+        </div>
+
+        {(digital || physical) ?
+          <div className="mt-auto flex gap-2">
+            {digital ?
+              <PriceBox
+                item={digital}
+                icon={<Smartphone className="size-3.5" aria-hidden />}
+              />
             : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      : null}
+            {physical ?
+              <PriceBox
+                item={physical}
+                icon={<BookOpen className="size-3.5" aria-hidden />}
+              />
+            : null}
+          </div>
+        : <div className="mt-auto" />}
+
+        <Link
+          href={href}
+          className={cn(
+            "inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg",
+            "bg-primary text-sm font-medium text-primary-foreground",
+            "transition-colors hover:bg-primary/90",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          )}
+        >
+          {t("viewBook")}
+          <ArrowRight className="size-3.5" aria-hidden />
+        </Link>
+      </div>
     </article>
   );
 }
@@ -167,25 +203,11 @@ export function BookCardGrid({
   return (
     <div
       className={cn(
-        "grid w-full grid-cols-2 justify-items-start gap-4 sm:grid-cols-[repeat(auto-fill,minmax(190px,210px))] sm:justify-start sm:gap-5",
+        "grid w-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4",
         className
       )}
     >
       {children}
-    </div>
-  );
-}
-
-export function BookCardSkeleton() {
-  return (
-    <div className="flex w-full max-w-[210px] flex-col overflow-hidden rounded-lg border border-[#1F1F1F] bg-[#111111]">
-      <div className="aspect-[2/3] w-full shrink-0 animate-pulse bg-[#1A1A1A]" />
-      <div className="space-y-1.5 px-2.5 pb-2.5 pt-2">
-        <div className="h-4 w-16 animate-pulse rounded bg-[#1A1A1A]" />
-        <div className="h-8 w-full animate-pulse rounded bg-[#1A1A1A]" />
-        <div className="h-2.5 w-2/3 animate-pulse rounded bg-[#1A1A1A]" />
-        <div className="h-2 w-1/2 animate-pulse rounded bg-[#1A1A1A]" />
-      </div>
     </div>
   );
 }

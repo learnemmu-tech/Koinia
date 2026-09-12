@@ -1,22 +1,29 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useOrganizationOptional } from "@/context/organization-context";
 import { firebaseAuth } from "@/lib/firebase-auth-service";
-import type { MembershipRoutingResult } from "@/lib/auth/membership-routing";
-import { sanitizeCallbackUrl } from "@/lib/callback-url";
+import {
+  resolveMembershipRouting,
+  type MembershipRoutingResult,
+} from "@/lib/auth/membership-routing";
+import { getWorkspaceType } from "@/lib/organization/workspace-type";
 import { QUERY_STALE_TIME } from "@/lib/react-query-config";
 
-async function fetchMembershipRouting(
-  callbackUrl: string
-): Promise<MembershipRoutingResult | null> {
+/**
+ * Fallback only when OrganizationProvider is absent.
+ * Normal app shell derives routing from the organization snapshot to avoid a
+ * second Neon round-trip (/api/auth/routing) competing with org + RSC.
+ */
+async function fetchMembershipRouting(): Promise<MembershipRoutingResult | null> {
   const user = firebaseAuth.currentUser;
   if (!user) return null;
 
   const token = await user.getIdToken();
-  const redirectTo = sanitizeCallbackUrl(callbackUrl);
-  const params = new URLSearchParams({ callbackUrl: redirectTo });
+  const params = new URLSearchParams({ callbackUrl: "/" });
   const res = await fetch(`/api/auth/routing?${params.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -25,20 +32,63 @@ async function fetchMembershipRouting(
   return res.json() as Promise<MembershipRoutingResult>;
 }
 
-export function useMembershipRouting(callbackUrl = "/") {
-  const { authUser } = useFirebaseAuth();
+/** Stable key — do not include pathname (avoids duplicate parallel fetches). */
+export const MEMBERSHIP_ROUTING_QUERY_KEY = ["membership-routing"] as const;
+
+export function useMembershipRouting(_callbackUrl = "/") {
+  const { authUser, profile, profileReady } = useFirebaseAuth();
+  const organization = useOrganizationOptional();
+
+  const derivedRouting = useMemo((): MembershipRoutingResult | null => {
+    if (!authUser || !profileReady || !profile) return null;
+    // OrganizationProvider is present in the app shell — wait for it to settle
+    // and derive locally instead of hitting /api/auth/routing.
+    if (organization) {
+      if (organization.loading) return null;
+      return resolveMembershipRouting({
+        profile,
+        membership: organization.membership,
+        branchMemberships: organization.branchMemberships,
+        churchesCount: organization.churches.length,
+        workspaceType: getWorkspaceType(organization.organization),
+        organizationStatus: organization.organization?.status ?? null,
+        callbackUrl: "/",
+      });
+    }
+    return null;
+  }, [
+    authUser,
+    profileReady,
+    profile,
+    organization,
+    organization?.loading,
+    organization?.membership,
+    organization?.branchMemberships,
+    organization?.churches,
+    organization?.organization,
+  ]);
+
+  const needsApiFallback = Boolean(authUser) && profileReady && !organization;
 
   const query = useQuery({
-    queryKey: ["membership-routing", callbackUrl],
-    queryFn: () => fetchMembershipRouting(callbackUrl),
-    enabled: Boolean(authUser),
+    queryKey: MEMBERSHIP_ROUTING_QUERY_KEY,
+    queryFn: () => fetchMembershipRouting(),
+    enabled: needsApiFallback,
     staleTime: QUERY_STALE_TIME,
     refetchOnWindowFocus: false,
+    refetchOnMount: false,
     retry: 1,
   });
 
+  const routing = derivedRouting ?? query.data ?? null;
+  const loading =
+    Boolean(authUser) &&
+    (!profileReady ||
+      Boolean(organization?.loading) ||
+      (needsApiFallback && query.isLoading && !query.data));
+
   return {
-    routing: query.data ?? null,
-    loading: query.isLoading && Boolean(authUser),
+    routing,
+    loading,
   };
 }

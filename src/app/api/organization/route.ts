@@ -29,9 +29,15 @@ export async function GET(request: Request) {
 
     let targetOrgId = organizationId;
     if (!targetOrgId) {
-      const orgs = await getOrganizationsForUser(userId);
-      if (orgs[0]) {
-        targetOrgId = orgs[0].id;
+      // Prefer profile org — avoids list-orgs waterfall when already known.
+      targetOrgId = appUser?.organizationId?.trim() || undefined;
+      if (!targetOrgId) {
+        const orgs = await timed("organization.list-for-user", () =>
+          getOrganizationsForUser(userId)
+        );
+        if (orgs[0]) {
+          targetOrgId = orgs[0].id;
+        }
       }
     }
 

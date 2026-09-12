@@ -1,3 +1,5 @@
-import LoadingSpinner from "@/components/loading-spinner";
+import { ContentAreaLoading } from "@/components/content-area-loading";
 
-export default LoadingSpinner;
+export default function SettingsLoading() {
+  return <ContentAreaLoading />;
+}

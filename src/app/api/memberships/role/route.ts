@@ -58,10 +58,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[api/memberships/role]", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to update role",
-      },
+      { error: "Failed to update role." },
       { status: 500 }
     );
   }

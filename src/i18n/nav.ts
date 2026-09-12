@@ -36,6 +36,11 @@ const NAV_LABEL_KEYS: Record<string, NavigationKey> = {
   Browse: "sectionBrowse",
   Resources: "sectionResources",
   Settings: "sectionSettings",
+  Content: "sectionContent",
+  Community: "sectionCommunity",
+  Organization: "sectionOrganization",
+  Tools: "sectionTools",
+  "Shepherd AI": "shepherdAi",
 };
 
 export function useNavLabel() {

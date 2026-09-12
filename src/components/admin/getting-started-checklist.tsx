@@ -64,7 +64,7 @@ export function GettingStartedChecklist() {
       href: "/dashboard/content?tab=sermons",
       cta: t("ctaCreate"),
       icon: Mic2,
-      accent: "from-violet-500/10 to-violet-500/5 border-violet-500/20",
+      accent: "from-primary/10 to-primary/5 border-primary/20",
     },
     {
       id: "song",

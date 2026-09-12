@@ -1,12 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchTenantContentPage } from "@/lib/api-client";
+import { fetchWithAuth } from "@/lib/api-client";
 import { useChurchManagementAccess } from "@/hooks/use-church-management-access";
 import { useWorkspaceTenantScope } from "@/hooks/use-workspace-tenant-scope";
 import { QUERY_GC_TIME, QUERY_STALE_TIME } from "@/lib/react-query-config";
-import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 import type { FirebaseBranchMembership } from "@/types/branch-membership";
 
 export type SidebarAdminBadges = {
@@ -26,7 +26,21 @@ export function useSidebarAdminBadges(): SidebarAdminBadges {
     useChurchManagementAccess();
   const scope = useWorkspaceTenantScope();
   const churchId = scope.churchId?.trim() ?? "";
+  // After first paint only — never block soft-nav RSC / org for Neon connections.
+  const [afterPaint, setAfterPaint] = useState(false);
+  useEffect(() => {
+    let innerId = 0;
+    const outerId = window.requestAnimationFrame(() => {
+      innerId = window.requestAnimationFrame(() => setAfterPaint(true));
+    });
+    return () => {
+      window.cancelAnimationFrame(outerId);
+      if (innerId) window.cancelAnimationFrame(innerId);
+    };
+  }, []);
+
   const enabled =
+    afterPaint &&
     !accessLoading &&
     canAccessChurchManagement &&
     !scope.blocked &&
@@ -35,30 +49,40 @@ export function useSidebarAdminBadges(): SidebarAdminBadges {
   const { data: badges = EMPTY_BADGES } = useQuery({
     queryKey: ["sidebar-admin-badges", churchId, scope.organizationId],
     enabled,
-    refetchInterval: 60_000,
+    refetchInterval: 5 * 60_000,
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     queryFn: async () => {
-      const [prayers, membersRes] = await Promise.all([
-        fetchTenantContentPage<FirebasePrayerRequest>({
-          collection: "prayerRequests",
-          churchId,
-          organizationId: scope.organizationId,
-          limit: 50,
-        }),
-        (async () => {
-          const { fetchWithAuth } = await import("@/lib/api-client");
-          const response = await fetchWithAuth(
-            `/api/memberships/pending?organizationId=${encodeURIComponent(scope.organizationId ?? "")}&branchId=${encodeURIComponent(churchId)}`
-          );
-          if (!response.ok) return { pending: [] as FirebaseBranchMembership[] };
-          return response.json() as Promise<{ pending: FirebaseBranchMembership[] }>;
-        })(),
+      const orgId = scope.organizationId ?? "";
+      const [prayersRes, membersRes] = await Promise.all([
+        fetchWithAuth(
+          `/api/tenant-content?${new URLSearchParams({
+            collection: "prayerRequests",
+            churchId,
+            organizationId: orgId,
+            status: "pending",
+            countOnly: "true",
+            limit: "1",
+          }).toString()}`
+        ),
+        fetchWithAuth(
+          `/api/memberships/pending?organizationId=${encodeURIComponent(orgId)}&branchId=${encodeURIComponent(churchId)}`
+        ),
       ]);
-      const pendingPrayers = prayers.items.filter(
-        (item) => item.status === "pending"
-      ).length;
-      const pendingMembers = membersRes.pending.length;
+
+      const pendingPrayers = prayersRes.ok
+        ? ((await prayersRes.json()) as { count?: number }).count ?? 0
+        : 0;
+      const pendingMembers = membersRes.ok
+        ? (
+            (await membersRes.json()) as {
+              pending: FirebaseBranchMembership[];
+            }
+          ).pending.length
+        : 0;
+
       return {
         pendingPrayers,
         pendingMembers,

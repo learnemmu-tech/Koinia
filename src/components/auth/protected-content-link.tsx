@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React from "react";
 
-import { useContentAuthDialog } from "@/context/content-auth-dialog-context";
+import { useContentAuthDialogOptional } from "@/context/content-auth-dialog-context";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ type ProtectedContentLinkProps = {
   children: React.ReactNode;
   /** When true, opens the auth dialog instead of navigating for signed-out visitors. */
   requireAuth?: boolean;
+  onClick?: React.MouseEventHandler<HTMLAnchorElement | HTMLButtonElement>;
   "aria-label"?: string;
 };
 
@@ -25,14 +26,20 @@ export function ProtectedContentLink({
   className,
   children,
   requireAuth = false,
+  onClick,
   "aria-label": ariaLabel,
 }: ProtectedContentLinkProps) {
   const { user, loading } = useFirebaseAuth();
-  const { openDialog } = useContentAuthDialog();
+  const dialog = useContentAuthDialogOptional();
 
-  if (!requireAuth || (!loading && user)) {
+  if (!requireAuth || (!loading && user) || !dialog) {
     return (
-      <Link href={href} className={className} aria-label={ariaLabel}>
+      <Link
+        href={href}
+        className={className}
+        aria-label={ariaLabel}
+        onClick={onClick}
+      >
         {children}
       </Link>
     );
@@ -42,7 +49,10 @@ export function ProtectedContentLink({
     <button
       type="button"
       className={cn("cursor-pointer text-left", className)}
-      onClick={() => openDialog(href, { redirectOnClose: false })}
+      onClick={(event) => {
+        onClick?.(event);
+        dialog.openDialog(href, { redirectOnClose: false });
+      }}
       disabled={loading}
       aria-label={ariaLabel}
     >

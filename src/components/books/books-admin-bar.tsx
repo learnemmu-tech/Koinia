@@ -12,10 +12,10 @@ export function BooksAdminBar({ canManage }: { canManage: boolean }) {
   if (!canManage) return null;
 
   return (
-    <Button asChild size="sm" className="h-9">
+    <Button asChild size="sm" className="h-9 rounded-lg px-3.5">
       <Link href="/dashboard/books/new">
         <Plus className="size-4" aria-hidden />
-        {t("create")}
+        {t("addBook")}
       </Link>
     </Button>
   );

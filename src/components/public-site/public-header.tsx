@@ -70,7 +70,7 @@ export function PublicHeader() {
   const getStartedHref = buildCreateWorkspaceAuthHref("/signup");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
+    <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/90 dark:border-border/50 dark:bg-background/95 dark:supports-[backdrop-filter]:bg-background/90">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:h-16 sm:px-6 md:px-8">
         <PublicWordmark className="shrink-0" />
 

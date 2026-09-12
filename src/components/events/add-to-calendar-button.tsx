@@ -16,12 +16,21 @@ import {
   buildGoogleCalendarUrl,
   downloadIcsFile,
 } from "@/lib/event-calendar";
+import { cn } from "@/lib/utils";
 
 type AddToCalendarButtonProps = {
   event: FirebaseEvent;
+  className?: string;
+  label?: string;
+  variant?: "default" | "outline" | "secondary" | "ghost";
 };
 
-export function AddToCalendarButton({ event }: AddToCalendarButtonProps) {
+export function AddToCalendarButton({
+  event,
+  className,
+  label = "Save to Calendar",
+  variant = "default",
+}: AddToCalendarButtonProps) {
   function handleGoogleCalendar() {
     window.open(buildGoogleCalendarUrl(event), "_blank", "noopener,noreferrer");
   }
@@ -40,15 +49,15 @@ export function AddToCalendarButton({ event }: AddToCalendarButtonProps) {
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant="outline"
           size="sm"
-          className="h-9 gap-2 rounded-full px-4 text-sm"
+          variant={variant}
+          className={cn("h-9 gap-2 rounded-full px-4 text-sm", className)}
         >
-          <CalendarPlus className="size-3.5" />
-          Add To Calendar
+          <CalendarPlus className="size-3.5" aria-hidden />
+          {label}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuItem onClick={handleGoogleCalendar}>
           Google Calendar
         </DropdownMenuItem>

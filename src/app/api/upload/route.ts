@@ -14,7 +14,12 @@ import { getDonationCampaignById } from "@/lib/postgres/features";
 import { getOrgMembershipRow, userCanManageChurch } from "@/lib/postgres/session";
 import { getChurchById, getOrganizationById } from "@/lib/postgres/tenants";
 import type { StorageUploadKind } from "@/lib/storage-upload-kind";
-import { deleteStoredMediaUrls, uploadPublicObject } from "@/lib/supabase-storage";
+import { rateLimitUploadRequest } from "@/lib/rate-limit";
+import {
+  deleteStoredMediaUrls,
+  getStorageObjectKeyFromUrl,
+  uploadPublicObject,
+} from "@/lib/supabase-storage";
 import { roleMeetsMinimum } from "@/types/membership";
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -64,6 +69,68 @@ function getFileExtension(mimeType: string, fileName: string): string {
   return "bin";
 }
 
+/** Magic-byte sniff for common raster formats (rejects SVG/HTML spoofing). */
+function sniffImageContentType(buffer: Buffer): {
+  contentType: string;
+  ext: string;
+} | null {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return { contentType: "image/jpeg", ext: "jpg" };
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return { contentType: "image/png", ext: "png" };
+  }
+  if (buffer.length >= 6) {
+    const head = buffer.subarray(0, 6).toString("ascii");
+    if (head === "GIF87a" || head === "GIF89a") {
+      return { contentType: "image/gif", ext: "gif" };
+    }
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return { contentType: "image/webp", ext: "webp" };
+  }
+  // AVIF: ISO BMFF with 'ftyp' + 'avif'/'avis'
+  if (buffer.length >= 12 && buffer.subarray(4, 8).toString("ascii") === "ftyp") {
+    const brand = buffer.subarray(8, 12).toString("ascii");
+    if (brand === "avif" || brand === "avis") {
+      return { contentType: "image/avif", ext: "avif" };
+    }
+  }
+  return null;
+}
+
+function looksLikeAudio(buffer: Buffer): boolean {
+  if (buffer.length < 4) return false;
+  // ID3 tag or MPEG frame sync
+  if (buffer.subarray(0, 3).toString("ascii") === "ID3") return true;
+  if (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0) return true;
+  // WAV
+  if (
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.length >= 12 &&
+    buffer.subarray(8, 12).toString("ascii") === "WAVE"
+  ) {
+    return true;
+  }
+  // OGG
+  if (buffer.subarray(0, 4).toString("ascii") === "OggS") return true;
+  // MP4/M4A
+  if (buffer.length >= 8 && buffer.subarray(4, 8).toString("ascii") === "ftyp") {
+    return true;
+  }
+  return false;
+}
+
 function resolveKind(
   kindParam: string | null,
   type: "cover" | "audio",
@@ -108,6 +175,32 @@ async function authorizeContentUpload(
   }
 
   return true;
+}
+
+/** Only allow deleting prior media that belongs to this entity prefix. */
+function isAuthorizedReplaceUrl(
+  replaceUrl: string,
+  kind: StorageUploadKind,
+  entityId: string
+): boolean {
+  const key = getStorageObjectKeyFromUrl(replaceUrl);
+  if (!key) return false;
+
+  const prefixes: Record<StorageUploadKind, string> = {
+    onboarding: `onboarding/${entityId}/`,
+    "organization-logo": `organizations/${entityId}/`,
+    "church-logo": `churches/${entityId}/`,
+    "church-cover": `churches/${entityId}/`,
+    song: `songs/${entityId}/`,
+    sermon: `sermons/${entityId}/`,
+    article: `articles/${entityId}/`,
+    event: `events/${entityId}/`,
+    donation: `donations/${entityId}/`,
+    book: `books/${entityId}/`,
+  };
+
+  const prefix = prefixes[kind];
+  return Boolean(prefix && key.startsWith(prefix) && !key.includes(".."));
 }
 
 async function authorizeUpload(
@@ -179,6 +272,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const rate = await rateLimitUploadRequest(decoded.uid);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many uploads. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const typeParam = searchParams.get("type");
     const entityId = searchParams.get("songId")?.trim() ?? "";
@@ -221,53 +322,69 @@ export async function POST(request: NextRequest) {
     }
 
     const fileName = file.name || entityId;
-    const ext = getFileExtension(file.type, fileName);
+    const claimedExt = getFileExtension(file.type, fileName);
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    let ext = claimedExt;
+    let safeContentType = file.type || "application/octet-stream";
 
     if (type === "cover") {
-      const isValidImage =
-        file.type.startsWith("image/") ||
-        Boolean(ext.match(/^(jpg|jpeg|png|webp|gif|avif)$/));
-      if (!isValidImage) {
-        return NextResponse.json(
-          { error: "Cover must be an image file" },
-          { status: 400 }
-        );
-      }
-      if (file.size > MAX_IMAGE_SIZE) {
+      if (file.size > MAX_IMAGE_SIZE || buffer.length > MAX_IMAGE_SIZE) {
         return NextResponse.json(
           { error: "Cover image must be 2 MB or smaller" },
           { status: 400 }
         );
       }
-    } else {
-      const isValidAudio =
-        file.type.startsWith("audio/") ||
-        Boolean(ext.match(/^(mp3|wav|m4a|ogg|webm|aac)$/));
-      if (!isValidAudio) {
+      const sniffed = sniffImageContentType(buffer);
+      if (!sniffed) {
         return NextResponse.json(
-          { error: "Audio must be an audio file" },
+          { error: "Cover must be a valid JPEG, PNG, WebP, GIF, or AVIF image" },
           { status: 400 }
         );
       }
-      if (file.size > MAX_AUDIO_SIZE) {
+      ext = sniffed.ext;
+      safeContentType = sniffed.contentType;
+    } else {
+      const claimedAudio =
+        file.type.startsWith("audio/") ||
+        Boolean(claimedExt.match(/^(mp3|wav|m4a|ogg|webm|aac)$/));
+      if (!claimedAudio || !looksLikeAudio(buffer)) {
+        return NextResponse.json(
+          { error: "Audio must be a valid audio file" },
+          { status: 400 }
+        );
+      }
+      if (file.size > MAX_AUDIO_SIZE || buffer.length > MAX_AUDIO_SIZE) {
         return NextResponse.json(
           { error: "Audio file must be 20 MB or smaller" },
           { status: 400 }
         );
       }
+      ext = claimedExt.match(/^(mp3|wav|m4a|ogg|webm|aac)$/)
+        ? claimedExt
+        : "mp3";
+      safeContentType = file.type.startsWith("audio/")
+        ? file.type
+        : "audio/mpeg";
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
     const uploaded = await uploadPublicObject({
       kind,
       entityId,
       ext,
       body: buffer,
-      contentType: file.type,
+      contentType: safeContentType,
     });
 
     if (replaceUrl) {
-      await deleteStoredMediaUrls(replaceUrl);
+      if (isAuthorizedReplaceUrl(replaceUrl, kind, entityId)) {
+        await deleteStoredMediaUrls(replaceUrl);
+      } else {
+        console.warn(
+          "[Upload] Ignored unauthorized replaceUrl for entity",
+          entityId
+        );
+      }
     }
 
     return NextResponse.json({
@@ -279,12 +396,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[Upload] Error:", error);
-    return NextResponse.json(
-      {
-        error: "Upload failed",
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

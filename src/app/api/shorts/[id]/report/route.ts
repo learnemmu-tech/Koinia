@@ -28,7 +28,7 @@ export async function POST(request: Request, context: RouteContext) {
     });
     return NextResponse.json({ reported: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Report failed.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    console.error("[api/shorts/report]", error);
+    return NextResponse.json({ error: "Report failed." }, { status: 400 });
   }
 }

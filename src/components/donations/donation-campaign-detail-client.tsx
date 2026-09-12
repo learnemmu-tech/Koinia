@@ -1,20 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { CalendarDays, Heart } from "lucide-react";
 
 import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
 
+import { ContentAreaLoading } from "@/components/content-area-loading";
 import { DonateForm } from "@/components/donations/donate-form";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import {
   formatDonationAmount,
   getCampaignProgressPercent,
 } from "@/lib/donation-firestore";
 import { useDonationCampaign } from "@/hooks/use-donation-campaigns";
-import { getSongCoverUrl } from "@/lib/utils";
+import { cn, getSongCoverUrl } from "@/lib/utils";
 
 type DonationCampaignDetailClientProps = {
   campaignId: string;
@@ -48,40 +49,19 @@ function splitCampaignDescription(description: string): string[] {
   return [text];
 }
 
+function formatCampaignDate(ms: number): string | null {
+  if (!ms || !Number.isFinite(ms)) return null;
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
 export function DonationCampaignDetailSkeleton() {
-  return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
-      <div className="grid gap-8 lg:grid-cols-[11fr_9fr] lg:gap-10">
-        <div className="space-y-5">
-          <Skeleton className="h-4 w-32 bg-accent" />
-          <Skeleton className="h-56 w-full rounded-2xl bg-card sm:h-64 lg:h-[280px]" />
-          <Skeleton className="h-6 w-36 rounded-full bg-accent" />
-          <Skeleton className="h-8 w-4/5 max-w-md bg-accent" />
-          <Skeleton className="h-4 w-full max-w-sm bg-accent" />
-          <Skeleton className="h-2 w-full rounded-full bg-accent" />
-          <Skeleton className="h-4 w-28 bg-accent" />
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-full bg-accent" />
-            <Skeleton className="h-4 w-full bg-accent" />
-            <Skeleton className="h-4 w-3/4 bg-accent" />
-          </div>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-7">
-          <Skeleton className="h-7 w-48 bg-accent" />
-          <Skeleton className="mt-3 h-0.5 w-12 bg-accent" />
-          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-[52px] rounded-[10px] bg-accent" />
-            ))}
-          </div>
-          <Skeleton className="mt-5 h-12 w-full rounded-[10px] bg-accent" />
-          <Skeleton className="mt-4 h-12 w-full rounded-[10px] bg-accent" />
-          <Skeleton className="mt-4 h-12 w-full rounded-[10px] bg-accent" />
-          <Skeleton className="mt-6 h-[52px] w-full rounded-[10px] bg-accent" />
-        </div>
-      </div>
-    </div>
-  );
+  return <ContentAreaLoading />;
 }
 
 export function DonationCampaignDetailClient({
@@ -96,17 +76,14 @@ export function DonationCampaignDetailClient({
 
   if (!campaign || campaign.status !== "active") {
     return (
-      <div className="mx-auto flex min-h-[320px] w-full max-w-lg flex-col items-center justify-center px-4 py-16 text-center">
-        <h1 className="font-heading text-2xl font-bold text-foreground">
+      <div className="mx-auto flex min-h-[280px] w-full max-w-lg flex-col items-center justify-center px-4 py-14 text-center">
+        <h1 className="font-heading text-2xl font-semibold text-foreground">
           Campaign not found
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           This campaign is not available for donations.
         </p>
-        <Button
-          asChild
-          className="mt-6 h-11 rounded-[10px] bg-primary px-6 text-primary-foreground hover:bg-primary/90"
-        >
+        <Button asChild className="mt-6 h-11 rounded-xl px-6">
           <Link href="/donations">← All Campaigns</Link>
         </Button>
       </div>
@@ -115,86 +92,151 @@ export function DonationCampaignDetailClient({
 
   const coverUrl = getSongCoverUrl(campaign.bannerImage);
   const progress = getCampaignProgressPercent(campaign);
+  const isCompleted = progress >= 100;
   const descriptionParagraphs = splitCampaignDescription(campaign.description);
+  const heroExcerpt =
+    campaign.description.trim().length > 220 ?
+      `${campaign.description.trim().slice(0, 220).trimEnd()}…`
+    : campaign.description.trim();
+  const createdLabel = formatCampaignDate(campaign.createdAt);
+  const raised = formatDonationAmount(campaign.currentAmount, campaign.currency);
+  const goal = formatDonationAmount(campaign.targetAmount, campaign.currency);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-10">
-      <div className="grid gap-8 lg:grid-cols-[11fr_9fr] lg:items-start lg:gap-10">
-        <div className="min-w-0 space-y-5">
-          <Link
-            href="/donations"
-            className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+    <article className="mx-auto w-full max-w-6xl space-y-7 px-4 pb-10 pt-4 sm:px-6 lg:pt-6">
+      <Link
+        href="/donations"
+        className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        ← All Campaigns
+      </Link>
+
+      {/* Hero: image + campaign info */}
+      <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-8">
+        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-muted shadow-sm sm:max-h-[360px] lg:aspect-[4/3] lg:max-h-[400px]">
+          <ImageWithFallback
+            src={coverUrl}
+            fallback={DEFAULT_SONG_COVER}
+            fill
+            sizes="(min-width: 1024px) 45vw, 100vw"
+            alt={campaign.title}
+            className="object-cover"
+            priority
+          />
+        </div>
+
+        <div className="flex min-w-0 flex-col items-start gap-3 lg:pt-1">
+          <span
+            className={cn(
+              "inline-flex h-7 items-center rounded-full px-2.5 text-[11px] font-semibold",
+              isCompleted ?
+                "bg-muted text-muted-foreground"
+              : "bg-[hsl(var(--primary-subtle))] text-primary"
+            )}
           >
-            ← All Campaigns
-          </Link>
+            {isCompleted ? "Completed" : "Active Campaign"}
+          </span>
 
-          <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-border sm:h-64 lg:h-[280px]">
-            <ImageWithFallback
-              src={coverUrl}
-              fallback={DEFAULT_SONG_COVER}
-              fill
-              sizes="(min-width: 1024px) 55vw, 100vw"
-              alt={campaign.title}
-              className="object-cover"
-              priority
-            />
-          </div>
+          <h1 className="font-heading text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-foreground sm:text-[2.125rem]">
+            {campaign.title}
+          </h1>
 
-          <div>
-            <span className="inline-flex items-center rounded-full border border-border bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              Active Campaign
-            </span>
+          {heroExcerpt ?
+            <p className="max-w-xl text-[0.95rem] leading-relaxed text-muted-foreground sm:text-base">
+              {heroExcerpt}
+            </p>
+          : null}
 
-            <h1 className="mt-3 font-heading text-[26px] font-bold leading-tight text-foreground">
-              {campaign.title}
-            </h1>
-
-            <div className="mt-4 space-y-2">
-              <p className="text-base font-semibold text-foreground">
-                {formatDonationAmount(campaign.currentAmount, campaign.currency)}{" "}
-                raised of{" "}
-                {formatDonationAmount(campaign.targetAmount, campaign.currency)}{" "}
-                goal
-              </p>
-              <div className="h-2 overflow-hidden rounded-full bg-accent">
-                <div
-                  className="h-full rounded-full bg-foreground transition-all duration-300"
-                  style={{ width: `${progress}%` }}
+          <div className="mt-1 flex flex-col gap-2 text-sm text-foreground/90">
+            {createdLabel ?
+              <p className="inline-flex items-center gap-2">
+                <CalendarDays
+                  className="size-[1.125rem] shrink-0 text-primary/85"
+                  aria-hidden
                 />
-              </div>
-              <p className="text-sm text-muted-foreground">{progress}% funded</p>
-            </div>
-
-            {descriptionParagraphs.length > 0 ?
-              <div className="mt-6 max-w-prose space-y-4">
-                {descriptionParagraphs.map((paragraph, index) => (
-                  <p
-                    key={`${index}-${paragraph.slice(0, 24)}`}
-                    className="text-[15px] leading-[1.75] text-muted-foreground"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
+                <span>
+                  <span className="text-muted-foreground">Started </span>
+                  {createdLabel}
+                </span>
+              </p>
             : null}
           </div>
         </div>
+      </section>
 
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          <div className="rounded-2xl border border-border bg-card p-7">
+      {/* Progress */}
+      <section className="rounded-2xl border border-border/60 bg-card px-5 py-4 shadow-sm sm:px-6 sm:py-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-heading text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              {raised}
+              <span className="ml-1.5 text-base font-normal text-muted-foreground">
+                raised
+              </span>
+            </p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              of {goal} goal
+            </p>
+          </div>
+          <p className="text-sm font-semibold tabular-nums text-foreground">
+            {progress}%
+          </p>
+        </div>
+        <div
+          className="mt-3.5 h-2 overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${progress}% funded`}
+        >
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </section>
+
+      {/* About + Donate */}
+      <section className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] lg:gap-7">
+        <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
+          <h2 className="font-heading text-lg font-semibold tracking-tight text-foreground">
+            About This Campaign
+          </h2>
+          {descriptionParagraphs.length > 0 ?
+            <div className="mt-3.5 max-w-prose space-y-4">
+              {descriptionParagraphs.map((paragraph, index) => (
+                <p
+                  key={`${index}-${paragraph.slice(0, 24)}`}
+                  className="text-[0.95rem] leading-[1.7] text-foreground/90 sm:text-base"
+                >
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          : <p className="mt-3 text-sm text-muted-foreground">
+              No additional campaign details have been added yet.
+            </p>
+          }
+        </section>
+
+        <aside className="lg:sticky lg:top-6 lg:self-start">
+          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
             <div className="mb-5">
               <div className="flex items-center gap-2">
-                <span className="text-2xl leading-none" aria-hidden>
-                  ❤️
-                </span>
-                <h2 className="text-xl font-bold text-foreground">Make a Donation</h2>
+                <Heart className="size-4 text-primary" aria-hidden />
+                <h2 className="font-heading text-lg font-semibold tracking-tight text-foreground">
+                  Make a Donation
+                </h2>
               </div>
-              <div className="mt-3 h-0.5 w-12 rounded-full bg-foreground" />
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                Your gift brings hope, support, and change to families in need.
+              </p>
             </div>
             <DonateForm campaign={campaign} />
           </div>
-        </div>
-      </div>
-    </div>
+        </aside>
+      </section>
+    </article>
   );
 }

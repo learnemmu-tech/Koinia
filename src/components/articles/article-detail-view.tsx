@@ -2,9 +2,16 @@ import type { FirebaseArticle } from "@/types/firebase-article";
 
 import { ArticleNavigation } from "@/components/articles/article-navigation";
 import { RelatedArticles } from "@/components/articles/related-articles";
+import {
+  ContentDetailLayout,
+  estimateReadingMinutes,
+  formatDetailDate,
+  type ContentDetailSidebarItem,
+} from "@/components/content-detail-layout";
+import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { YouTubeEmbed } from "@/components/media/youtube-embed";
-import { ReadingDetailLayout } from "@/components/reading-detail-layout";
 import { ShareContentButton } from "@/components/share-content-button";
+import { DEFAULT_SONG_COVER } from "@/config/site";
 import { getSongCoverUrl } from "@/lib/utils";
 
 type ArticleDetailViewProps = {
@@ -20,31 +27,93 @@ export function ArticleDetailView({
   previousArticle,
   nextArticle,
 }: ArticleDetailViewProps) {
-  const coverUrl = getSongCoverUrl(article.coverImage);
-  const headerSubtitle = article.scriptureReference
-    ? `${article.shortDescription} · ${article.scriptureReference}`
-    : article.shortDescription;
+  const coverUrl = getSongCoverUrl(article.coverImage) || DEFAULT_SONG_COVER;
+  const dateLabel = formatDetailDate(article.dateCreated);
+  const category = article.category?.trim() || "";
+  const readingMinutes = estimateReadingMinutes(article.content);
+  const author = article.author?.trim() || "";
+  const excerpt = article.shortDescription?.trim() || "";
+  const scripture = article.scriptureReference?.trim() || "";
+  const hasVideo = Boolean(article.youtubeUrl?.trim());
+
+  const metadata = [
+    dateLabel,
+    category || null,
+    readingMinutes ? `${readingMinutes} min read` : null,
+  ].filter(Boolean) as string[];
+
+  const sidebarItems: ContentDetailSidebarItem[] = [];
+  if (author) {
+    sidebarItems.push({ label: "Author", value: author, icon: "user" });
+  }
+  if (dateLabel) {
+    sidebarItems.push({ label: "Date", value: dateLabel, icon: "calendar" });
+  }
+  if (category) {
+    sidebarItems.push({ label: "Category", value: category, icon: "tag" });
+  }
+  if (readingMinutes) {
+    sidebarItems.push({
+      label: "Reading",
+      value: `${readingMinutes} min`,
+      icon: "clock",
+    });
+  }
+  if (scripture) {
+    sidebarItems.push({
+      label: "Scripture",
+      value: scripture,
+      icon: "book",
+    });
+  }
 
   return (
-    <ReadingDetailLayout
+    <ContentDetailLayout
+      kind="article"
+      kindLabel="Article"
+      backLabel="Back to Articles"
+      backHref="/articles"
       coverUrl={coverUrl}
       coverAlt={article.title}
-      category={article.category}
       title={article.title}
-      subtitle={headerSubtitle}
-      author={article.author}
+      author={author || undefined}
       authorImage={article.authorImage}
-      dateCreated={article.dateCreated}
+      metadata={metadata}
+      excerpt={excerpt || undefined}
       content={article.content}
-      beforeContent={
-        <YouTubeEmbed title={article.title} youtubeUrl={article.youtubeUrl} />
-      }
+      sidebarTitle="About this article"
+      sidebarItems={sidebarItems}
+      scriptureReference={scripture || undefined}
+      tags={article.tags}
+      hasMedia={hasVideo}
       headerAction={
         <ShareContentButton
           title={article.title}
-          description={article.shortDescription}
+          description={excerpt || undefined}
           path={`/articles/${encodeURIComponent(article.id)}`}
+          className="h-9 rounded-xl px-4"
+          label="Share"
         />
+      }
+      heroActions={
+        <FavoriteButton
+          itemType="article"
+          itemId={article.id}
+          appearance="button"
+        />
+      }
+      media={
+        hasVideo ?
+          <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+            <div className="aspect-video w-full">
+              <YouTubeEmbed
+                title={article.title}
+                youtubeUrl={article.youtubeUrl}
+                framed={false}
+              />
+            </div>
+          </div>
+        : null
       }
       footer={
         <>

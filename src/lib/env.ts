@@ -21,6 +21,13 @@ export const env = createEnv({
     SUPER_ADMIN_EMAIL: z.string().email().optional(),
     ADMIN_NOTIFICATION_EMAIL: z.string().email().optional(),
     CONTACT_EMAIL: z.string().email().optional(),
+
+    /** Shepherd AI — server-only. Never expose via NEXT_PUBLIC_. */
+    GEMINI_API_KEY: z.string().min(1).optional(),
+    GEMINI_MODEL: z.string().min(1).optional(),
+    /** Legacy / unused by Shepherd (kept optional for local leftovers). */
+    OPENAI_API_KEY: z.string().min(1).optional(),
+    OPENAI_MODEL: z.string().min(1).optional(),
   },
 
   client: {

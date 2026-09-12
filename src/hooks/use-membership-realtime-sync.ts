@@ -13,8 +13,9 @@ export function useMembershipRealtimeSync() {
     if (!authUser?.uid) return;
 
     const interval = window.setInterval(() => {
-      void queryClient.invalidateQueries({ queryKey: ["membership-routing"] });
-    }, 120_000);
+      // Routing is derived from organization snapshot in the app shell.
+      void queryClient.invalidateQueries({ queryKey: ["organization"] });
+    }, 5 * 60_000);
 
     return () => window.clearInterval(interval);
   }, [authUser?.uid, queryClient]);

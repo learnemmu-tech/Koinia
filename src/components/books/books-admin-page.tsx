@@ -146,6 +146,7 @@ export function BooksAdminPageClient({
       />
 
       <BooksToolbar
+        variant="admin"
         search={search}
         onSearchChange={setSearch}
         editionFilter={editionFilter}

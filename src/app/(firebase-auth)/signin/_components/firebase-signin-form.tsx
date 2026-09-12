@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -18,15 +18,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { setAuthCookie } from "@/context/firebase-auth-context";
-import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination";
+import {
+  completePostAuthSession,
+  fetchPostAuthDestination,
+} from "@/lib/auth/fetch-post-auth-destination";
 import { buildAuthHref, sanitizeCallbackUrl } from "@/lib/callback-url";
 import { getFirebaseAuthErrorMessage } from "@/lib/firebase-auth-errors";
 import {
   signInWithGoogle,
   activateClerkSession,
-  syncSessionProfileAfterClerkAuth,
+  rememberSyncedProfile,
 } from "@/lib/firebase-auth-service";
 import { cn } from "@/lib/utils";
+
+import {
+  AUTH_DIVIDER_LABEL_CLASS,
+  AUTH_FIELD_GROUP_CLASS,
+  AUTH_FIELD_ICON_CLASS,
+  AUTH_FORM_FIELDS_CLASS,
+  AUTH_FORM_STACK_CLASS,
+  AUTH_GOOGLE_BUTTON_CLASS,
+  AUTH_HEADING_CLASS,
+  AUTH_INPUT_WITH_ICON_CLASS,
+  AUTH_LABEL_CLASS,
+  AUTH_LINK_CLASS,
+  AUTH_MUTED_TEXT_CLASS,
+  AUTH_PRIMARY_ARROW_CLASS,
+  AUTH_PRIMARY_BUTTON_CLASS,
+  AUTH_PRIMARY_LABEL_CLASS,
+} from "../../_components/auth-form-styles";
 
 const signInSchema = (tValidation: ReturnType<typeof useTranslations<"validation">>) =>
   z.object({
@@ -41,9 +61,6 @@ type SignInValues = {
   email: string;
   password: string;
 };
-
-const authInputClass =
-  "h-9 py-1.5 text-sm border-input bg-background text-foreground placeholder:text-muted-foreground";
 
 type FirebaseSignInFormProps = React.HTMLAttributes<HTMLDivElement> & {
   callbackUrl?: string;
@@ -102,10 +119,13 @@ export function FirebaseSignInForm({
       }
     }
 
-    const { profile } = await syncSessionProfileAfterClerkAuth();
+    const { profile, destination } = await completePostAuthSession({
+      callbackUrl: redirectTo,
+    });
+    rememberSyncedProfile(profile);
     setAuthCookie(true, { role: profile.role, profile });
     toast.success(tAuth("signedInSuccess"));
-    router.replace(await fetchPostAuthDestination(redirectTo));
+    router.replace(destination);
   }
 
   async function sendSignInVerificationCode() {
@@ -260,109 +280,110 @@ export function FirebaseSignInForm({
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <div className="flex flex-col gap-2 text-center md:text-left">
-        <h1 className="text-2xl font-bold tracking-tight">
-          {tAuth("loginTitle")}
-        </h1>
-        <p className="text-sm text-zinc-400">
-          {tAuth("loginSubtitle")}
-        </p>
+    <div className={cn(AUTH_FORM_STACK_CLASS, className)} {...props}>
+      <div className="flex flex-col gap-2.5 text-left">
+        <h1 className={AUTH_HEADING_CLASS}>{tAuth("loginTitle")}</h1>
+        <p className={AUTH_MUTED_TEXT_CLASS}>{tAuth("loginSubtitle")}</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="email">{tAuth("email")}</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="m@example.com"
-            autoComplete="email"
-            disabled={isDisabled}
-            className={authInputClass}
-            {...register("email")}
-          />
-          {errors.email && (
+      <form onSubmit={handleSubmit(onSubmit)} className={AUTH_FORM_FIELDS_CLASS}>
+        <div className={AUTH_FIELD_GROUP_CLASS}>
+          <Label htmlFor="email" className={AUTH_LABEL_CLASS}>
+            {tAuth("email")}
+          </Label>
+          <div className="relative">
+            <Mail className={AUTH_FIELD_ICON_CLASS} aria-hidden />
+            <Input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              disabled={isDisabled}
+              className={AUTH_INPUT_WITH_ICON_CLASS}
+              {...register("email")}
+            />
+          </div>
+          {errors.email ?
             <p className="text-sm text-destructive">{errors.email.message}</p>
-          )}
+          : null}
         </div>
 
-        <div className="grid gap-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">{tAuth("password")}</Label>
-            <Link
-              href="/forgot-password"
-              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
+        <div className={AUTH_FIELD_GROUP_CLASS}>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="password" className={AUTH_LABEL_CLASS}>
+              {tAuth("password")}
+            </Label>
+            <Link href="/forgot-password" className={AUTH_LINK_CLASS}>
               {tAuth("forgotPassword")}
             </Link>
           </div>
           <div className="relative">
+            <Lock className={AUTH_FIELD_ICON_CLASS} aria-hidden />
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder={tAuth("enterPassword")}
               autoComplete="current-password"
               disabled={isDisabled}
-              className={cn(authInputClass, "pr-10")}
+              className={cn(AUTH_INPUT_WITH_ICON_CLASS, "pr-11")}
               {...register("password")}
             />
             <button
               type="button"
-              tabIndex={-1}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 my-auto text-muted-foreground hover:text-foreground"
+              className="absolute inset-y-0 right-1 my-auto flex size-9 items-center justify-center rounded-md text-[#6B7280] transition-colors hover:text-[#1C2B3A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0623A]/35"
               aria-label={showPassword ? tAuth("hidePassword") : tAuth("showPassword")}
             >
               {showPassword ?
-                <EyeOff className="size-4" />
-              : <Eye className="size-4" />}
+                <EyeOff className="size-4" aria-hidden />
+              : <Eye className="size-4" aria-hidden />}
             </button>
           </div>
-          {errors.password && (
-            <p className="text-sm text-destructive">
-              {errors.password.message}
-            </p>
-          )}
+          {errors.password ?
+            <p className="text-sm text-destructive">{errors.password.message}</p>
+          : null}
         </div>
 
         <Button
           type="submit"
-          className="w-full font-semibold"
+          className={AUTH_PRIMARY_BUTTON_CLASS}
           disabled={isDisabled}
         >
-          {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
-          {tAuth("login")}
+          <span className={AUTH_PRIMARY_LABEL_CLASS}>
+            {isLoading ?
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            : null}
+            {tAuth("login")}
+          </span>
+          <ArrowRight className={AUTH_PRIMARY_ARROW_CLASS} aria-hidden />
         </Button>
       </form>
 
       <div className="relative text-center text-sm">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border" />
+          <span className="w-full border-t border-[#E2D9CC]" />
         </div>
-        <span className="relative bg-background px-2 text-xs uppercase tracking-wider text-muted-foreground">
-          {tAuth("orContinueWith")}
-        </span>
+        <span className={AUTH_DIVIDER_LABEL_CLASS}>{tAuth("orContinueWith")}</span>
       </div>
 
       <Button
         variant="outline"
-        className="w-full"
+        className={AUTH_GOOGLE_BUTTON_CLASS}
         onClick={handleGoogleSignIn}
         disabled={isDisabled}
         type="button"
       >
         {isGoogleLoading ?
-          <Loader2 className="mr-2 size-4 animate-spin" />
-        : <Google className="mr-2 size-4" />}
+          <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+        : <Google className="mr-2 size-4" aria-hidden />}
         {tAuth("signInWithGoogle")}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className={cn("text-center text-sm leading-snug", AUTH_MUTED_TEXT_CLASS)}>
         {tAuth("noAccount")}{" "}
         <Link
           href={buildAuthHref("/signup", redirectTo)}
-          className="text-foreground underline underline-offset-4 hover:text-primary"
+          className={AUTH_LINK_CLASS}
         >
           {tCommon("signUp")}
         </Link>

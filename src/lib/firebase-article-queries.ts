@@ -23,7 +23,11 @@ export async function getPublishedArticles(
   scope: ContentQueryInput,
   options?: { limit?: number }
 ): Promise<FirebaseArticle[]> {
-  return listArticles(scope, { publishedOnly: true, limit: options?.limit });
+  return listArticles(scope, {
+    publishedOnly: true,
+    limit: options?.limit,
+    resolveCreatorClerkIds: false,
+  });
 }
 
 export async function getArticleById(

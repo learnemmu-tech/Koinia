@@ -207,3 +207,64 @@ export function getHomeDisplayEvents(
     visible: highlight ? [highlight, ...rest] : rest,
   };
 }
+
+/** Compact listing/detail date: "Sep 13, 2026" (locale-aware). */
+export function formatCompactEventDate(
+  eventDate: string,
+  locale = "en-US"
+): string {
+  const start = getEventDateStartMs(eventDate);
+  if (start == null) {
+    const trimmed = eventDate.trim();
+    return trimmed || "";
+  }
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(start));
+}
+
+export type EventListingStatusKind =
+  | "live_now"
+  | "today"
+  | "tomorrow"
+  | "upcoming"
+  | "past";
+
+export type EventListingStatus = {
+  kind: EventListingStatusKind;
+  dateLabel: string;
+  showLiveDot: boolean;
+};
+
+/**
+ * Single primary event status for listing/detail cards.
+ * Priority: LIVE NOW → PAST → TODAY → TOMORROW → UPCOMING
+ */
+export function getEventListingStatus(
+  event: FirebaseEvent,
+  now = Date.now(),
+  locale = "en-US"
+): EventListingStatus {
+  const dateLabel = formatCompactEventDate(event.eventDate, locale);
+
+  if (isEventLive(event, now)) {
+    return { kind: "live_now", dateLabel, showLiveDot: true };
+  }
+
+  const daysUntil = getDaysUntilEventDay(event, now);
+  if (isEventEnded(event, now) || (daysUntil != null && daysUntil < 0)) {
+    return { kind: "past", dateLabel, showLiveDot: false };
+  }
+
+  if (daysUntil === 0) {
+    return { kind: "today", dateLabel, showLiveDot: true };
+  }
+
+  if (daysUntil === 1) {
+    return { kind: "tomorrow", dateLabel, showLiveDot: false };
+  }
+
+  return { kind: "upcoming", dateLabel, showLiveDot: false };
+}

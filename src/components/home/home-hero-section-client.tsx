@@ -98,8 +98,8 @@ const FEATURES: Record<FeatureKey, FeatureItem> = {
     icon: Music2,
     label: "Worship Songs",
     desc: "Listen and worship together",
-    iconClass: "text-violet-400",
-    iconWrapClass: "bg-violet-400/10",
+    iconClass: "text-primary",
+    iconWrapClass: "bg-primary-subtle",
   },
   sermons: {
     href: "/sermons",

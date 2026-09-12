@@ -189,7 +189,7 @@ function FavoriteEntryCard({ entry }: { entry: ResolvedFavoriteEntry }) {
     case "article":
       return <FirebaseArticleCard article={entry.item} />;
     case "event":
-      return <EventCard event={entry.item} />;
+      return <EventCard event={entry.item} compact />;
   }
 }
 

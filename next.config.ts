@@ -24,6 +24,8 @@ const config: NextConfig = {
   // A partial app-paths-manifest from the dev server makes collect-page-data
   // throw PageNotFoundError for real routes such as /forgot-password.
   distDir: isProd ? ".next" : ".next-dev",
+  /** Hide the Next.js circular "N" development indicator (not app UI). */
+  devIndicators: false,
   reactStrictMode: true,
   serverExternalPackages: ["pg"],
   images: {
@@ -70,6 +72,32 @@ const config: NextConfig = {
     },
   },
   output: isDocker ? "standalone" : undefined,
+  async headers() {
+    // Intentionally no CSP yet — must be tuned for Clerk, Supabase, Google OAuth,
+    // and inline/bootstrap scripts before enabling in production.
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+          ...(isProd
+            ? [
+                {
+                  key: "Strict-Transport-Security",
+                  value: "max-age=63072000; includeSubDomains; preload",
+                },
+              ]
+            : []),
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {

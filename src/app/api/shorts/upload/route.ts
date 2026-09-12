@@ -267,12 +267,16 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[shorts/upload]", error);
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : "";
     const isSizeError = /maximum allowed size|exceeds the Supabase Storage/i.test(
       message
     );
     return NextResponse.json(
-      { error: message || "Upload failed" },
+      {
+        error: isSizeError
+          ? "File exceeds the maximum allowed size."
+          : "Upload failed.",
+      },
       { status: isSizeError ? 413 : 500 }
     );
   }

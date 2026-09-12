@@ -31,5 +31,7 @@ export function useEventDetailQuery(
     initialData: initialEvent,
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 }

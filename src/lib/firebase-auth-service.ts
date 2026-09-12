@@ -247,6 +247,32 @@ async function delay(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** In-memory only — avoids a duplicate sync-profile hop right after login. */
+let recentSyncedProfile: { uid: string; profile: FirestoreUser; at: number } | null =
+  null;
+const RECENT_SYNC_TTL_MS = 15_000;
+
+export function rememberSyncedProfile(profile: FirestoreUser & { id?: string }) {
+  const user = firebaseAuth.currentUser;
+  if (!user) return;
+  recentSyncedProfile = {
+    uid: user.uid,
+    profile,
+    at: Date.now(),
+  };
+}
+
+function takeRecentSyncedProfile(uid: string): FirestoreUser | null {
+  if (
+    !recentSyncedProfile ||
+    recentSyncedProfile.uid !== uid ||
+    Date.now() - recentSyncedProfile.at > RECENT_SYNC_TTL_MS
+  ) {
+    return null;
+  }
+  return recentSyncedProfile.profile;
+}
+
 async function syncProfileViaApi(
   user: SessionUser,
   options?: { firstName?: string; lastName?: string }
@@ -308,13 +334,18 @@ async function syncProfileViaApi(
     );
   }
 
-  return response.json() as Promise<FirestoreUser>;
+  const profile = (await response.json()) as FirestoreUser;
+  rememberSyncedProfile(profile);
+  return profile;
 }
 
 export async function getUserProfile(
   uid: string,
   _options?: { fromServer?: boolean }
 ): Promise<FirestoreUser | null> {
+  const recent = takeRecentSyncedProfile(uid);
+  if (recent) return recent;
+
   try {
     const user = firebaseAuth.currentUser;
     if (!user || user.uid !== uid) {
@@ -326,7 +357,9 @@ export async function getUserProfile(
     });
     if (response.status === 404) return null;
     if (!response.ok) return null;
-    return response.json() as Promise<FirestoreUser>;
+    const profile = (await response.json()) as FirestoreUser;
+    rememberSyncedProfile(profile);
+    return profile;
   } catch {
     return null;
   }
@@ -339,6 +372,10 @@ export async function createOrUpdateUserInFirestore(
     lastName?: string;
   }
 ): Promise<FirestoreUser> {
+  const recent = takeRecentSyncedProfile(user.uid);
+  if (recent && !options?.firstName && !options?.lastName) {
+    return recent;
+  }
   return syncProfileViaApi(user, options);
 }
 
@@ -545,22 +582,20 @@ export async function signInWithGoogle(options?: {
     redirectUrlComplete,
   };
 
-  // Full-page redirect so Clerk can finish OAuth (including first-time Google sign-up)
-  // on /sso-callback in this window. Popup OAuth left the opener without a session.
-  if (
-    window.location.pathname.startsWith("/signup") &&
-    clerk.client.signUp.authenticateWithRedirect
-  ) {
-    try {
+  // Identity-first: prefer Sign-In OAuth so existing Google/Clerk accounts
+  // are recognized. Fall back to Sign-Up OAuth only when Sign-In cannot start
+  // (genuinely new users). Page intent (/signup vs /signin) is not proof of
+  // new vs existing — Clerk identity + PostgreSQL clerk_id are authoritative.
+  try {
+    await clerk.client.signIn.authenticateWithRedirect(oauthParams);
+    return { redirected: true };
+  } catch {
+    if (clerk.client.signUp.authenticateWithRedirect) {
       await clerk.client.signUp.authenticateWithRedirect(oauthParams);
       return { redirected: true };
-    } catch {
-      // Existing Google accounts finish through sign-in instead.
     }
+    throw new Error("Unable to start Google sign-in.");
   }
-
-  await clerk.client.signIn.authenticateWithRedirect(oauthParams);
-  return { redirected: true };
 }
 
 export async function completeGoogleRedirectSignIn(): Promise<GoogleSignInResult | null> {

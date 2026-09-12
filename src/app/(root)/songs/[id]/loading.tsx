@@ -1,5 +1,5 @@
-import { PageContentSkeleton } from "@/components/skeletons/page-content-skeleton";
+import { ContentAreaLoading } from "@/components/content-area-loading";
 
-export default function SongDetailLoading() {
-  return <PageContentSkeleton variant="detail" />;
+export default function SongsDetailLoading() {
+  return <ContentAreaLoading />;
 }

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import {
+  countPrayerRequestsByStatus,
   getArticlesByIds,
   getEventsByIds,
   getSermonsByIds,
@@ -67,8 +68,9 @@ export async function GET(request: Request) {
       if (!scopedChurchId) {
         return NextResponse.json({ items: [], hasMore: false });
       }
+      // Member directory is admin-only (emails / roles). Regular members must not list.
       if (!isAdmin) {
-        const allowed = await userCanAccessChurchContent(
+        const allowed = await userCanManageChurch(
           decoded.uid,
           decoded.email,
           scopedChurchId
@@ -185,20 +187,18 @@ export async function GET(request: Request) {
       return NextResponse.json({ items: [], hasMore: false });
     }
 
-    if (!isAdmin) {
-      const allowed = await userCanAccessChurchContent(
-        decoded.uid,
-        decoded.email,
-        churchId
-      );
-      if (!allowed) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-    }
+    const [allowed, canManage] = await Promise.all([
+      isAdmin
+        ? Promise.resolve(true)
+        : userCanAccessChurchContent(decoded.uid, decoded.email, churchId),
+      isAdmin
+        ? Promise.resolve(true)
+        : userCanManageChurch(decoded.uid, decoded.email, churchId),
+    ]);
 
-    const canManage =
-      isAdmin ||
-      (await userCanManageChurch(decoded.uid, decoded.email, churchId));
+    if (!allowed) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     if (collection === "donations" && !canManage) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -209,6 +209,14 @@ export async function GET(request: Request) {
       churchId,
       branchId: churchId,
     });
+
+    const statusFilter = searchParams.get("status")?.trim() || undefined;
+    const countOnly = searchParams.get("countOnly") === "true";
+
+    if (collection === "prayerRequests" && countOnly && statusFilter) {
+      const count = await countPrayerRequestsByStatus(scope, statusFilter);
+      return NextResponse.json({ count, items: [], hasMore: false });
+    }
 
     const pageOptions = {
       publishedOnly: !canManage,
@@ -231,7 +239,11 @@ export async function GET(request: Request) {
         items = await listEvents(scope, pageOptions);
         break;
       case "prayerRequests":
-        items = await listPrayerRequests(scope);
+        items = await listPrayerRequests(scope, {
+          limit: limit + 1,
+          offset,
+          status: statusFilter,
+        });
         break;
       case "donationCampaigns":
         items = await listDonationCampaigns(scope, pageOptions);
@@ -245,8 +257,8 @@ export async function GET(request: Request) {
 
     if (collection === "prayerRequests" || collection === "donations") {
       return NextResponse.json({
-        items: items.slice(offset, offset + limit),
-        hasMore: items.length > offset + limit,
+        items: items.slice(0, limit),
+        hasMore: items.length > limit,
       });
     }
 

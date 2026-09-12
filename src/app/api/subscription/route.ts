@@ -68,11 +68,12 @@ export async function GET(request: Request) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
       } else {
-        const orgRow = await getOrgMembershipRow(appUser.id, organizationId);
-        const churchRows = await listChurchMembershipsForUser(appUser.id);
+        const [orgRow, churchRows] = await Promise.all([
+          getOrgMembershipRow(appUser.id, organizationId),
+          listChurchMembershipsForUser(appUser.id),
+        ]);
         const isMemberOfOrg =
           orgRow?.status === "active" ||
-          appUser.organizationId === organizationId ||
           churchRows.some(
             (row) =>
               row.organizationId === organizationId && row.status === "active"
@@ -83,13 +84,13 @@ export async function GET(request: Request) {
       }
     }
 
-    await timed("subscription.ensure", () =>
+    const subscription = await timed("subscription.ensure", () =>
       ensureSubscriptionDocument(organizationId)
     );
     const snapshot = await timed("subscription.snapshot", () =>
       churchIdParam && !organizationIdParam
         ? getSubscriptionSnapshotForChurch(churchIdParam)
-        : getSubscriptionSnapshot(organizationId)
+        : getSubscriptionSnapshot(organizationId, subscription)
     );
 
     return NextResponse.json(snapshot);

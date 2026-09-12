@@ -1,6 +1,17 @@
 import { sanitizeCallbackUrl } from "@/lib/callback-url";
 import { resolvePostAuthDestination } from "@/lib/auth/resolve-post-auth-destination";
-import { firebaseAuth, getUserProfile } from "@/lib/firebase-auth-service";
+import {
+  firebaseAuth,
+  getUserProfile,
+  type FirestoreUser,
+} from "@/lib/firebase-auth-service";
+import type { MembershipRoutingResult } from "@/lib/auth/membership-routing";
+
+export type CompletePostAuthResult = {
+  profile: FirestoreUser;
+  destination: string;
+  routing: MembershipRoutingResult;
+};
 
 /**
  * Loads membership context from the server and returns the post-auth destination.
@@ -32,4 +43,57 @@ export async function fetchPostAuthDestination(
 
   const profile = await getUserProfile(user.uid);
   return resolvePostAuthDestination({ profile, callbackUrl: redirectTo });
+}
+
+/**
+ * One round-trip: sync profile + resolve post-auth destination.
+ */
+export async function completePostAuthSession(options?: {
+  firstName?: string;
+  lastName?: string;
+  callbackUrl?: string;
+}): Promise<CompletePostAuthResult> {
+  const user = firebaseAuth.currentUser;
+  if (!user) {
+    throw new Error("Signed in but user is unavailable.");
+  }
+
+  const redirectTo = sanitizeCallbackUrl(options?.callbackUrl ?? "/");
+  const token = await user.getIdToken();
+  const response = await fetch("/api/auth/complete-session", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      email: user.email,
+      firstName: options?.firstName,
+      lastName: options?.lastName,
+      callbackUrl: redirectTo,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(
+      error?.error ?? `Failed to complete sign-in (${response.status}).`
+    );
+  }
+
+  const data = (await response.json()) as {
+    profile: FirestoreUser;
+    routing: MembershipRoutingResult;
+    destination: string;
+  };
+
+  return {
+    profile: data.profile,
+    routing: data.routing,
+    destination: data.destination || redirectTo,
+  };
 }

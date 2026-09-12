@@ -8,7 +8,6 @@ import type { FirebaseEvent } from "@/types/firebase-event";
 import { EventCard } from "@/components/events/event-card";
 import { Button } from "@/components/ui/button";
 import { usePublishedEvents } from "@/hooks/use-published-events";
-import { contentCardGridClassName } from "@/lib/responsive-classes";
 
 type UpcomingEventsSectionClientProps = {
   initialEvents: FirebaseEvent[];
@@ -65,7 +64,7 @@ export function UpcomingEventsSectionClient({
         <div className="flex items-center justify-center rounded-2xl border border-dashed border-border/50 py-14">
           <Loader2 className="size-5 animate-spin text-primary/60" />
         </div>
-      : <div className={contentCardGridClassName}>
+      : <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {events.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}

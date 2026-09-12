@@ -13,6 +13,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { RootClientShell } from "@/components/root-client-shell";
 import { siteConfig } from "@/config/site";
 import { LOCALE_COOKIE, parseLocale } from "@/i18n/config";
+import { POST_AUTH_CONTINUE_HOME } from "@/lib/auth/auth-paths";
 import { env } from "@/lib/env";
 import { SEO_KEYWORDS } from "@/lib/seo";
 import { getActiveChurchIdFromCookies } from "@/lib/church-server";
@@ -65,9 +66,9 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
           <ClerkProvider
             signInUrl="/signin"
             signUpUrl="/signup"
-            afterSignOutUrl="/"
-            signInFallbackRedirectUrl="/auth/continue"
-            signUpFallbackRedirectUrl="/auth/continue"
+            afterSignOutUrl="/signin"
+            signInFallbackRedirectUrl={POST_AUTH_CONTINUE_HOME}
+            signUpFallbackRedirectUrl={POST_AUTH_CONTINUE_HOME}
           >
             <RootClientShell
               initialActiveChurchId={initialActiveChurchId}
@@ -98,7 +99,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0d5c63" },
+    { media: "(prefers-color-scheme: light)", color: "#F6F1E7" },
     { media: "(prefers-color-scheme: dark)", color: "#0a4549" },
   ],
 };

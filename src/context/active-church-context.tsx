@@ -92,17 +92,16 @@ export function ActiveChurchProvider({
   }, []);
 
   React.useEffect(() => {
+    // Multi-church is off: active church comes from cookies/profile. Do not
+    // hit /api/churches/active on every session — it races the auth bootstrap
+    // stampede for no UI benefit.
     if (!MULTI_CHURCH_ENABLED) {
-      if (initialChurches.length === 0) {
-        void refreshChurches();
-      } else {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
       return;
     }
 
     void refreshChurches();
-  }, [refreshChurches, initialChurches.length]);
+  }, [refreshChurches]);
 
   React.useEffect(() => {
     if (!MULTI_CHURCH_ENABLED) return;

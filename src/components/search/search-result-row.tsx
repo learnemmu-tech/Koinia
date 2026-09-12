@@ -15,6 +15,7 @@ type SearchResultRowProps = {
   subtitle?: string;
   coverUrl?: string;
   highlightQuery?: string;
+  onNavigate?: () => void;
 };
 
 export function SearchResultRow({
@@ -23,15 +24,17 @@ export function SearchResultRow({
   subtitle,
   coverUrl,
   highlightQuery,
+  onNavigate,
 }: SearchResultRowProps) {
   const imageUrl = getSongCoverUrl(coverUrl);
 
   return (
     <ProtectedContentLink
       href={href}
+      onClick={onNavigate}
       className={cn(
-        "app-mobile-card group relative flex w-full flex-shrink-0 items-center gap-3 overflow-hidden rounded-lg border border-border/50 bg-card/40 px-3 py-2.5 transition-all duration-200",
-        "hover:border-border/80 hover:bg-card/60 hover:shadow-sm",
+        "app-mobile-card group relative flex w-full flex-shrink-0 items-center gap-3 overflow-hidden rounded-lg border border-border bg-card px-3 py-2.5 transition-all duration-200 dark:border-border/50 dark:bg-card/40",
+        "hover:bg-surface-raised hover:shadow-none dark:hover:bg-card/60",
       )}
     >
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md">

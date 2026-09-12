@@ -6,7 +6,6 @@ import { db } from "@/db";
 import {
   articles,
   churchMemberships,
-  churches,
   donationCampaigns,
   donations,
   eventRegistrations,
@@ -141,6 +140,11 @@ export type ContentListOptions = {
   publishedOnly?: boolean;
   limit?: number;
   offset?: number;
+  /**
+   * When false, skip the extra users round-trip that maps createdBy → Clerk id.
+   * Public catalog cards do not display creator Clerk ids.
+   */
+  resolveCreatorClerkIds?: boolean;
 };
 
 async function assertPlatformContentCreator() {
@@ -369,6 +373,10 @@ export async function listSermons(
       ? rowsQuery.offset(options.offset)
       : rowsQuery);
 
+  if (options.resolveCreatorClerkIds === false) {
+    return rows.map((row) => mapSermon({ ...row, content: "" }, ""));
+  }
+
   const clerkIds = await getClerkIdsByUserIds(
     rows.map((row) => row.createdBy).filter((id): id is string => Boolean(id))
   );
@@ -528,6 +536,10 @@ export async function listArticles(
     : options.offset != null
       ? rowsQuery.offset(options.offset)
       : rowsQuery);
+
+  if (options.resolveCreatorClerkIds === false) {
+    return rows.map((row) => mapArticle({ ...row, content: "" }, ""));
+  }
 
   const clerkIds = await getClerkIdsByUserIds(
     rows.map((row) => row.createdBy).filter((id): id is string => Boolean(id))
@@ -792,29 +804,90 @@ export async function registerUserForEvent(input: {
 }
 
 export async function listPrayerRequests(
-  scope: ContentQueryInput
+  scope: ContentQueryInput,
+  options?: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+  }
 ): Promise<FirebasePrayerRequest[]> {
   const query = resolveListQuery(scope);
-  const rows = await db
-    .select()
-    .from(prayerRequests)
-    .where(
-      contentScopeWhere(
-        {
-          contentScope: prayerRequests.contentScope,
-          organizationId: prayerRequests.organizationId,
-          churchId: prayerRequests.churchId,
-        },
-        query
-      )
-    )
-    .orderBy(desc(prayerRequests.createdAt));
+  const conditions = [
+    contentScopeWhere(
+      {
+        contentScope: prayerRequests.contentScope,
+        organizationId: prayerRequests.organizationId,
+        churchId: prayerRequests.churchId,
+      },
+      query
+    ),
+  ];
+  const status = options?.status?.trim();
+  if (
+    status === "pending" ||
+    status === "approved" ||
+    status === "rejected"
+  ) {
+    conditions.push(eq(prayerRequests.status, status));
+  }
+
+  const limit = options?.limit;
+  const offset = options?.offset ?? 0;
+
+  const rows =
+    typeof limit === "number" && limit > 0
+      ? await db
+          .select()
+          .from(prayerRequests)
+          .where(and(...conditions))
+          .orderBy(desc(prayerRequests.createdAt))
+          .limit(limit)
+          .offset(offset)
+      : await db
+          .select()
+          .from(prayerRequests)
+          .where(and(...conditions))
+          .orderBy(desc(prayerRequests.createdAt))
+          .offset(offset);
   const clerkIds = await getClerkIdsByUserIds(
     rows.map((row) => row.userId).filter((id): id is string => Boolean(id))
   );
   return rows.map((row) =>
     mapPrayerRequest(row, row.userId ? clerkIds.get(row.userId) : null)
   );
+}
+
+/** Lightweight pending-prayer count for admin badges (no row payloads). */
+export async function countPrayerRequestsByStatus(
+  scope: ContentQueryInput,
+  status: string
+): Promise<number> {
+  if (
+    status !== "pending" &&
+    status !== "approved" &&
+    status !== "rejected"
+  ) {
+    return 0;
+  }
+
+  const query = resolveListQuery(scope);
+  const [row] = await db
+    .select({ value: sql<number>`count(*)::int` })
+    .from(prayerRequests)
+    .where(
+      and(
+        contentScopeWhere(
+          {
+            contentScope: prayerRequests.contentScope,
+            organizationId: prayerRequests.organizationId,
+            churchId: prayerRequests.churchId,
+          },
+          query
+        ),
+        eq(prayerRequests.status, status)
+      )
+    );
+  return row?.value ?? 0;
 }
 
 export async function getPrayerRequestById(
@@ -1070,6 +1143,18 @@ export async function createPendingDonation(input: PendingDonationInput): Promis
   const campaign = await getDonationCampaignById(input.campaignId);
   if (!campaign) throw new Error("Campaign not found");
 
+  const idempotencyKey = input.idempotencyKey?.trim();
+  if (idempotencyKey) {
+    const [existing] = await db
+      .select({ id: donations.id, paymentStatus: donations.paymentStatus })
+      .from(donations)
+      .where(eq(donations.transactionId, idempotencyKey))
+      .limit(1);
+    if (existing) {
+      return existing.id;
+    }
+  }
+
   if (campaign.contentScope === "platform_public") {
     const [row] = await db
       .insert(donations)
@@ -1084,7 +1169,7 @@ export async function createPendingDonation(input: PendingDonationInput): Promis
         currency: input.currency,
         paymentStatus: "pending",
         paymentProvider: input.paymentProvider,
-        transactionId: input.idempotencyKey?.trim() || `pending_${Date.now()}`,
+        transactionId: idempotencyKey || `pending_${Date.now()}`,
         isAnonymous: input.isAnonymous,
       })
       .returning({ id: donations.id });
@@ -1106,7 +1191,7 @@ export async function createPendingDonation(input: PendingDonationInput): Promis
       currency: input.currency,
       paymentStatus: "pending",
       paymentProvider: input.paymentProvider,
-      transactionId: input.idempotencyKey?.trim() || `pending_${Date.now()}`,
+      transactionId: idempotencyKey || `pending_${Date.now()}`,
       isAnonymous: input.isAnonymous,
     })
     .returning({ id: donations.id });
@@ -1380,61 +1465,51 @@ export async function computeOrganizationUsage(
 ): Promise<SubscriptionUsage> {
   if (!organizationId.trim()) return { ...EMPTY_USAGE };
 
-  const countWhere = async (
-    table:
-      | typeof songs
-      | typeof sermons
-      | typeof articles
-      | typeof events
-      | typeof donationCampaigns
-      | typeof churches
-  ) => {
-    const [row] = await db
-      .select({ value: sql<number>`count(*)::int` })
-      .from(table)
-      .where(eq(table.organizationId, organizationId));
-    return row?.value ?? 0;
-  };
-
-  const [membersRow] = await db
-    .select({ value: sql<number>`count(*)::int` })
-    .from(churchMemberships)
-    .where(
-      and(
-        eq(churchMemberships.organizationId, organizationId),
-        eq(churchMemberships.status, "active")
-      )
-    );
-  const [adminsRow] = await db
-    .select({ value: sql<number>`count(*)::int` })
-    .from(organizationMemberships)
-    .where(
-      and(
-        eq(organizationMemberships.organizationId, organizationId),
-        eq(organizationMemberships.status, "active")
-      )
-    );
-
-  const [churchAdminRow] = await db
-    .select({ value: sql<number>`count(*)::int` })
-    .from(churchMemberships)
-    .where(
-      and(
-        eq(churchMemberships.organizationId, organizationId),
-        eq(churchMemberships.status, "active"),
-        eq(churchMemberships.role, "church_admin")
-      )
-    );
+  // One round-trip: critical when the pool max is 1 (Vercel) or Neon latency
+  // makes nine sequential COUNT queries cost multiple seconds.
+  const result = await db.execute<{
+    members: number;
+    songs: number;
+    sermons: number;
+    articles: number;
+    churches: number;
+    org_admins: number;
+    church_admins: number;
+    events: number;
+    donation_campaigns: number;
+  }>(sql`
+    SELECT
+      (SELECT count(*)::int FROM church_memberships
+        WHERE organization_id = ${organizationId} AND status = 'active') AS members,
+      (SELECT count(*)::int FROM songs
+        WHERE organization_id = ${organizationId}) AS songs,
+      (SELECT count(*)::int FROM sermons
+        WHERE organization_id = ${organizationId}) AS sermons,
+      (SELECT count(*)::int FROM articles
+        WHERE organization_id = ${organizationId}) AS articles,
+      (SELECT count(*)::int FROM churches
+        WHERE organization_id = ${organizationId}) AS churches,
+      (SELECT count(*)::int FROM organization_memberships
+        WHERE organization_id = ${organizationId} AND status = 'active') AS org_admins,
+      (SELECT count(*)::int FROM church_memberships
+        WHERE organization_id = ${organizationId}
+          AND status = 'active' AND role = 'church_admin') AS church_admins,
+      (SELECT count(*)::int FROM events
+        WHERE organization_id = ${organizationId}) AS events,
+      (SELECT count(*)::int FROM donation_campaigns
+        WHERE organization_id = ${organizationId}) AS donation_campaigns
+  `);
+  const row = result.rows?.[0];
 
   return {
-    members: membersRow?.value ?? 0,
-    songs: await countWhere(songs),
-    sermons: await countWhere(sermons),
-    articles: await countWhere(articles),
-    churches: Math.max(1, await countWhere(churches)),
-    admins: (adminsRow?.value ?? 0) + (churchAdminRow?.value ?? 0),
-    events: await countWhere(events),
-    donationCampaigns: await countWhere(donationCampaigns),
+    members: Number(row?.members ?? 0),
+    songs: Number(row?.songs ?? 0),
+    sermons: Number(row?.sermons ?? 0),
+    articles: Number(row?.articles ?? 0),
+    churches: Math.max(1, Number(row?.churches ?? 0)),
+    admins: Number(row?.org_admins ?? 0) + Number(row?.church_admins ?? 0),
+    events: Number(row?.events ?? 0),
+    donationCampaigns: Number(row?.donation_campaigns ?? 0),
   };
 }
 
