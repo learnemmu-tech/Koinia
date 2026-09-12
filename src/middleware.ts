@@ -27,6 +27,8 @@ const PROTECTED_PREFIXES = [
 ];
 
 function isProtectedPath(pathname: string) {
+  // Application home requires auth — logged-out visitors go to /signin.
+  if (pathname === "/") return true;
   if (PUBLIC_CONTENT_LIST_PATHS.includes(pathname)) return false;
   if (/^\/books\/[^/]+\/order\/?$/.test(pathname)) return true;
   if (isPathMatch(pathname, PROTECTED_PREFIXES)) return true;
