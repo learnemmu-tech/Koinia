@@ -18,13 +18,21 @@ type RequireWorkspaceAccessProps = {
 
 function shouldBlockForRouting(
   routing: MembershipRoutingResult,
-  pathname: string
+  pathname: string,
+  canAccessWorkspace: boolean
 ): boolean {
   const { destination, status } = routing;
   if (destination === pathname) return false;
 
+  // Active workspace operators may freely navigate all /dashboard/* routes.
+  // Destination is a post-auth default landing, not a "must stay here" lock —
+  // otherwise a stale destination of "/" silently undoes every sidebar click.
   if (status === "active" && isWorkspaceRoute(pathname)) {
-    if (destination === WORKSPACE_BASE || isWorkspaceRoute(destination)) {
+    if (
+      canAccessWorkspace ||
+      destination === WORKSPACE_BASE ||
+      isWorkspaceRoute(destination)
+    ) {
       return false;
     }
   }
@@ -37,7 +45,7 @@ export function RequireWorkspaceAccess({ children }: RequireWorkspaceAccessProps
   const pathname = usePathname();
   const { user, loading: authLoading, profileReady } = useFirebaseAuth();
   const { loading: workspaceLoading, canAccessWorkspace } = useWorkspaceAccess();
-  const { routing, loading: routingLoading } = useMembershipRouting(pathname);
+  const { routing, loading: routingLoading } = useMembershipRouting();
   const router = useRouter();
 
   const needsRoutingCheck =
@@ -51,7 +59,7 @@ export function RequireWorkspaceAccess({ children }: RequireWorkspaceAccessProps
       return;
     }
 
-    if (routing && shouldBlockForRouting(routing, pathname)) {
+    if (routing && shouldBlockForRouting(routing, pathname, canAccessWorkspace)) {
       router.replace(routing.destination);
     }
   }, [
@@ -63,12 +71,13 @@ export function RequireWorkspaceAccess({ children }: RequireWorkspaceAccessProps
     profileReady,
     router,
     pathname,
+    canAccessWorkspace,
   ]);
 
   if (authLoading || !profileReady) return <AuthLoading />;
   if (!user) return <AuthLoading />;
 
-  if (routing && shouldBlockForRouting(routing, pathname)) {
+  if (routing && shouldBlockForRouting(routing, pathname, canAccessWorkspace)) {
     return <AuthLoading />;
   }
 

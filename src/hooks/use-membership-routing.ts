@@ -23,8 +23,8 @@ async function fetchMembershipRouting(): Promise<MembershipRoutingResult | null>
   if (!user) return null;
 
   const token = await user.getIdToken();
-  const params = new URLSearchParams({ callbackUrl: "/" });
-  const res = await fetch(`/api/auth/routing?${params.toString()}`, {
+  // No callbackUrl — this is session membership status, not post-auth redirect.
+  const res = await fetch("/api/auth/routing", {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -35,7 +35,12 @@ async function fetchMembershipRouting(): Promise<MembershipRoutingResult | null>
 /** Stable key — do not include pathname (avoids duplicate parallel fetches). */
 export const MEMBERSHIP_ROUTING_QUERY_KEY = ["membership-routing"] as const;
 
-export function useMembershipRouting(_callbackUrl = "/") {
+/**
+ * Session membership routing for guards.
+ * Do not pass callbackUrl "/" here — that is only for post-auth redirects and
+ * would override admin role-aware defaults, breaking sidebar /dashboard links.
+ */
+export function useMembershipRouting(_callbackUrl?: string) {
   const { authUser, profile, profileReady } = useFirebaseAuth();
   const organization = useOrganizationOptional();
 
@@ -52,7 +57,6 @@ export function useMembershipRouting(_callbackUrl = "/") {
         churchesCount: organization.churches.length,
         workspaceType: getWorkspaceType(organization.organization),
         organizationStatus: organization.organization?.status ?? null,
-        callbackUrl: "/",
       });
     }
     return null;

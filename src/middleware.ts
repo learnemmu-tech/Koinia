@@ -78,6 +78,17 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
+  // Legacy obscure admin UI — never leave it publicly reachable.
+  if (
+    pathname === "/admin-secret-xyz789" ||
+    pathname.startsWith("/admin-secret-xyz789/")
+  ) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(buildSignInUrl(req, "/dashboard"));
+    }
+    return NextResponse.redirect(new URL("/dashboard/content?tab=songs", req.url));
+  }
+
   if (isWorkspaceRoute(pathname) || isSuperAdminPath(pathname)) {
     if (!isAuthenticated) {
       return NextResponse.redirect(

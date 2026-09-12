@@ -8,8 +8,8 @@ type AuthLightShellProps = {
 
 /**
  * Forces FaithConnectHub light authentication appearance for this route tree.
- * Nested forcedTheme avoids inheriting the app ThemeProvider defaultTheme="dark"
- * without changing global dark-theme tokens or dashboard appearance.
+ * Nested forcedTheme keeps Sign In / Sign Up light even if the user previously
+ * selected dark (or system→dark) in the main app ThemeProvider.
  */
 export function AuthLightShell({ children }: AuthLightShellProps) {
   return (

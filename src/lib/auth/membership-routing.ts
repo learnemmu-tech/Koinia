@@ -244,8 +244,13 @@ export function resolveMembershipRouting({
       roleMeetsMinimum(membership.role, "volunteer") &&
       hasActiveWorkspace(accessInput))
   ) {
+    // "/" is the sanitize fallback / member home — never treat it as an
+    // explicit post-auth callback that overrides role-aware defaults.
+    // Otherwise admins get destination "/" and RequireWorkspaceAccess
+    // immediately bounces every /dashboard/* soft navigation back home.
     if (
       sanitized &&
+      sanitized !== "/" &&
       sanitized !== CREATE_WORKSPACE_PATH &&
       !isJoinPath(sanitized)
     ) {
