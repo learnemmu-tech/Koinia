@@ -78,14 +78,14 @@ const ENTERPRISE_FEATURES: SubscriptionFeatureFlags = {
 export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     id: "free",
-    name: "30-Day Free Trial",
+    name: "14-Day Free Trial",
     badgeName: "Trial",
     tagline: "Explore FaithConnectHub for your church.",
     description:
-      "A 30-day trial for a newly created church workspace. Limits apply; donations are not included.",
+      "A 14-day trial for a newly created church workspace. Limits apply; donations are not included.",
     monthlyPrice: 0,
     yearlyPrice: 0,
-    ctaLabel: "Start 30-day trial",
+    ctaLabel: "Start 14-day trial",
     limits: limits({}),
     features: FREE_FEATURES,
     highlights: [

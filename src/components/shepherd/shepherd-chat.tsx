@@ -673,7 +673,7 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
         >
           {!shepherdAllowed ?
             <p className="mb-2 text-center text-sm text-muted-foreground">
-              Shepherd AI is available for the first 10 days of the 30-day trial.
+              Shepherd AI is available for the first 10 days of the 14-day trial.
             </p>
           : null}
           <div

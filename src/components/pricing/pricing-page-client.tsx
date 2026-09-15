@@ -37,7 +37,7 @@ const FAQ_ITEMS = [
   {
     question: "Can I upgrade later?",
     answer:
-      "Yes. You can start with the 30-day free trial and upgrade to Starter, Professional, or Enterprise as your ministry grows. Plan changes will be available once billing is enabled.",
+      "Yes. You can start with the 14-day free trial and upgrade to Starter, Professional, or Enterprise as your ministry grows. Plan changes will be available once billing is enabled.",
   },
   {
     question: "Can I cancel anytime?",
@@ -45,7 +45,7 @@ const FAQ_ITEMS = [
       "When billing launches, you'll be able to cancel or downgrade at the end of your billing period. Your content remains accessible according to your plan limits.",
   },
   {
-    question: "What happens after the 30-day trial?",
+    question: "What happens after the 14-day trial?",
     answer:
       "Your existing content is preserved. Paid checkout is not live yet, so you can keep exploring plans on the pricing page. We'll notify you before any future charge.",
   },
@@ -57,7 +57,7 @@ const FAQ_ITEMS = [
   {
     question: "Is payment required today?",
     answer:
-      "No. FaithConnectHub is building toward full billing integration. You can start a 30-day trial now; checkout and invoices will be added in a future release.",
+      "No. FaithConnectHub is building toward full billing integration. You can start a 14-day trial now; checkout and invoices will be added in a future release.",
   },
 ];
 
@@ -181,7 +181,7 @@ export function PricingPageClient() {
                   </Button>
                 : plan.monthlyPrice === 0 ?
                   <Button variant="outline" className="w-full" asChild>
-                    <Link href="/signup">{plan.ctaLabel ?? "Start 30-day trial"}</Link>
+                    <Link href="/signup">{plan.ctaLabel ?? "Start 14-day trial"}</Link>
                   </Button>
                 : <Button className="w-full" disabled>
                     Coming Soon

@@ -147,7 +147,7 @@ export async function assertFeatureAllowed(
   if (!snapshot.features[key]) {
     if (key === "canUseShepherdAi" && snapshot.trial.isTrial) {
       throw new SubscriptionLimitError(
-        "Shepherd AI is available for the first 10 days of your 30-day trial."
+        "Shepherd AI is available for the first 10 days of your 14-day trial."
       );
     }
     throw new SubscriptionLimitError(

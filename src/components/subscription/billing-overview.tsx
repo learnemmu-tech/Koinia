@@ -118,7 +118,7 @@ export function BillingOverview({
         </div>
         {trial.phase === "reminder" ?
           <p className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
-            Your 30-day trial ends in {trial.daysRemaining}{" "}
+            Your 14-day trial ends in {trial.daysRemaining}{" "}
             {trial.daysRemaining === 1 ? "day" : "days"}. Existing content will be preserved.
           </p>
         : null}
@@ -131,7 +131,7 @@ export function BillingOverview({
         : null}
         {trial.phase === "expired" ?
           <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            Your 30-day trial has ended. Existing content is preserved. Paid checkout is not
+            Your 14-day trial has ended. Existing content is preserved. Paid checkout is not
             available yet.
           </p>
         : null}

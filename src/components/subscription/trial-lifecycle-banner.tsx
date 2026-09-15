@@ -18,10 +18,10 @@ export function TrialLifecycleBanner() {
 
   const message =
     trial.phase === "expired" ?
-      "Your 30-day trial has ended. Existing content is preserved and remains available to view."
+      "Your 14-day trial has ended. Existing content is preserved and remains available to view."
     : trial.phase === "urgent" ?
       `Your trial expires in ${days} ${dayLabel}. Existing content will be preserved.`
-    : `Your 30-day trial ends in ${days} ${dayLabel}. Existing content will be preserved.`;
+    : `Your 14-day trial ends in ${days} ${dayLabel}. Existing content will be preserved.`;
 
   return (
     <div

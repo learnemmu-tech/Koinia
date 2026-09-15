@@ -45,7 +45,7 @@ export function SuperAdminSubscriptionsFilters({
           className={selectClass}
         >
           <option value="">All plans</option>
-          <option value="free">30-Day Trial</option>
+          <option value="free">14-Day Trial</option>
           <option value="starter">Starter</option>
           <option value="professional">Professional</option>
           <option value="enterprise">Enterprise</option>

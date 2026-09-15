@@ -1,9 +1,9 @@
 import type { ChurchSubscription, TrialLifecycle } from "@/types/subscription";
 
-export const TRIAL_DURATION_DAYS = 30;
+export const TRIAL_DURATION_DAYS = 14;
 export const SHEPHERD_TRIAL_DAYS = 10;
 export const TRIAL_EXPIRED_MESSAGE =
-  "Your 30-day trial has ended. Existing content is preserved and remains available to view.";
+  "Your 14-day trial has ended. Existing content is preserved and remains available to view.";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -58,8 +58,8 @@ export function getTrialLifecycle(
 
   let phase: TrialLifecycle["phase"] = "active";
   if (expired) phase = "expired";
-  else if (daysIntoTrial >= 28) phase = "urgent";
-  else if (daysIntoTrial >= 21) phase = "reminder";
+  else if (daysIntoTrial >= 12) phase = "urgent";
+  else if (daysIntoTrial >= 8) phase = "reminder";
 
   return {
     isTrial: true,
