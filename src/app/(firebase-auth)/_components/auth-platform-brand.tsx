@@ -9,8 +9,8 @@ type AuthPlatformBrandProps = {
 };
 
 /**
- * Official Shepherd brand mark used across the app.
- * Keeps the original circular shepherd emblem consistent across auth screens.
+ * Horizontal FaithConnectHub lockup for Sign In / Sign Up only.
+ * Intrinsic size is 327×85; displayed width stays modest on all viewports.
  */
 export function AuthPlatformBrand({
   className,
@@ -26,12 +26,12 @@ export function AuthPlatformBrand({
       aria-label="FaithConnectHub"
     >
       <Image
-        src="/icons/shepherd-ai.webp"
+        src="/images/faithconnecthub-lockup-auth.png"
         alt="FaithConnectHub"
-        width={220}
-        height={220}
+        width={327}
+        height={85}
         priority
-        className="auth-logo-img h-auto w-[min(100%,210px)] rounded-full bg-transparent object-contain object-center"
+        className="auth-logo-img h-auto w-[min(100%,248px)] max-w-full bg-transparent object-contain object-left"
       />
     </Link>
   );
