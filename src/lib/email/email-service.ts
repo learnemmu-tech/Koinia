@@ -8,6 +8,7 @@ import { DonationThankYouEmail } from "@/emails/templates/donation-thank-you-ema
 import { EventAnnouncementEmail } from "@/emails/templates/event-announcement-email";
 import { EventRegistrationEmail } from "@/emails/templates/event-registration-email";
 import { MembershipApprovedEmail } from "@/emails/templates/membership-approved-email";
+import { OrganizationCreatedEmail } from "@/emails/templates/organization-created-email";
 import { PrayerApprovedEmail } from "@/emails/templates/prayer-approved-email";
 import { PrayerConfirmationEmail } from "@/emails/templates/prayer-confirmation-email";
 import { SermonPublishedEmail } from "@/emails/templates/sermon-published-email";
@@ -53,6 +54,25 @@ export const EmailService = {
       to: input.to,
       subject: `Welcome to ${emailConfig.appName}`,
       react: WelcomeEmail({ userName }),
+    });
+  },
+
+  async sendOrganizationCreatedEmail(input: {
+    to: string;
+    userName: string;
+    organizationName: string;
+    churchName?: string;
+    organizationId: string;
+  }): Promise<SendEmailResult> {
+    return sendEmail({
+      to: input.to,
+      subject: "Welcome to FaithConnectHub — Your Organization Is Ready",
+      react: OrganizationCreatedEmail({
+        userName: input.userName,
+        organizationName: input.organizationName,
+        churchName: input.churchName,
+        organizationId: input.organizationId,
+      }),
     });
   },
 
@@ -393,8 +413,15 @@ export const EmailService = {
   },
 
   async notifyAdmin(payload: AdminNotificationPayload): Promise<SendEmailResult> {
+    return this.notifyAdminTo(emailConfig.adminEmail, payload);
+  },
+
+  async notifyAdminTo(
+    to: string | string[],
+    payload: AdminNotificationPayload
+  ): Promise<SendEmailResult> {
     return sendEmail({
-      to: emailConfig.adminEmail,
+      to,
       subject: `[Admin] ${payload.title}`,
       react: AdminNotificationEmail({
         title: payload.title,

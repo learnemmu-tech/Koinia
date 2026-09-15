@@ -23,6 +23,7 @@ type ShortsPageClientProps = {
   initialShortId?: string;
   createContentScope?: "organization" | "platform_public";
   createChurchId?: string;
+  churchId?: string;
 };
 
 export function ShortsPageClient({
@@ -32,11 +33,23 @@ export function ShortsPageClient({
   initialShortId,
   createContentScope = "organization",
   createChurchId = "",
+  churchId = "",
 }: ShortsPageClientProps) {
   const { user } = useFirebaseAuth();
   const { openDialog } = useContentAuthDialog();
   const t = useTranslations("shorts");
   const tc = useTranslations("common");
+  const feedScope = React.useMemo<{
+    contentMode: "platform_public" | "tenant";
+    churchId: string;
+  }>(
+    () => ({
+      contentMode: createChurchId || churchId ? "tenant" : "platform_public",
+      churchId: createChurchId || churchId,
+    }),
+    [createChurchId, churchId]
+  );
+
   const [shorts, setShorts] = React.useState(initialShorts);
   const [filter, setFilter] = React.useState<ShortsFeedFilter>("church");
   const [activeId, setActiveId] = React.useState<string | null>(
@@ -128,13 +141,13 @@ export function ShortsPageClient({
     void (async () => {
       try {
         const token = await getToken();
-        const items = await fetchShortsFeed(filter, token ?? undefined);
+        const items = await fetchShortsFeed(filter, token ?? undefined, undefined, feedScope);
         mergeFeedInteractionState(items);
       } catch {
         authSyncedRef.current = false;
       }
     })();
-  }, [user, filter, getToken, mergeFeedInteractionState]);
+  }, [feedScope, user, filter, getToken, mergeFeedInteractionState]);
 
   const reloadFeed = React.useCallback(
     async (nextFilter: ShortsFeedFilter, nextQuery = "") => {
@@ -144,7 +157,8 @@ export function ShortsPageClient({
         const items = await fetchShortsFeed(
           nextFilter,
           token ?? undefined,
-          nextQuery
+          nextQuery,
+          feedScope
         );
         setAppliedQuery(nextQuery.trim());
         const currentActive = activeIdRef.current;
@@ -169,7 +183,7 @@ export function ShortsPageClient({
         setFilterLoading(false);
       }
     },
-    [getToken]
+    [feedScope, getToken]
   );
 
   /** Debounced Shorts search — caption, topic, creator, and church. */

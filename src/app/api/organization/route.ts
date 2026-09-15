@@ -137,6 +137,7 @@ export async function POST(request: Request) {
         organizationId: org.id,
         organizationName: org.name,
         workspaceType: org.settings?.workspaceType ?? "independent_church",
+        creatorUserId: decoded.uid,
         creatorName,
         creatorEmail: decoded.email?.trim() || appUser?.email?.trim() || "—",
       });

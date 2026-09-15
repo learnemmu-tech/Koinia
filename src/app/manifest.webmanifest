@@ -3,9 +3,9 @@
   "short_name": "FCH",
   "start_url": "/",
   "icons": [
-    { "src": "/images/logo-192.png", "type": "image/png", "sizes": "192x192" },
-    { "src": "/images/logo-512.png", "type": "image/png", "sizes": "512x512" },
-    { "src": "/icon.png", "type": "image/png", "sizes": "512x512" }
+    { "src": "/icons/shepherd-ai-fallback.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icons/shepherd-ai-fallback.png", "type": "image/png", "sizes": "512x512" },
+    { "src": "/icons/shepherd-ai-fallback.png", "type": "image/png", "sizes": "512x512" }
   ],
   "theme_color": "#0d5c63",
   "background_color": "#ffffff",

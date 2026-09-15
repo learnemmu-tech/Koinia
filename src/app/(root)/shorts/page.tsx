@@ -118,6 +118,7 @@ export default async function ShortsPage({
       createContentScope={createContentScope}
 
       createChurchId={createChurchId}
+      churchId={tenantScope?.churchId ?? ""}
 
       initialShortId={initialShortId}
 

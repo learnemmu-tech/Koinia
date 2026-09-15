@@ -10,8 +10,9 @@ import {
   getPrayerRequestById,
   getSongById,
   getSermonById,
-  listActiveChurchMembersForEmail,
+  listContentEmailRecipients,
   listChurchAdminAppUsers,
+  listPlatformSuperAdminEmailRecipients,
 } from "@/lib/postgres/features";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { getShortById } from "@/lib/postgres/shorts";
@@ -44,9 +45,15 @@ async function listEligibleChurchEmailRecipients(input: {
   preferenceKey?: EmailPreferenceKey;
   excludeClerkId?: string;
 }): Promise<EmailRecipient[]> {
-  const rows = await listActiveChurchMembersForEmail(input.churchId);
+  const church = await getChurchById(input.churchId);
+  if (!church?.organizationId) return [];
+
+  const rows = await listContentEmailRecipients(
+    input.churchId,
+    church.organizationId
+  );
   const exclude = input.excludeClerkId?.trim();
-  const recipients: EmailRecipient[] = [];
+  const recipients = new Map<string, EmailRecipient>();
 
   for (const row of rows) {
     if (exclude && row.clerkId === exclude) continue;
@@ -58,14 +65,45 @@ async function listEligibleChurchEmailRecipients(input: {
       if (!canSendPreferenceEmail(preferences, input.preferenceKey)) continue;
     }
 
-    recipients.push({
-      id: row.clerkId ?? row.id,
-      email,
-      userName: `${row.firstName} ${row.lastName}`.trim() || "Friend",
-    });
+    const normalizedEmail = email.toLowerCase();
+    if (!recipients.has(normalizedEmail)) {
+      recipients.set(normalizedEmail, {
+        id: row.clerkId ?? row.id,
+        email,
+        userName: `${row.firstName} ${row.lastName}`.trim() || "Friend",
+      });
+    }
   }
 
-  return recipients;
+  return [...recipients.values()];
+}
+
+async function sendEmailBatch<T>(
+  recipients: EmailRecipient[],
+  send: (recipient: EmailRecipient) => Promise<T>
+): Promise<void> {
+  const batchSize = 25;
+  for (let index = 0; index < recipients.length; index += batchSize) {
+    const batch = recipients.slice(index, index + batchSize);
+    await Promise.allSettled(batch.map(send));
+  }
+}
+
+function dispatchSuperAdminNotification(
+  label: string,
+  payload: Parameters<typeof EmailService.notifyAdmin>[0]
+): void {
+  dispatchEmail(label, async () => {
+    const admins = await listPlatformSuperAdminEmailRecipients();
+    const recipients = [
+      ...new Set(admins.map((admin) => admin.email.trim().toLowerCase()).filter(Boolean)),
+    ];
+
+    if (recipients.length > 0) {
+      return EmailService.notifyAdminTo(recipients, payload);
+    }
+    return EmailService.notifyAdmin(payload);
+  });
 }
 
 export function triggerWelcomeEmails(input: {
@@ -101,6 +139,7 @@ export function triggerOrganizationCreatedAdminEmail(input: {
   organizationId: string;
   organizationName: string;
   workspaceType: WorkspaceType;
+  creatorUserId: string;
   creatorName: string;
   creatorEmail: string;
   churchName?: string;
@@ -123,15 +162,28 @@ export function triggerOrganizationCreatedAdminEmail(input: {
     details["Church name"] = input.churchName.trim();
   }
 
-  dispatchEmail("admin-organization-created", () =>
-    EmailService.notifyAdmin({
+  dispatchEmail("organization-created", async () => {
+    const creator = await getAppUserByClerkId(input.creatorUserId);
+    const creatorEmail = creator?.email?.trim();
+    if (!creatorEmail) return;
+    const creatorName = `${creator?.firstName ?? ""} ${creator?.lastName ?? ""}`.trim();
+
+    return EmailService.sendOrganizationCreatedEmail({
+      to: creatorEmail,
+      userName: creatorName || input.creatorName.trim() || "Friend",
+      organizationName: input.organizationName,
+      churchName: input.churchName,
+      organizationId: input.organizationId,
+    });
+  });
+
+  dispatchSuperAdminNotification("admin-organization-created", {
       type: "organization_created",
       title: "New organization created — FaithConnectHub",
       summary: `A new ${workspaceLabel} workspace was created.`,
       details,
       actionUrl: `${emailConfig.appUrl}/super-admin/organizations/${encodeURIComponent(input.organizationId)}`,
-    })
-  );
+    });
 }
 
 export function triggerPrayerSubmittedEmails(input: {
@@ -382,8 +434,15 @@ export async function triggerEventAnnouncementEmails(
       excludeClerkId,
     });
 
-    await Promise.allSettled(
-      recipients.map((user) =>
+    dispatchSuperAdminNotification("admin-event-published", {
+      type: "content_published",
+      title: "New event published",
+      summary: `The event ${event.title} was published.`,
+      details: { Event: event.title, "Event ID": event.id },
+      actionUrl: `${emailConfig.appUrl}/events/${event.id}`,
+    });
+
+    await sendEmailBatch(recipients, (user) =>
         EmailService.sendEventAnnouncement({
           to: user.email,
           userName: user.userName,
@@ -395,7 +454,6 @@ export async function triggerEventAnnouncementEmails(
           eventId: event.id,
           userId: user.id,
         })
-      )
     );
   } catch (error) {
     console.error("[email] event announcement trigger failed:", error);
@@ -424,8 +482,15 @@ export async function triggerContentAnnouncementEmails(
           excludeClerkId,
         });
 
-        await Promise.allSettled(
-          recipients.map((user) =>
+        dispatchSuperAdminNotification("admin-song-published", {
+          type: "content_published",
+          title: "New song published",
+          summary: `The song ${song.songTitle} was published.`,
+          details: { Song: song.songTitle, "Song ID": song.id },
+          actionUrl: `${emailConfig.appUrl}/songs/${song.id}`,
+        });
+
+        await sendEmailBatch(recipients, (user) =>
             EmailService.sendSongPublished({
               to: user.email,
               userName: user.userName,
@@ -434,7 +499,6 @@ export async function triggerContentAnnouncementEmails(
               songId: song.id,
               userId: user.id,
             })
-          )
         );
         return;
       }
@@ -449,8 +513,15 @@ export async function triggerContentAnnouncementEmails(
           excludeClerkId,
         });
 
-        await Promise.allSettled(
-          recipients.map((user) =>
+        dispatchSuperAdminNotification("admin-sermon-published", {
+          type: "content_published",
+          title: "New sermon published",
+          summary: `The sermon ${sermon.title} was published.`,
+          details: { Sermon: sermon.title, "Sermon ID": sermon.id },
+          actionUrl: `${emailConfig.appUrl}/sermons/${sermon.id}`,
+        });
+
+        await sendEmailBatch(recipients, (user) =>
             EmailService.sendSermonPublished({
               to: user.email,
               userName: user.userName,
@@ -460,7 +531,6 @@ export async function triggerContentAnnouncementEmails(
               sermonId: sermon.id,
               userId: user.id,
             })
-          )
         );
         return;
       }
@@ -475,8 +545,15 @@ export async function triggerContentAnnouncementEmails(
           excludeClerkId,
         });
 
-        await Promise.allSettled(
-          recipients.map((user) =>
+        dispatchSuperAdminNotification("admin-article-published", {
+          type: "content_published",
+          title: "New article published",
+          summary: `The article ${article.title} was published.`,
+          details: { Article: article.title, "Article ID": article.id },
+          actionUrl: `${emailConfig.appUrl}/articles/${article.id}`,
+        });
+
+        await sendEmailBatch(recipients, (user) =>
             EmailService.sendArticlePublished({
               to: user.email,
               userName: user.userName,
@@ -485,7 +562,6 @@ export async function triggerContentAnnouncementEmails(
               articleId: article.id,
               userId: user.id,
             })
-          )
         );
         return;
       }
@@ -505,8 +581,15 @@ export async function triggerContentAnnouncementEmails(
           excludeClerkId,
         });
 
-        await Promise.allSettled(
-          recipients.map((user) =>
+        dispatchSuperAdminNotification("admin-donation-campaign-published", {
+          type: "content_published",
+          title: "New giving campaign published",
+          summary: `The giving campaign ${campaign.title} was published.`,
+          details: { Campaign: campaign.title, "Campaign ID": campaign.id },
+          actionUrl: `${emailConfig.appUrl}/donations/${campaign.id}`,
+        });
+
+        await sendEmailBatch(recipients, (user) =>
             EmailService.sendDonationCampaignAnnouncement({
               to: user.email,
               userName: user.userName,
@@ -516,7 +599,6 @@ export async function triggerContentAnnouncementEmails(
               campaignId: campaign.id,
               userId: user.id,
             })
-          )
         );
       }
     }
@@ -542,8 +624,7 @@ export async function triggerShortPublishedEmails(
 
     const caption = short.caption.trim() || "A new Short from your church";
 
-    await Promise.allSettled(
-      recipients.map((user) =>
+    await sendEmailBatch(recipients, (user) =>
         EmailService.sendShortPublished({
           to: user.email,
           userName: user.userName,
@@ -551,7 +632,6 @@ export async function triggerShortPublishedEmails(
           shortId: short.id,
           userId: user.id,
         })
-      )
     );
   } catch (error) {
     console.error("[email] short published trigger failed:", error);

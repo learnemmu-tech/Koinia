@@ -1603,6 +1603,73 @@ export async function listActiveChurchMembersForEmail(churchId: string) {
     );
 }
 
+export async function listContentEmailRecipients(
+  churchId: string,
+  organizationId: string
+) {
+  const [churchRows, organizationRows] = await Promise.all([
+    db
+      .select({
+        id: users.id,
+        clerkId: users.clerkId,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        emailPreferences: users.emailPreferences,
+      })
+      .from(churchMemberships)
+      .innerJoin(users, eq(users.id, churchMemberships.userId))
+      .where(
+        and(
+          eq(churchMemberships.churchId, churchId),
+          eq(churchMemberships.status, "active")
+        )
+      ),
+    db
+      .select({
+        id: users.id,
+        clerkId: users.clerkId,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        emailPreferences: users.emailPreferences,
+        role: organizationMemberships.role,
+      })
+      .from(organizationMemberships)
+      .innerJoin(users, eq(users.id, organizationMemberships.userId))
+      .where(
+        and(
+          eq(organizationMemberships.organizationId, organizationId),
+          eq(organizationMemberships.status, "active")
+        )
+      ),
+  ]);
+
+  const recipients = new Map<string, (typeof churchRows)[number]>();
+  for (const row of churchRows) {
+    recipients.set(row.id, row);
+  }
+  for (const row of organizationRows) {
+    if (roleMeetsMinimum(row.role as MembershipRole, "org_admin")) {
+      recipients.set(row.id, row);
+    }
+  }
+  return [...recipients.values()];
+}
+
+export async function listPlatformSuperAdminEmailRecipients() {
+  return db
+    .select({
+      id: users.id,
+      clerkId: users.clerkId,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+    })
+    .from(users)
+    .where(eq(users.platformRole, "super_admin"));
+}
+
 export async function listChurchAdminAppUsers(
   churchId: string,
   organizationId?: string

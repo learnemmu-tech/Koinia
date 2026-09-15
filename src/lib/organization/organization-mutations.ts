@@ -93,6 +93,7 @@ export async function ensureUserOrganizationAction(
       organizationId: org.id,
       organizationName: org.name,
       workspaceType: org.settings?.workspaceType ?? "independent_church",
+      creatorUserId: userId,
       creatorName,
       creatorEmail: appUser?.email?.trim() || "—",
     });

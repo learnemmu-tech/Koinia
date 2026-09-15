@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   }
 
   after(() =>
-    triggerEventAnnouncementEmails(body.eventId, authUser.uid).catch((error) => {
+    triggerEventAnnouncementEmails(body.eventId).catch((error) => {
       console.error("[api/email/event-published]", error);
     })
   );

@@ -88,8 +88,7 @@ export async function POST(request: Request) {
   after(() =>
     triggerContentAnnouncementEmails(
       body.type as ContentPublishEmailType,
-      body.contentId,
-      authUser.uid
+      body.contentId
     ).catch((error) => {
       console.error("[api/email/content-published]", error);
     })

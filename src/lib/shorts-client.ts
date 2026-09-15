@@ -26,10 +26,22 @@ function authHeaders(token?: string): HeadersInit {
 export async function fetchShortsFeed(
   filter: ShortsFeedFilter,
   token?: string,
-  query?: string
+  query?: string,
+  context?: { contentMode?: "platform_public" | "tenant"; churchId?: string }
 ): Promise<VideoShort[]> {
-  const search = query?.trim() ? `&q=${encodeURIComponent(query.trim())}` : "";
-  const response = await fetch(`/api/shorts?filter=${filter}${search}`, {
+  const params = new URLSearchParams({ filter });
+  const trimmedQuery = query?.trim();
+  if (trimmedQuery) {
+    params.set("q", trimmedQuery);
+  }
+
+  const churchId = context?.churchId?.trim() ?? "";
+  if (context?.contentMode === "tenant" && churchId) {
+    params.set("contentMode", "tenant");
+    params.set("churchId", churchId);
+  }
+
+  const response = await fetch(`/api/shorts?${params.toString()}`, {
     headers: authHeaders(token),
     cache: "no-store",
   });

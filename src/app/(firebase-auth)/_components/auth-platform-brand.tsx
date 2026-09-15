@@ -9,8 +9,8 @@ type AuthPlatformBrandProps = {
 };
 
 /**
- * Official FaithConnectHub platform lockup (transparent, content-cropped).
- * Sits on cream #F6F1E7 with no white rectangular plate.
+ * Official Shepherd brand mark used across the app.
+ * Keeps the original circular shepherd emblem consistent across auth screens.
  */
 export function AuthPlatformBrand({
   className,
@@ -26,12 +26,12 @@ export function AuthPlatformBrand({
       aria-label="FaithConnectHub"
     >
       <Image
-        src="/images/faithconnecthub-lockup-auth.png"
+        src="/icons/shepherd-ai.webp"
         alt="FaithConnectHub"
-        width={260}
-        height={47}
+        width={220}
+        height={220}
         priority
-        className="auth-logo-img h-auto w-[min(100%,232px)] bg-transparent object-contain object-left lg:w-[244px]"
+        className="auth-logo-img h-auto w-[min(100%,210px)] rounded-full bg-transparent object-contain object-center"
       />
     </Link>
   );

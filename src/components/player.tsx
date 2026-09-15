@@ -232,7 +232,24 @@ function usePlayerEngine() {
   }
 
   React.useEffect(() => {
+    function isTextEntryTarget(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      if (target.isContentEditable) {
+        return true;
+      }
+
+      return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) ||
+        Boolean(target.closest("input, textarea, select, [contenteditable='true'], [role='textbox']"));
+    }
+
     function onKeyDown(e: KeyboardEvent) {
+      if (isTextEntryTarget(e.target)) {
+        return;
+      }
+
       if (e.key === " " && !isTyping) {
         e.preventDefault();
         playPauseHandler();

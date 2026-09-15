@@ -5,9 +5,9 @@ export const siteConfig = {
   url: "https://faithconnecthub.com/",
   description:
     "FaithConnectHub is a Christian worship and ministry platform for songs, sermons, articles, prayer requests, events, and donations.",
-  image: "/images/logo.png",
-  icon: "/icon.png",
-  appleIcon: "/apple-icon.png",
+  image: "/icons/shepherd-ai.webp",
+  icon: "/icons/shepherd-ai-fallback.png",
+  appleIcon: "/icons/shepherd-ai-fallback.png",
 
   ministry: {
     title: "FaithConnectHub",

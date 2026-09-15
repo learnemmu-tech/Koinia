@@ -1,6 +1,7 @@
 import "server-only";
 
-const DEFAULT_FROM = "FaithConnectHub <onboarding@resend.dev>";
+export const VERIFIED_EMAIL_DOMAIN = "futureblock.in";
+const DEFAULT_FROM = "FaithConnectHub <notifications@futureblock.in>";
 
 const EMAIL_REGEX = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 
@@ -41,6 +42,17 @@ export function resolveResendFromAddress(raw: string | undefined): string {
       "— expected email@example.com or Name <email@example.com>.",
       "Using default:",
       DEFAULT_FROM
+    );
+    return DEFAULT_FROM;
+  }
+
+  const email = candidate.match(/<([^>]+)>$/)?.[1] ?? candidate;
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (domain !== VERIFIED_EMAIL_DOMAIN) {
+    console.error(
+      "[email] RESEND_FROM_EMAIL must belong to the verified domain:",
+      VERIFIED_EMAIL_DOMAIN,
+      "Using default sender."
     );
     return DEFAULT_FROM;
   }

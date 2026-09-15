@@ -77,6 +77,7 @@ export async function POST(request: Request) {
           organizationId: result.organizationId,
           organizationName: name,
           workspaceType,
+          creatorUserId: userId,
           creatorName,
           creatorEmail: decoded.email?.trim() || appUser?.email?.trim() || "—",
           churchName:
