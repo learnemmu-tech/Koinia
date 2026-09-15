@@ -1,5 +1,6 @@
 export { canUseFeature, hasFeature, resolveFeatureFlags, resolveFeatureFlagsFromSubscription } from "./features";
 export {
+  BILLING_USAGE_KEYS,
   buildUsageCheck,
   buildUsageChecks,
   EMPTY_USAGE,
@@ -16,6 +17,7 @@ export {
   formatPlanPrice,
   getNextPlan,
   getPlan,
+  getPlanComparisonRows,
   PLAN_ORDER,
   PLANS,
 } from "./plans";
@@ -26,4 +28,11 @@ export {
   SUBSCRIPTIONS_COLLECTION,
 } from "./subscription-firestore";
 export { getSubscriptionByChurchId, getSubscriptionSnapshot, ensureSubscriptionDocument } from "./subscription-server";
+export {
+  getTrialEndDate,
+  getTrialLifecycle,
+  SHEPHERD_TRIAL_DAYS,
+  TRIAL_DURATION_DAYS,
+  TRIAL_EXPIRED_MESSAGE,
+} from "./trial";
 export { computeChurchUsage } from "./usage-server";

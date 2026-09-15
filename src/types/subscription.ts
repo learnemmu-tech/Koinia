@@ -20,6 +20,8 @@ export type SubscriptionUsage = {
   admins: number;
   events: number;
   donationCampaigns: number;
+  shorts: number;
+  prayerRequests: number;
 };
 
 export type UsageLimitKey = keyof SubscriptionUsage;
@@ -34,6 +36,7 @@ export type SubscriptionFeatureFlags = {
   canCreateArticles: boolean;
   canCreateEvents: boolean;
   canCreateDonations: boolean;
+  canUseShepherdAi: boolean;
   canCreateChurches: boolean;
   canUseEmailNotifications: boolean;
   canUseAnalytics: boolean;
@@ -78,16 +81,30 @@ export type ChurchSubscription = {
 export type PlanDefinition = {
   id: PlanId;
   name: string;
+  /** Compact label for badges when `name` is long. */
+  badgeName?: string;
   tagline: string;
   description: string;
   monthlyPrice: number | null;
   yearlyPrice: number | null;
   highlighted?: boolean;
   contactSales?: boolean;
+  ctaLabel?: string;
   limits: PlanLimits;
   features: SubscriptionFeatureFlags;
   /** Marketing bullet list for pricing cards */
   highlights: string[];
+};
+
+export type TrialPhase = "none" | "active" | "reminder" | "urgent" | "expired";
+
+export type TrialLifecycle = {
+  isTrial: boolean;
+  phase: TrialPhase;
+  daysIntoTrial: number | null;
+  daysRemaining: number | null;
+  shepherdAiAvailable: boolean;
+  shepherdDaysRemaining: number | null;
 };
 
 export type UsageCheck = {
@@ -106,4 +123,5 @@ export type SubscriptionSnapshot = {
   limits: PlanLimits;
   usage: SubscriptionUsage;
   usageChecks: UsageCheck[];
+  trial: TrialLifecycle;
 };

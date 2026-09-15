@@ -15,6 +15,7 @@ import { ShepherdPulseMark } from "@/components/shepherd/shepherd-pulse-mark";
 import { promptsForMode } from "@/components/shepherd/shepherd-prompts";
 import { ShepherdResponseActions } from "@/components/shepherd/shepherd-response-actions";
 import { Button } from "@/components/ui/button";
+import { useSubscriptionOptional } from "@/context/subscription-context";
 import type { ShepherdAudienceMode } from "@/lib/shepherd/validation";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +70,8 @@ type Props = {
 
 export function ShepherdChat({ initialMode, displayName: _displayName }: Props) {
   const { getToken } = useAuth();
+  const subscription = useSubscriptionOptional();
+  const shepherdAllowed = subscription?.canUseFeature("canUseShepherdAi") ?? true;
   const [mode, setMode] = useState<ShepherdAudienceMode>(initialMode);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -359,7 +362,7 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
 
   async function sendMessage(raw: string) {
     const content = raw.trim();
-    if (!content || streaming) return;
+    if (!content || streaming || !shepherdAllowed) return;
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
@@ -445,7 +448,7 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
 
   const suggestions = promptsForMode(mode);
   const empty = messages.length === 0;
-  const canSend = Boolean(input.trim()) && !streaming;
+  const canSend = Boolean(input.trim()) && !streaming && shepherdAllowed;
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
@@ -523,7 +526,7 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
                       key={item.id}
                       type="button"
                       onClick={() => void sendMessage(item.prompt)}
-                      disabled={streaming}
+                      disabled={streaming || !shepherdAllowed}
                       className={cn(
                         "group relative rounded-xl border border-border/70 bg-card px-3.5 py-3.5 text-left shadow-sm",
                         "transition-[border-color,background-color,box-shadow,transform] duration-150",
@@ -668,6 +671,11 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
             void sendMessage(input);
           }}
         >
+          {!shepherdAllowed ?
+            <p className="mb-2 text-center text-sm text-muted-foreground">
+              Shepherd AI is available for the first 10 days of the 30-day trial.
+            </p>
+          : null}
           <div
             className={cn(
               "relative rounded-[1.75rem] border border-border/80 bg-card",
@@ -687,7 +695,7 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
               onKeyDown={onKeyDown}
               placeholder="Ask Shepherd about Scripture, faith, or ministry…"
               rows={1}
-              disabled={streaming}
+              disabled={streaming || !shepherdAllowed}
               className={cn(
                 "max-h-40 min-h-[56px] w-full resize-none bg-transparent",
                 "px-5 py-4 pr-14 text-sm leading-relaxed text-foreground",

@@ -21,9 +21,10 @@ import {
 } from "@/components/ui/accordion";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
-import type { BillingInterval, PlanId } from "@/types/subscription";
+import type { BillingInterval } from "@/types/subscription";
 import {
   formatPlanPrice,
+  getPlanComparisonRows,
   PLAN_ORDER,
   PLANS,
 } from "@/lib/subscription/plans";
@@ -36,7 +37,7 @@ const FAQ_ITEMS = [
   {
     question: "Can I upgrade later?",
     answer:
-      "Yes. You can start on Free and upgrade to Starter, Professional, or Enterprise as your ministry grows. Plan changes will be available once billing is enabled.",
+      "Yes. You can start with the 30-day free trial and upgrade to Starter, Professional, or Enterprise as your ministry grows. Plan changes will be available once billing is enabled.",
   },
   {
     question: "Can I cancel anytime?",
@@ -44,91 +45,19 @@ const FAQ_ITEMS = [
       "When billing launches, you'll be able to cancel or downgrade at the end of your billing period. Your content remains accessible according to your plan limits.",
   },
   {
-    question: "What happens after a trial?",
+    question: "What happens after the 30-day trial?",
     answer:
-      "Trial periods will convert to your selected paid plan unless you cancel before the trial ends. We'll notify you before any charge.",
+      "Your existing content is preserved. Paid checkout is not live yet, so you can keep exploring plans on the pricing page. We'll notify you before any future charge.",
   },
   {
     question: "Do you offer Enterprise plans?",
     answer:
-      "Yes. Enterprise includes unlimited churches, white-label options, custom domains, API access, dedicated support, and SLA. Contact our team for a custom quote.",
+      "Yes. Enterprise is a custom offering for large ministries, including future white-label, custom domain, API, dedicated support, and SLA options. Contact our team for a quote.",
   },
   {
     question: "Is payment required today?",
     answer:
-      "No. FaithConnectHub is building toward full billing integration. You can explore plans now; checkout and invoices will be added in a future release.",
-  },
-];
-
-type ComparisonRow = {
-  label: string;
-  values: Record<PlanId, string | boolean>;
-};
-
-const COMPARISON_ROWS: ComparisonRow[] = [
-  {
-    label: "Churches",
-    values: { free: "1", starter: "1", professional: "5", enterprise: "Unlimited" },
-  },
-  {
-    label: "Members",
-    values: { free: "50", starter: "500", professional: "Unlimited", enterprise: "Unlimited" },
-  },
-  {
-    label: "Songs",
-    values: { free: "20", starter: "Unlimited", professional: "Unlimited", enterprise: "Unlimited" },
-  },
-  {
-    label: "Sermons",
-    values: { free: "20", starter: "Unlimited", professional: "Unlimited", enterprise: "Unlimited" },
-  },
-  {
-    label: "Articles",
-    values: { free: "20", starter: "Unlimited", professional: "Unlimited", enterprise: "Unlimited" },
-  },
-  {
-    label: "Email notifications",
-    values: { free: false, starter: true, professional: true, enterprise: true },
-  },
-  {
-    label: "Analytics",
-    values: { free: false, starter: true, professional: true, enterprise: true },
-  },
-  {
-    label: "Advanced analytics",
-    values: { free: false, starter: false, professional: true, enterprise: true },
-  },
-  {
-    label: "Custom branding",
-    values: { free: false, starter: true, professional: true, enterprise: true },
-  },
-  {
-    label: "Event registration",
-    values: { free: false, starter: false, professional: true, enterprise: true },
-  },
-  {
-    label: "Multiple admins",
-    values: { free: false, starter: true, professional: true, enterprise: true },
-  },
-  {
-    label: "White label",
-    values: { free: false, starter: false, professional: false, enterprise: true },
-  },
-  {
-    label: "Custom domain",
-    values: { free: false, starter: false, professional: false, enterprise: true },
-  },
-  {
-    label: "API access",
-    values: { free: false, starter: false, professional: false, enterprise: true },
-  },
-  {
-    label: "Dedicated support",
-    values: { free: false, starter: false, professional: false, enterprise: true },
-  },
-  {
-    label: "SLA",
-    values: { free: false, starter: false, professional: false, enterprise: true },
+      "No. FaithConnectHub is building toward full billing integration. You can start a 30-day trial now; checkout and invoices will be added in a future release.",
   },
 ];
 
@@ -252,7 +181,7 @@ export function PricingPageClient() {
                   </Button>
                 : plan.monthlyPrice === 0 ?
                   <Button variant="outline" className="w-full" asChild>
-                    <Link href="/signup">Get started free</Link>
+                    <Link href="/signup">{plan.ctaLabel ?? "Start 30-day trial"}</Link>
                   </Button>
                 : <Button className="w-full" disabled>
                     Coming Soon
@@ -285,7 +214,7 @@ export function PricingPageClient() {
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON_ROWS.map((row) => (
+                {getPlanComparisonRows().map((row) => (
                   <tr
                     key={row.label}
                     className="border-b border-border/40 last:border-0"

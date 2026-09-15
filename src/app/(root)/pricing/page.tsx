@@ -5,7 +5,7 @@ import { buildBreadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
   title: "Pricing",
-  description: `Choose the right ${siteConfig.name} plan for your church or ministry. Compare Free, Starter, Professional, and Enterprise features.`,
+  description: `Choose the right ${siteConfig.name} plan for your church or ministry. Compare the 30-day free trial, Starter, Professional, and Enterprise features.`,
   path: "/pricing",
   keywords: [
     "church software pricing",

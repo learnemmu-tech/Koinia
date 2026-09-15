@@ -14,6 +14,19 @@ import type {
 export async function createDonationCampaign(
   input: CreateDonationCampaignInput
 ): Promise<string> {
+  const organizationId = input.organizationId?.trim();
+  const churchId = input.churchId?.trim();
+  if (organizationId) {
+    const { assertFeatureAllowed } = await import(
+      "@/lib/subscription/subscription-server"
+    );
+    await assertFeatureAllowed(organizationId, "canCreateDonations");
+  } else if (churchId) {
+    const { assertChurchFeatureAllowed } = await import(
+      "@/lib/subscription/subscription-server"
+    );
+    await assertChurchFeatureAllowed(churchId, "canCreateDonations");
+  }
   return insertCampaign(input);
 }
 

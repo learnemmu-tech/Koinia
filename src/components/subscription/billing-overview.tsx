@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { siteConfig } from "@/config/site";
 import type { SubscriptionSnapshot } from "@/types/subscription";
 import { formatLimitValue, PLAN_ORDER, PLANS } from "@/lib/subscription/plans";
+import { BILLING_USAGE_KEYS } from "@/lib/subscription/limits";
 
 type BillingOverviewProps = {
   snapshot: SubscriptionSnapshot | undefined;
@@ -74,19 +75,32 @@ export function BillingOverview({
     );
   }
 
-  const { plan, usageChecks, features } = snapshot;
-  const limitedChecks = usageChecks.filter((item) => item.limit !== null);
+  const { plan, usageChecks, features, trial } = snapshot;
+  const usageByKey = new Map(usageChecks.map((item) => [item.key, item]));
+  const displayedChecks = BILLING_USAGE_KEYS.map((key) => usageByKey.get(key)).filter(
+    (item): item is NonNullable<typeof item> => Boolean(item)
+  );
 
-  const featureRows: { label: string; key: keyof typeof features }[] = [
-    { label: "Email notifications", key: "canUseEmailNotifications" },
-    { label: "Analytics", key: "canUseAnalytics" },
-    { label: "Advanced analytics", key: "canUseAdvancedAnalytics" },
-    { label: "Custom branding", key: "canCustomizeBranding" },
-    { label: "Event registration", key: "canUseEventRegistration" },
-    { label: "Multiple admins", key: "canInviteAdmins" },
-    { label: "White label", key: "canUseWhiteLabel" },
-    { label: "Custom domain", key: "canUseCustomDomain" },
-    { label: "API access", key: "canUseApiAccess" },
+  const featureRows: { label: string; enabled: boolean }[] = [
+    { label: "Donations", enabled: features.canCreateDonations },
+    {
+      label:
+        trial.isTrial && features.canUseShepherdAi && trial.shepherdDaysRemaining != null
+          ? `Shepherd AI (${trial.shepherdDaysRemaining} days left)`
+        : trial.isTrial && !features.canUseShepherdAi
+          ? "Shepherd AI (available for first 10 trial days)"
+        : "Shepherd AI",
+      enabled: features.canUseShepherdAi,
+    },
+    { label: "Email notifications", enabled: features.canUseEmailNotifications },
+    { label: "Analytics", enabled: features.canUseAnalytics },
+    { label: "Advanced analytics", enabled: features.canUseAdvancedAnalytics },
+    { label: "Custom branding", enabled: features.canCustomizeBranding },
+    { label: "Event registration", enabled: features.canUseEventRegistration },
+    { label: "Multiple admins", enabled: features.canInviteAdmins },
+    { label: "White label", enabled: features.canUseWhiteLabel },
+    { label: "Custom domain", enabled: features.canUseCustomDomain },
+    { label: "API access", enabled: features.canUseApiAccess },
   ];
 
   return (
@@ -102,6 +116,25 @@ export function BillingOverview({
           </div>
           <PlanBadge planId={plan.id} asLink />
         </div>
+        {trial.phase === "reminder" ?
+          <p className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+            Your 30-day trial ends in {trial.daysRemaining}{" "}
+            {trial.daysRemaining === 1 ? "day" : "days"}. Existing content will be preserved.
+          </p>
+        : null}
+        {trial.phase === "urgent" ?
+          <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            Your trial expires in {trial.daysRemaining}{" "}
+            {trial.daysRemaining === 1 ? "day" : "days"}. Paid plans are coming soon — your
+            content stays available to view.
+          </p>
+        : null}
+        {trial.phase === "expired" ?
+          <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            Your 30-day trial has ended. Existing content is preserved. Paid checkout is not
+            available yet.
+          </p>
+        : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href="/pricing">Compare plans</Link>
@@ -128,7 +161,7 @@ export function BillingOverview({
           Live usage for your church workspace.
         </p>
         <div className="mt-4 space-y-4">
-          {limitedChecks.map((item) => (
+          {displayedChecks.map((item) => (
             <div key={item.key} className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">{item.label}</span>
@@ -152,9 +185,9 @@ export function BillingOverview({
         <div className="mt-2 divide-y divide-border/50">
           {featureRows.map((row) => (
             <FeatureRow
-              key={row.key}
+              key={row.label}
               label={row.label}
-              enabled={Boolean(features[row.key])}
+              enabled={row.enabled}
             />
           ))}
         </div>

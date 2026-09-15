@@ -17,7 +17,21 @@ export const USAGE_LIMIT_LABELS: Record<UsageLimitKey, string> = {
   admins: "Admins",
   events: "Events",
   donationCampaigns: "Donation Campaigns",
+  shorts: "Shorts / Videos",
+  prayerRequests: "Prayer Requests",
 };
+
+/** Usage meters shown on the billing page. */
+export const BILLING_USAGE_KEYS: UsageLimitKey[] = [
+  "members",
+  "songs",
+  "sermons",
+  "articles",
+  "churches",
+  "shorts",
+  "events",
+  "prayerRequests",
+];
 
 export const EMPTY_USAGE: SubscriptionUsage = {
   members: 0,
@@ -28,6 +42,8 @@ export const EMPTY_USAGE: SubscriptionUsage = {
   admins: 0,
   events: 0,
   donationCampaigns: 0,
+  shorts: 0,
+  prayerRequests: 0,
 };
 
 export function getPlanLimits(planId: PlanId): PlanLimits {

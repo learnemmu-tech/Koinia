@@ -175,6 +175,11 @@ export async function approveBranchMembership(
     return;
   }
 
+  const { assertUsageAllowed } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertUsageAllowed(row.organizationId, "members");
+
   await db.transaction(async (tx) => {
     await tx
       .update(churchMemberships)

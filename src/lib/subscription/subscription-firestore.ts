@@ -7,6 +7,7 @@ import type {
 } from "@/types/subscription";
 
 import { toMillis } from "@/lib/firebase-utils";
+import { getTrialEndDate } from "./trial";
 
 export const SUBSCRIPTIONS_COLLECTION = "subscriptions";
 
@@ -53,6 +54,8 @@ function normalizeUsage(data: unknown): SubscriptionUsage | undefined {
     admins: Number(raw.admins ?? 0) || 0,
     events: Number(raw.events ?? 0) || 0,
     donationCampaigns: Number(raw.donationCampaigns ?? 0) || 0,
+    shorts: Number(raw.shorts ?? 0) || 0,
+    prayerRequests: Number(raw.prayerRequests ?? 0) || 0,
   };
 }
 
@@ -128,10 +131,13 @@ export function buildSubscriptionCreatePayload(
   planId: PlanId = "free"
 ): Record<string, unknown> {
   const now = Date.now();
+  const isTrial = planId === "free";
   return {
     organizationId,
     planId,
-    status: "active",
+    status: isTrial ? "trialing" : "active",
+    trialStart: isTrial ? now : undefined,
+    trialEnd: isTrial ? getTrialEndDate(new Date(now)).getTime() : undefined,
     cancelAtPeriodEnd: false,
     createdAt: now,
     updatedAt: now,

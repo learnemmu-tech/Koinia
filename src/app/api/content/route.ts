@@ -22,6 +22,12 @@ import {
 } from "@/lib/postgres/content-mutations";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { userCanManageChurch } from "@/lib/postgres/session";
+import { getChurchById } from "@/lib/postgres/tenants";
+import {
+  assertChurchUsageAllowed,
+  isSubscriptionLimitError,
+  SubscriptionLimitError,
+} from "@/lib/subscription/subscription-server";
 import { timed } from "@/lib/perf";
 import type { CreateArticleInput, UpdateArticleInput } from "@/types/firebase-article";
 import type { CreateEventInput, UpdateEventInput } from "@/types/firebase-event";
@@ -170,6 +176,14 @@ export async function POST(request: Request) {
     if (op === "create") {
       let id: string;
       const churchId = body.churchId?.trim() || "";
+      if (!isPlatformCreate && churchId) {
+        const usageKey =
+          collection === "songs" ? "songs"
+          : collection === "sermons" ? "sermons"
+          : collection === "articles" ? "articles"
+          : "events";
+        await assertChurchUsageAllowed(churchId, usageKey);
+      }
       switch (collection) {
         case "songs":
           id = await addSong(churchId, data as CreateSongInput);
@@ -255,6 +269,9 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("[api/content]", error);
     return NextResponse.json(
       { error: "Failed to save content." },

@@ -143,6 +143,13 @@ export async function joinUserToChurchBySlug(
   const targetStatus: "active" | "pending" =
     church.enrollmentMode === "open" ? "active" : "pending";
 
+  if (targetStatus === "active") {
+    const { assertUsageAllowed } = await import(
+      "@/lib/subscription/subscription-server"
+    );
+    await assertUsageAllowed(church.organizationId, "members");
+  }
+
   const [existing] = await db
     .select()
     .from(churchMemberships)

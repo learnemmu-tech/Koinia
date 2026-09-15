@@ -5,18 +5,22 @@ import type {
   SubscriptionFeatureFlags,
 } from "@/types/subscription";
 
+import { SHEPHERD_TRIAL_DAYS, TRIAL_DURATION_DAYS } from "./trial";
+
 const UNLIMITED = null;
 
 function limits(partial: Partial<PlanLimits>): PlanLimits {
   return {
-    members: 50,
-    songs: 20,
-    sermons: 20,
-    articles: 20,
+    members: 15,
+    songs: 10,
+    sermons: 10,
+    articles: 10,
     churches: 1,
     admins: 1,
-    events: 5,
-    donationCampaigns: 3,
+    events: 1,
+    donationCampaigns: 0,
+    shorts: 5,
+    prayerRequests: 5,
     ...partial,
   };
 }
@@ -26,7 +30,8 @@ const FREE_FEATURES: SubscriptionFeatureFlags = {
   canCreateSermons: true,
   canCreateArticles: true,
   canCreateEvents: true,
-  canCreateDonations: true,
+  canCreateDonations: false,
+  canUseShepherdAi: true,
   canCreateChurches: false,
   canUseEmailNotifications: false,
   canUseAnalytics: false,
@@ -44,6 +49,7 @@ const FREE_FEATURES: SubscriptionFeatureFlags = {
 
 const STARTER_FEATURES: SubscriptionFeatureFlags = {
   ...FREE_FEATURES,
+  canCreateDonations: true,
   canUseEmailNotifications: true,
   canUseAnalytics: true,
   canCustomizeBranding: true,
@@ -53,16 +59,18 @@ const STARTER_FEATURES: SubscriptionFeatureFlags = {
 
 const PROFESSIONAL_FEATURES: SubscriptionFeatureFlags = {
   ...STARTER_FEATURES,
-  canCreateChurches: true,
-  canUseAdvancedAnalytics: true,
-  canUseEventRegistration: true,
+  // Multi-church, advanced analytics, and event registration are future
+  // positioning only — independent churches are the current product.
+  canCreateChurches: false,
+  canUseAdvancedAnalytics: false,
+  canUseEventRegistration: false,
 };
 
 const ENTERPRISE_FEATURES: SubscriptionFeatureFlags = {
   ...PROFESSIONAL_FEATURES,
-  canUseWhiteLabel: true,
-  canUseCustomDomain: true,
-  canUseApiAccess: true,
+  canUseWhiteLabel: false,
+  canUseCustomDomain: false,
+  canUseApiAccess: false,
   hasDedicatedSupport: true,
   hasSla: true,
 };
@@ -70,22 +78,27 @@ const ENTERPRISE_FEATURES: SubscriptionFeatureFlags = {
 export const PLANS: Record<PlanId, PlanDefinition> = {
   free: {
     id: "free",
-    name: "Free",
-    tagline: "Get started",
-    description: "Perfect for small ministries exploring the platform.",
+    name: "30-Day Free Trial",
+    badgeName: "Trial",
+    tagline: "Explore FaithConnectHub for your church.",
+    description:
+      "A 30-day trial for a newly created church workspace. Limits apply; donations are not included.",
     monthlyPrice: 0,
     yearlyPrice: 0,
+    ctaLabel: "Start 30-day trial",
     limits: limits({}),
     features: FREE_FEATURES,
     highlights: [
       "1 Church",
-      "50 Members",
-      "20 Songs",
-      "20 Sermons",
-      "20 Articles",
-      "Basic Events",
-      "Basic Donations",
-      "Community Support",
+      "15 Members",
+      "10 Songs",
+      "10 Sermons",
+      "10 Articles",
+      "5 Shorts / Videos",
+      "1 Event",
+      "5 Prayer Requests",
+      `Shepherd AI for ${SHEPHERD_TRIAL_DAYS} days`,
+      "Donations not included",
     ],
   },
   starter: {
@@ -102,6 +115,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       articles: UNLIMITED,
       events: UNLIMITED,
       donationCampaigns: UNLIMITED,
+      shorts: UNLIMITED,
+      prayerRequests: UNLIMITED,
       admins: 2,
     }),
     features: STARTER_FEATURES,
@@ -130,20 +145,21 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       songs: UNLIMITED,
       sermons: UNLIMITED,
       articles: UNLIMITED,
-      churches: 5,
+      churches: 1,
       admins: 10,
       events: UNLIMITED,
       donationCampaigns: UNLIMITED,
+      shorts: UNLIMITED,
+      prayerRequests: UNLIMITED,
     }),
     features: PROFESSIONAL_FEATURES,
     highlights: [
-      "5 Churches",
+      "5 Churches (coming soon)",
       "Unlimited Members",
       "Unlimited Songs",
       "Unlimited Sermons",
-      "Unlimited Articles",
-      "Advanced Analytics",
-      "Event Registration",
+      "Advanced Analytics (coming soon)",
+      "Event Registration (coming soon)",
       "Multiple Admins",
       "Priority Support",
     ],
@@ -151,7 +167,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   enterprise: {
     id: "enterprise",
     name: "Enterprise",
-    tagline: "At scale",
+    tagline: "Custom",
     description: "Custom solutions for large organizations and networks.",
     monthlyPrice: null,
     yearlyPrice: null,
@@ -161,18 +177,20 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       songs: UNLIMITED,
       sermons: UNLIMITED,
       articles: UNLIMITED,
-      churches: UNLIMITED,
+      churches: 1,
       admins: UNLIMITED,
       events: UNLIMITED,
       donationCampaigns: UNLIMITED,
+      shorts: UNLIMITED,
+      prayerRequests: UNLIMITED,
     }),
     features: ENTERPRISE_FEATURES,
     highlights: [
-      "Unlimited Churches",
+      "Unlimited Churches (coming soon)",
       "Unlimited Members",
-      "White Label",
-      "Custom Domain",
-      "API Access",
+      "White Label (coming soon)",
+      "Custom Domain (coming soon)",
+      "API Access (coming soon)",
       "Dedicated Support",
       "SLA",
       "Contact Sales",
@@ -186,6 +204,157 @@ export const PLAN_ORDER: PlanId[] = [
   "professional",
   "enterprise",
 ];
+
+export type PlanComparisonValue = string | boolean;
+
+export type PlanComparisonRow = {
+  label: string;
+  values: Record<PlanId, PlanComparisonValue>;
+};
+
+function comparisonValues(
+  map: (plan: PlanDefinition) => PlanComparisonValue
+): Record<PlanId, PlanComparisonValue> {
+  return {
+    free: map(PLANS.free),
+    starter: map(PLANS.starter),
+    professional: map(PLANS.professional),
+    enterprise: map(PLANS.enterprise),
+  };
+}
+
+function limitLabel(limit: number | null): string {
+  return formatLimitValue(limit);
+}
+
+export function getPlanComparisonRows(): PlanComparisonRow[] {
+  return [
+    {
+      label: "Churches",
+      values: {
+        free: "1",
+        starter: "1",
+        professional: "5 (coming soon)",
+        enterprise: "Unlimited (coming soon)",
+      },
+    },
+    {
+      label: "Members",
+      values: comparisonValues((plan) => limitLabel(plan.limits.members)),
+    },
+    {
+      label: "Songs",
+      values: comparisonValues((plan) => limitLabel(plan.limits.songs)),
+    },
+    {
+      label: "Sermons",
+      values: comparisonValues((plan) => limitLabel(plan.limits.sermons)),
+    },
+    {
+      label: "Articles",
+      values: comparisonValues((plan) => limitLabel(plan.limits.articles)),
+    },
+    {
+      label: "Shorts / Videos",
+      values: comparisonValues((plan) => limitLabel(plan.limits.shorts)),
+    },
+    {
+      label: "Events",
+      values: comparisonValues((plan) => limitLabel(plan.limits.events)),
+    },
+    {
+      label: "Prayer Requests",
+      values: comparisonValues((plan) => limitLabel(plan.limits.prayerRequests)),
+    },
+    {
+      label: "Donations",
+      values: {
+        free: "No",
+        starter: true,
+        professional: true,
+        enterprise: true,
+      },
+    },
+    {
+      label: "Shepherd AI",
+      values: {
+        free: `${SHEPHERD_TRIAL_DAYS} days`,
+        starter: true,
+        professional: true,
+        enterprise: true,
+      },
+    },
+    {
+      label: "Email notifications",
+      values: comparisonValues((plan) => plan.features.canUseEmailNotifications),
+    },
+    {
+      label: "Analytics",
+      values: comparisonValues((plan) => plan.features.canUseAnalytics),
+    },
+    {
+      label: "Advanced analytics",
+      values: {
+        free: false,
+        starter: false,
+        professional: "Coming soon",
+        enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "Custom branding",
+      values: comparisonValues((plan) => plan.features.canCustomizeBranding),
+    },
+    {
+      label: "Event registration",
+      values: {
+        free: false,
+        starter: false,
+        professional: "Coming soon",
+        enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "Multiple admins",
+      values: comparisonValues((plan) => plan.features.canInviteAdmins),
+    },
+    {
+      label: "White label",
+      values: {
+        free: false,
+        starter: false,
+        professional: false,
+        enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "Custom domain",
+      values: {
+        free: false,
+        starter: false,
+        professional: false,
+        enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "API access",
+      values: {
+        free: false,
+        starter: false,
+        professional: false,
+        enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "Dedicated support",
+      values: comparisonValues((plan) => plan.features.hasDedicatedSupport),
+    },
+    {
+      label: "SLA",
+      values: comparisonValues((plan) => plan.features.hasSla),
+    },
+  ];
+}
 
 export function getPlan(planId: PlanId): PlanDefinition {
   return PLANS[planId];
@@ -205,7 +374,7 @@ export function formatPlanPrice(
   const price =
     interval === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
   if (price === null || price === undefined) return "Custom";
-  if (price === 0) return "Free";
+  if (price === 0) return `Free for ${TRIAL_DURATION_DAYS} days`;
   return interval === "yearly" ?
       `$${price}/yr`
     : `$${price}/mo`;

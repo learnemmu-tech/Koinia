@@ -19,6 +19,7 @@ import {
 } from "@/lib/postgres/session";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { timed } from "@/lib/perf";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
 
 export async function GET(request: Request) {
   const decoded = await verifyBearerToken(request);

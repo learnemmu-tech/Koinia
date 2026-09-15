@@ -119,6 +119,10 @@ export async function createChurchInOrganizationAction(
   input: CreateChurchInput
 ): Promise<{ churchId: string; branchId: string }> {
   await assertOrgAccess(userId, email, organizationId);
+  const { assertUsageAllowed } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertUsageAllowed(organizationId, "churches");
   return createChurchInOrganization(organizationId, input, userId);
 }
 

@@ -1,3 +1,6 @@
+import { getPlan } from "@/lib/subscription/plans";
+import type { PlanId } from "@/types/subscription";
+
 export function formatWorkspaceType(
   value: string | null | undefined
 ): string {
@@ -17,6 +20,16 @@ export function formatOrganizationStatus(
 
 export function formatPlanId(value: string | null | undefined): string {
   if (!value) return "None";
+  const planId = value.trim().toLowerCase();
+  if (
+    planId === "free" ||
+    planId === "starter" ||
+    planId === "professional" ||
+    planId === "enterprise"
+  ) {
+    const plan = getPlan(planId as PlanId);
+    return plan.badgeName ?? plan.name;
+  }
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 

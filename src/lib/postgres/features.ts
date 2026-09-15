@@ -1477,6 +1477,8 @@ export async function computeOrganizationUsage(
     church_admins: number;
     events: number;
     donation_campaigns: number;
+    shorts: number;
+    prayer_requests: number;
   }>(sql`
     SELECT
       (SELECT count(*)::int FROM church_memberships
@@ -1497,7 +1499,11 @@ export async function computeOrganizationUsage(
       (SELECT count(*)::int FROM events
         WHERE organization_id = ${organizationId}) AS events,
       (SELECT count(*)::int FROM donation_campaigns
-        WHERE organization_id = ${organizationId}) AS donation_campaigns
+        WHERE organization_id = ${organizationId}) AS donation_campaigns,
+      (SELECT count(*)::int FROM video_shorts
+        WHERE organization_id = ${organizationId}) AS shorts,
+      (SELECT count(*)::int FROM prayer_requests
+        WHERE organization_id = ${organizationId}) AS prayer_requests
   `);
   const row = result.rows?.[0];
 
@@ -1506,10 +1512,12 @@ export async function computeOrganizationUsage(
     songs: Number(row?.songs ?? 0),
     sermons: Number(row?.sermons ?? 0),
     articles: Number(row?.articles ?? 0),
-    churches: Math.max(1, Number(row?.churches ?? 0)),
+    churches: Number(row?.churches ?? 0),
     admins: Number(row?.org_admins ?? 0) + Number(row?.church_admins ?? 0),
     events: Number(row?.events ?? 0),
     donationCampaigns: Number(row?.donation_campaigns ?? 0),
+    shorts: Number(row?.shorts ?? 0),
+    prayerRequests: Number(row?.prayer_requests ?? 0),
   };
 }
 

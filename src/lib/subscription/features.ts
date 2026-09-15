@@ -6,6 +6,7 @@ import type {
 } from "@/types/subscription";
 
 import { getPlan } from "./plans";
+import { getTrialLifecycle } from "./trial";
 
 export function resolveFeatureFlags(
   planId: PlanId,
@@ -17,12 +18,22 @@ export function resolveFeatureFlags(
 }
 
 export function resolveFeatureFlagsFromSubscription(
-  subscription: Pick<ChurchSubscription, "planId" | "featureFlags">
+  subscription: Pick<
+    ChurchSubscription,
+    "planId" | "featureFlags" | "status" | "trialStart" | "trialEnd"
+  >
 ): SubscriptionFeatureFlags {
-  return resolveFeatureFlags(
+  const flags = resolveFeatureFlags(
     subscription.planId,
     subscription.featureFlags
   );
+  const trial = getTrialLifecycle(subscription);
+  return {
+    ...flags,
+    canUseShepherdAi: trial.isTrial
+      ? trial.shepherdAiAvailable
+      : flags.canUseShepherdAi,
+  };
 }
 
 export function hasFeature(
@@ -33,7 +44,10 @@ export function hasFeature(
 }
 
 export function canUseFeature(
-  subscription: Pick<ChurchSubscription, "planId" | "featureFlags">,
+  subscription: Pick<
+    ChurchSubscription,
+    "planId" | "featureFlags" | "status" | "trialStart" | "trialEnd"
+  >,
   key: FeatureFlagKey
 ): boolean {
   return hasFeature(resolveFeatureFlagsFromSubscription(subscription), key);

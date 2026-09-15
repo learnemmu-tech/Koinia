@@ -13,6 +13,10 @@ import {
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { getChurchById } from "@/lib/postgres/tenants";
 import {
+  assertChurchUsageAllowed,
+  isSubscriptionLimitError,
+} from "@/lib/subscription/subscription-server";
+import {
   SHORT_CATEGORIES,
   type ShortCategory,
   type ShortVisibility,
@@ -110,6 +114,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No active church context" }, { status: 400 });
     }
 
+    await assertChurchUsageAllowed(churchId, "shorts");
+
     const short = await createShortDraft({
       clerkId: verified.uid,
       email: verified.email,
@@ -127,6 +133,9 @@ export async function POST(request: Request) {
       organizationId: short.organizationId,
     });
   } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("[api/shorts]", error);
     const raw = error instanceof Error ? error.message : "";
     if (raw === "Forbidden" || raw.toLowerCase().includes("member")) {

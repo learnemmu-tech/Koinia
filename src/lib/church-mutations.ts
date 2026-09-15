@@ -16,6 +16,10 @@ export async function createChurch(input: CreateChurchInput): Promise<string> {
   if (!organizationId) {
     throw new Error("organizationId is required");
   }
+  const { assertUsageAllowed } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertUsageAllowed(organizationId, "churches");
   const created = await createChurchInOrganization(organizationId, input);
   return created.churchId;
 }

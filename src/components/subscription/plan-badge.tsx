@@ -44,6 +44,7 @@ export function PlanBadge({
   const plan = getPlan(planId);
   const style = PLAN_STYLES[planId];
   const Icon = planId === "enterprise" ? Crown : Sparkles;
+  const label = plan.badgeName ?? plan.name;
 
   const badge = (
     <Badge
@@ -57,7 +58,7 @@ export function PlanBadge({
       {showIcon ?
         <Icon className="size-3 shrink-0" aria-hidden />
       : null}
-      {plan.name}
+      {label}
     </Badge>
   );
 

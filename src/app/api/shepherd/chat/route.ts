@@ -18,6 +18,10 @@ import {
 import { resolveShepherdUserContext } from "@/lib/shepherd/resolve-context";
 import { shepherdChatRequestSchema } from "@/lib/shepherd/validation";
 import { rateLimitShepherdRequest } from "@/lib/rate-limit";
+import {
+  assertFeatureAllowed,
+  isSubscriptionLimitError,
+} from "@/lib/subscription/subscription-server";
 
 export const runtime = "nodejs";
 /** Allow Gemini stream + one cold retry within platform limits. */
@@ -100,6 +104,17 @@ export async function POST(request: Request) {
       { error: "A user message is required." },
       { status: 400 }
     );
+  }
+
+  if (context.organizationId) {
+    try {
+      await assertFeatureAllowed(context.organizationId, "canUseShepherdAi");
+    } catch (error) {
+      if (isSubscriptionLimitError(error)) {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
+      throw error;
+    }
   }
 
   if (isClearlyOffTopic(lastUser.content)) {

@@ -19,6 +19,10 @@ export async function createPrayerRequest(
   options?: { email?: string | null; organizationId?: string; branchId?: string }
 ): Promise<string> {
   const sanitized = sanitizePrayerRequestInput(values);
+  const { assertChurchUsageAllowed } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertChurchUsageAllowed(churchId, "prayerRequests");
   return insertPrayerRequest({
     churchId,
     userId,

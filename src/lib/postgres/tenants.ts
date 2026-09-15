@@ -14,8 +14,9 @@ import {
 } from "@/db/schema";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { slugifyChurchSlug } from "@/lib/church-scope";
-import { isPostgresUuid } from "@/lib/postgres/uuid";
 import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
+import { isPostgresUuid } from "@/lib/postgres/uuid";
+import { getTrialEndDate } from "@/lib/subscription/trial";
 import { resolvePrimaryBranchMembership } from "@/lib/auth/workspace-access";
 import {
   getAppUserByClerkId,
@@ -239,12 +240,15 @@ export async function ensureSubscriptionDocument(organizationId: string) {
     .where(eq(subscriptions.organizationId, orgId))
     .limit(1);
   if (existing) return existing;
+  const now = new Date();
   const [created] = await db
     .insert(subscriptions)
     .values({
       organizationId: orgId,
       planId: "free",
-      status: "active",
+      status: "trialing",
+      trialStart: now,
+      trialEnd: getTrialEndDate(now),
     })
     .returning();
   return created ?? null;
