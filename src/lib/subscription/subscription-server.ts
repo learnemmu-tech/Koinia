@@ -63,7 +63,11 @@ export async function getSubscriptionSnapshot(
     preloadedSubscription ??
     (await getSubscriptionByOrganizationId(organizationId));
   const plan = getPlan(subscription.planId);
-  const limits = getPlanLimits(subscription.planId);
+  const paidPeriodExpired =
+    subscription.planId !== "free" &&
+    subscription.currentPeriodEnd != null &&
+    subscription.currentPeriodEnd <= Date.now();
+  const limits = getPlanLimits(paidPeriodExpired ? "free" : subscription.planId);
   const features = resolveFeatureFlagsFromSubscription(subscription);
   const usage = await computeOrganizationUsage(organizationId);
   const usageChecks = buildUsageChecks(usage, limits);
@@ -118,6 +122,14 @@ function assertTrialWritable(snapshot: SubscriptionSnapshot): void {
   if (snapshot.trial.phase === "expired") {
     throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
   }
+}
+
+export async function assertSubscriptionWritable(
+  organizationId: string
+): Promise<void> {
+  const orgId = organizationId.trim();
+  if (!orgId) return;
+  assertTrialWritable(await getSubscriptionSnapshot(orgId));
 }
 
 export async function assertUsageAllowed(

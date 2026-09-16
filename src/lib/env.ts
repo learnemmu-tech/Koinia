@@ -22,6 +22,13 @@ export const env = createEnv({
     ADMIN_NOTIFICATION_EMAIL: z.string().email().optional(),
     CONTACT_EMAIL: z.string().email().optional(),
 
+    RAZORPAY_KEY: z.string().optional(),
+    RAZORPAY_SECRET_KEY: z.string().optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+    RAZORPAY_STARTER_PLAN_ID: z.string().optional(),
+    RAZORPAY_PROFESSIONAL_PLAN_ID: z.string().optional(),
+    RAZORPAY_SUBSCRIPTION_TOTAL_COUNT: z.string().optional(),
+
     /** Shepherd AI — server-only. Never expose via NEXT_PUBLIC_. */
     GEMINI_API_KEY: z.string().min(1).optional(),
     GEMINI_MODEL: z.string().min(1).optional(),

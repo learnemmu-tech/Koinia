@@ -102,3 +102,86 @@ export const prayerIntercessions = pgTable(
     index("prayer_intercessions_user_id_idx").on(table.userId),
   ]
 );
+
+export const prayerResponses = pgTable(
+  "prayer_responses",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    prayerRequestId: uuid("prayer_request_id")
+      .notNull()
+      .references(() => prayerRequests.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id"),
+    content: text("content").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.parentId],
+      foreignColumns: [table.id],
+      name: "prayer_responses_parent_id_fk",
+    }).onDelete("set null"),
+    index("prayer_responses_request_created_at_idx").on(
+      table.prayerRequestId,
+      table.createdAt
+    ),
+    index("prayer_responses_parent_id_idx").on(table.parentId),
+    index("prayer_responses_author_id_idx").on(table.authorId),
+  ]
+);
+
+export const prayerResponseLikes = pgTable(
+  "prayer_response_likes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    responseId: uuid("response_id")
+      .notNull()
+      .references(() => prayerResponses.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("prayer_response_likes_response_user_unique").on(
+      table.responseId,
+      table.userId
+    ),
+    index("prayer_response_likes_response_id_idx").on(table.responseId),
+  ]
+);
+
+export const prayerResponseReports = pgTable(
+  "prayer_response_reports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    responseId: uuid("response_id")
+      .notNull()
+      .references(() => prayerResponses.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("prayer_response_reports_response_user_unique").on(
+      table.responseId,
+      table.userId
+    ),
+    index("prayer_response_reports_response_id_idx").on(table.responseId),
+  ]
+);

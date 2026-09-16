@@ -4,6 +4,10 @@ import Link from "next/link";
 import { Check, Mail, X } from "lucide-react";
 
 import { PlanBadge } from "@/components/subscription/plan-badge";
+import {
+  CancelRazorpaySubscriptionButton,
+  RazorpaySubscriptionButton,
+} from "@/components/subscription/razorpay-subscription-button";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -76,6 +80,16 @@ export function BillingOverview({
   }
 
   const { plan, usageChecks, features, trial } = snapshot;
+  const paidDaysRemaining = snapshot.subscription.currentPeriodEnd
+    ? Math.max(
+        0,
+        Math.ceil((snapshot.subscription.currentPeriodEnd - Date.now()) / (24 * 60 * 60 * 1000))
+      )
+    : null;
+  const isPaidPlan = plan.id === "starter" || plan.id === "professional";
+  const periodEnd = snapshot.subscription.currentPeriodEnd
+    ? new Date(snapshot.subscription.currentPeriodEnd).toLocaleDateString()
+    : null;
   const usageByKey = new Map(usageChecks.map((item) => [item.key, item]));
   const displayedChecks = BILLING_USAGE_KEYS.map((key) => usageByKey.get(key)).filter(
     (item): item is NonNullable<typeof item> => Boolean(item)
@@ -116,6 +130,21 @@ export function BillingOverview({
           </div>
           <PlanBadge planId={plan.id} asLink />
         </div>
+        {isPaidPlan ?
+          <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 px-3 py-3 text-sm">
+            <p className="font-medium">
+              {snapshot.subscription.status === "active" ? "Active" : "Subscription needs attention"}
+            </p>
+            {periodEnd ?
+              <p className="mt-1 text-muted-foreground">
+                {snapshot.subscription.cancelAtPeriodEnd ? "Paid access ends" : "Renews"} on {periodEnd}
+                {paidDaysRemaining != null ?
+                  ` (${paidDaysRemaining} ${paidDaysRemaining === 1 ? "day" : "days"})`
+                : null}
+              </p>
+            : null}
+          </div>
+        : null}
         {trial.phase === "reminder" ?
           <p className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
             Your 14-day trial ends in {trial.daysRemaining}{" "}
@@ -125,8 +154,7 @@ export function BillingOverview({
         {trial.phase === "urgent" ?
           <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             Your trial expires in {trial.daysRemaining}{" "}
-            {trial.daysRemaining === 1 ? "day" : "days"}. Paid plans are coming soon — your
-            content stays available to view.
+            {trial.daysRemaining === 1 ? "day" : "days"}. Your content stays available to view.
           </p>
         : null}
         {trial.phase === "expired" ?
@@ -139,11 +167,13 @@ export function BillingOverview({
           <Button variant="outline" size="sm" asChild>
             <Link href="/pricing">Compare plans</Link>
           </Button>
-          {plan.id !== "enterprise" && showUpgradeOptions ?
-            <Button size="sm" disabled>
-              Upgrade — Coming Soon
-            </Button>
+          {!isPaidPlan && showUpgradeOptions ?
+            <RazorpaySubscriptionButton planId="starter" label="Start Starter" onComplete={onRetry} />
           : null}
+          {plan.id === "starter" && showUpgradeOptions ?
+            <RazorpaySubscriptionButton planId="professional" label="Upgrade to Professional" onComplete={onRetry} />
+          : null}
+          {isPaidPlan ? <CancelRazorpaySubscriptionButton onComplete={onRetry} /> : null}
           {plan.id === "enterprise" || plan.contactSales ?
             <Button size="sm" asChild>
               <Link href={`mailto:${siteConfig.author.email}?subject=Enterprise%20Plan`}>
@@ -197,11 +227,10 @@ export function BillingOverview({
         <section className="rounded-2xl border border-border/60 bg-muted/20 p-5 sm:p-6">
           <h3 className="font-semibold">Upgrade options</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Payment integration coming soon. Compare plans or contact sales for
-            Enterprise.
+            Start a paid plan with Razorpay or contact sales for Enterprise.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {PLAN_ORDER.filter((id) => id !== plan.id).map((id) => {
+            {PLAN_ORDER.filter((id) => id !== plan.id && id !== "free").map((id) => {
               const p = PLANS[id];
               return (
                 <div
@@ -215,6 +244,15 @@ export function BillingOverview({
                   <p className="mt-1 text-xs text-muted-foreground">
                     {p.tagline}
                   </p>
+                  {id === "starter" || id === "professional" ?
+                    <div className="mt-3">
+                      <RazorpaySubscriptionButton
+                        planId={id}
+                        label="Start Subscription"
+                        onComplete={onRetry}
+                      />
+                    </div>
+                  : null}
                 </div>
               );
             })}

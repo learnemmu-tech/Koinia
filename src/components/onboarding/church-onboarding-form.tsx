@@ -238,7 +238,7 @@ export function ChurchOnboardingForm() {
         city: city.trim(),
         state: "N/A",
         country: country.trim(),
-        workspaceType,
+        workspaceType: "independent_church" as const,
       };
 
       const response = await fetch("/api/onboarding/church", {
@@ -359,9 +359,8 @@ export function ChurchOnboardingForm() {
           role: resolvedProfile.role,
           profile: resolvedProfile,
           membership: activeMembership,
-          churchesCount:
-            workspaceType === "multi_church_org" ? 0 : churches.length + 1,
-          workspaceType,
+          churchesCount: churches.length + 1,
+          workspaceType: "independent_church",
         });
       }
 
@@ -419,7 +418,10 @@ export function ChurchOnboardingForm() {
 
             className="h-11 min-w-[200px] rounded-lg px-8 text-[15px] font-medium"
 
-            onClick={() => setStep(2)}
+            onClick={() => {
+              setWorkspaceType("independent_church");
+              setStep(2);
+            }}
 
           >
 
@@ -512,11 +514,7 @@ export function ChurchOnboardingForm() {
 
             onChange={(e) => setName(e.target.value)}
 
-            placeholder={
-
-              isIndependent ? "Grace Gospel Chapel" : "Grace Ministries Network"
-
-            }
+            placeholder="Enter your church name"
 
             required
 

@@ -14,6 +14,7 @@ import { PrayerConfirmationEmail } from "@/emails/templates/prayer-confirmation-
 import { SermonPublishedEmail } from "@/emails/templates/sermon-published-email";
 import { ShortPublishedEmail } from "@/emails/templates/short-published-email";
 import { SongPublishedEmail } from "@/emails/templates/song-published-email";
+import { TrialLifecycleEmail } from "@/emails/templates/trial-lifecycle-email";
 import { WelcomeEmail } from "@/emails/templates/welcome-email";
 
 import { emailConfig } from "./config";
@@ -429,6 +430,20 @@ export const EmailService = {
         details: payload.details,
         actionUrl: payload.actionUrl,
       }),
+    });
+  },
+
+  async sendTrialLifecycleEmail(input: {
+    to: string | string[];
+    title: string;
+    message: string;
+    actionLabel: string;
+    actionUrl: string;
+  }): Promise<SendEmailResult> {
+    return sendEmail({
+      to: input.to,
+      subject: input.title,
+      react: TrialLifecycleEmail(input),
     });
   },
 };

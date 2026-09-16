@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cookies } from "next/headers";
 import { auth, clerkClient, verifyToken } from "@clerk/nextjs/server";
 
 export type VerifiedAuthUser = {
@@ -60,6 +61,36 @@ function emailFromClaims(claims: unknown): string | undefined {
   return undefined;
 }
 
+async function userFromJwt(
+  token: string,
+  secretKey: string
+): Promise<VerifiedAuthUser | null> {
+  try {
+    const payload = await verifyToken(token, { secretKey });
+    const uid = payload.sub;
+    if (!uid) return null;
+    return { uid, email: emailFromClaims(payload) };
+  } catch {
+    return null;
+  }
+}
+
+async function userFromSessionCookie(
+  secretKey: string
+): Promise<VerifiedAuthUser | null> {
+  try {
+    const store = await cookies();
+    const session =
+      store.get("__session")?.value ||
+      store.getAll().find((cookie) => cookie.name.startsWith("__session"))
+        ?.value;
+    if (!session) return null;
+    return userFromJwt(session, secretKey);
+  } catch {
+    return null;
+  }
+}
+
 export async function verifyBearerToken(
   request: Request
 ): Promise<VerifiedAuthUser | null> {
@@ -68,25 +99,25 @@ export async function verifyBearerToken(
 
   if (authHeader?.startsWith("Bearer ") && secretKey) {
     const token = authHeader.slice("Bearer ".length);
-    try {
-      const payload = await verifyToken(token, { secretKey });
-      const uid = payload.sub;
-      if (!uid) return null;
+    const fromBearer = await userFromJwt(token, secretKey);
+    if (fromBearer) return fromBearer;
+  }
 
-      return {
-        uid,
-        email: emailFromClaims(payload),
-      };
-    } catch {
-      // Fall through to cookie session.
-    }
+  // Prefer the session cookie before Clerk `auth()`, which can fail closed when
+  // an expired Authorization header is still present.
+  if (secretKey) {
+    const fromCookie = await userFromSessionCookie(secretKey);
+    if (fromCookie) return fromCookie;
   }
 
   try {
     const { userId, sessionClaims } = await auth();
-    if (!userId) return null;
-    return { uid: userId, email: emailFromClaims(sessionClaims) };
+    if (userId) {
+      return { uid: userId, email: emailFromClaims(sessionClaims) };
+    }
   } catch {
-    return null;
+    // Invalid or expired Authorization must not block a valid Clerk cookie session.
   }
+
+  return null;
 }

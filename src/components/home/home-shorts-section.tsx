@@ -101,8 +101,8 @@ export function HomeShortsSection({ shorts }: HomeShortsSectionProps) {
       />
       {visible.length === 0 ?
         <HomeEmptyState
-          title="Short videos coming soon"
-          description="Share encouragement, worship, and moments from your church community."
+          title="No short videos yet"
+          description="Share moments of faith, encouragement, worship, and community with your church."
         />
       : <HomeCollectionRail className="md:mx-0 md:grid md:max-w-4xl md:grid-cols-4 md:items-start md:overflow-visible md:px-0 lg:grid-cols-5">
           {visible.map((short) => (

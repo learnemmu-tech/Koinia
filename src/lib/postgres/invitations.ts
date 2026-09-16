@@ -205,6 +205,16 @@ export async function acceptInvitation(
     throw new Error("You already belong to another organization");
   }
 
+  const alreadyOrgMember = existingOrgMemberships.some(
+    (row) => row.organizationId === invitation.organizationId
+  );
+  if (pgRole === "org_admin" && !alreadyOrgMember) {
+    const { assertUsageAllowed } = await import(
+      "@/lib/subscription/subscription-server"
+    );
+    await assertUsageAllowed(invitation.organizationId, "admins");
+  }
+
   await db.transaction(async (tx) => {
     if (pgRole === "org_admin") {
       const [existing] = await tx

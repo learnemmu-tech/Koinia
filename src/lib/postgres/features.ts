@@ -113,6 +113,10 @@ const NOTIFICATION_PRESETS: Record<
     title: "New Book Published",
     message: "A new book has been published.",
   },
+  trial_lifecycle: {
+    title: "Trial update",
+    message: "Your FaithConnectHub trial has an important update.",
+  },
 };
 
 export type PendingDonationInput = {
@@ -262,6 +266,10 @@ export async function addSong(
   }
 
   const church = await requireChurch(churchId);
+  if (church.organizationId) {
+    const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+    await assertUsageAllowed(church.organizationId, "songs");
+  }
   const [row] = await db
     .insert(songs)
     .values({
@@ -438,6 +446,10 @@ export async function createSermon(input: CreateSermonInput): Promise<string> {
   }
 
   const church = await requireChurch(input.churchId);
+  if (church.organizationId) {
+    const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+    await assertUsageAllowed(church.organizationId, "sermons");
+  }
   const creator = input.createdBy ? await getAppUserByClerkId(input.createdBy) : null;
   const [row] = await db
     .insert(sermons)
@@ -602,6 +614,10 @@ export async function createArticle(input: CreateArticleInput): Promise<string> 
   }
 
   const church = await requireChurch(input.churchId);
+  if (church.organizationId) {
+    const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+    await assertUsageAllowed(church.organizationId, "articles");
+  }
   const creator = input.createdBy ? await getAppUserByClerkId(input.createdBy) : null;
   const [row] = await db
     .insert(articles)
@@ -724,6 +740,10 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
   }
 
   const church = await requireChurch(input.churchId);
+  if (church.organizationId) {
+    const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+    await assertUsageAllowed(church.organizationId, "events");
+  }
   const [row] = await db
     .insert(events)
     .values({

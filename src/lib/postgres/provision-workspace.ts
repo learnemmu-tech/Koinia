@@ -8,12 +8,14 @@ import {
   churches,
   organizationMemberships,
   organizations,
+  subscriptions,
   users,
 } from "@/db/schema";
 import { slugifyChurchSlug } from "@/lib/church-scope";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
 import type { WorkspaceType } from "@/types/organization";
+import { getTrialEndDate } from "@/lib/subscription/trial";
 
 export type PostgresWorkspaceProvisionInput = {
   name: string;
@@ -244,6 +246,17 @@ export async function provisionWorkspaceInPostgres(
           status: "active",
         });
       }
+    }
+
+    if (organizationCreated) {
+      const trialStart = new Date();
+      await tx.insert(subscriptions).values({
+        organizationId,
+        planId: "free",
+        status: "trialing",
+        trialStart,
+        trialEnd: getTrialEndDate(trialStart),
+      });
     }
 
     await tx

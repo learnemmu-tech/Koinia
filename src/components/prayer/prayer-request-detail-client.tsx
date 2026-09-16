@@ -12,6 +12,7 @@ import {
 import { PrayerCountStat } from "@/components/prayer/prayer-count-stat";
 import { PrayButton } from "@/components/prayer/pray-button";
 import { SharePrayerRequestButton } from "@/components/prayer/share-prayer-request-button";
+import { PrayerConversation } from "@/components/prayer/prayer-conversation";
 import { usePrayerRequest } from "@/hooks/use-prayer-request";
 import {
   formatPrayerDate,
@@ -121,6 +122,8 @@ export function PrayerRequestDetailClient({
           </div>
         </div>
       </div>
+
+      <PrayerConversation requestId={request.id} />
     </article>
   );
 }

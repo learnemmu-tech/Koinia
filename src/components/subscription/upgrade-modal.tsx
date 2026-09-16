@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight, Mail } from "lucide-react";
 
 import { PlanBadge } from "@/components/subscription/plan-badge";
+import { RazorpaySubscriptionButton } from "@/components/subscription/razorpay-subscription-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,6 +38,10 @@ export function UpgradeModal() {
     : undefined;
 
   const isEnterprise = recommendedPlan.contactSales;
+  const paidPlanId =
+    recommendedPlan.id === "starter" || recommendedPlan.id === "professional"
+      ? recommendedPlan.id
+      : null;
 
   return (
     <Dialog
@@ -123,7 +128,12 @@ export function UpgradeModal() {
                   Contact Sales
                 </Link>
               </Button>
-            : <Button disabled>Coming Soon</Button>}
+            : paidPlanId ?
+              <RazorpaySubscriptionButton
+                planId={paidPlanId}
+                label="Start Subscription"
+              />
+            : null}
           </div>
         </DialogFooter>
       </DialogContent>

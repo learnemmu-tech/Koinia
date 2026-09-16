@@ -54,6 +54,11 @@ export const NOTIFICATION_PRESETS: Record<
     message: "A new book has been published.",
     pathPrefix: "/books",
   },
+  trial_lifecycle: {
+    title: "Trial update",
+    message: "Your FaithConnectHub trial has an important update.",
+    pathPrefix: "/dashboard/billing",
+  },
 };
 
 async function createPublishNotificationViaApi(input: {

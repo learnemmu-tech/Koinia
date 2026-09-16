@@ -1,4 +1,4 @@
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { verifyChurchContentPublisher } from "@/lib/auth/verify-church-content-publisher";
@@ -85,14 +85,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  after(() =>
-    triggerContentAnnouncementEmails(
+  try {
+    await triggerContentAnnouncementEmails(
       body.type as ContentPublishEmailType,
       body.contentId
-    ).catch((error) => {
-      console.error("[api/email/content-published]", error);
-    })
-  );
+    );
+  } catch (error) {
+    console.error("[api/email/content-published]", error);
+  }
 
   return NextResponse.json({ success: true });
 }

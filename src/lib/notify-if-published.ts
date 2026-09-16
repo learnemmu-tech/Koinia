@@ -3,6 +3,7 @@ import type { EventStatus } from "@/types/firebase-event";
 import type { PrayerRequestStatus } from "@/types/firebase-prayer-request";
 import type { DonationCampaignStatus } from "@/types/firebase-donation";
 
+import { firebaseAuth } from "@/lib/firebase-auth-service";
 import { createPublishNotification } from "@/lib/firebase-notification-queries";
 
 type ContentEmailType = Extract<
@@ -10,60 +11,85 @@ type ContentEmailType = Extract<
   "song" | "article" | "sermon"
 >;
 
+async function resolveFreshIdToken(fallback?: string): Promise<string | undefined> {
+  try {
+    const user = firebaseAuth.currentUser;
+    if (user) {
+      return await user.getIdToken(true);
+    }
+  } catch (error) {
+    console.error("[email] failed to refresh auth token:", error);
+  }
+  return fallback?.trim() || undefined;
+}
+
+function postEmailNotification(
+  path: string,
+  body: Record<string, string>,
+  idToken: string,
+  label: string
+): void {
+  void fetch(path, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(body),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        console.error(`[email] ${label} dispatch rejected`, {
+          status: response.status,
+        });
+      }
+    })
+    .catch((error) => {
+      console.error(`[email] ${label} dispatch failed:`, error);
+    });
+}
+
 function dispatchContentPublishedEmail(
   type: ContentEmailType | "donation_campaign",
   contentId: string,
   idToken?: string
 ): void {
-  if (!idToken) return;
-
-  void fetch("/api/email/content-published", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ type, contentId }),
-  }).catch((error) => {
-    console.error(`[email] ${type} dispatch failed:`, error);
-  });
-}
-
-function dispatchEventPublishedEmail(eventId: string, idToken?: string): void {
-  if (!idToken) return;
-
-  void fetch("/api/email/event-published", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ eventId }),
-  }).catch((error) => {
-    console.error("[email] event dispatch failed:", error);
+  void resolveFreshIdToken(idToken).then((token) => {
+    if (!token) {
+      console.error(`[email] ${type} dispatch skipped: missing auth token`);
+      return;
+    }
+    postEmailNotification(
+      "/api/email/content-published",
+      { type, contentId },
+      token,
+      type
+    );
   });
 }
 
 function dispatchPrayerApprovedEmail(prayerId: string, idToken?: string): void {
-  if (!idToken) return;
-
-  void fetch("/api/email/prayer-approved", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ prayerId }),
-  }).catch((error) => {
-    console.error("[email] prayer approved dispatch failed:", error);
+  void resolveFreshIdToken(idToken).then((token) => {
+    if (!token) {
+      console.error("[email] prayer approved dispatch skipped: missing auth token");
+      return;
+    }
+    postEmailNotification(
+      "/api/email/prayer-approved",
+      { prayerId },
+      token,
+      "prayer approved"
+    );
   });
 }
 
 /**
  * Safe wrapper used by admin publish flows.
  *
- * - Only fires when content transitions into a published state.
- * - Never throws: a notification failure must not break content creation.
+ * In-app notifications are created here. Song/sermon/article/event emails are
+ * scheduled by POST /api/content so a stale client token cannot drop them.
+ * Never throws: a notification failure must not break content creation.
  */
 export async function notifyIfNewlyPublished(input: {
   type: ContentEmailType;
@@ -89,8 +115,6 @@ export async function notifyIfNewlyPublished(input: {
   }).catch((error) => {
     console.error("[notifyIfNewlyPublished] notification dispatch failed:", error);
   });
-
-  dispatchContentPublishedEmail(input.type, input.contentId, input.idToken);
 }
 
 export async function notifyIfEventPublished(input: {
@@ -117,8 +141,6 @@ export async function notifyIfEventPublished(input: {
   }).catch((error) => {
     console.error("[notifyIfEventPublished] notification dispatch failed:", error);
   });
-
-  dispatchEventPublishedEmail(input.contentId, input.idToken);
 }
 
 export async function notifyIfDonationCampaignPublished(input: {

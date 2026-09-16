@@ -359,7 +359,7 @@ html.dark .auth-light,
   }
 
   .auth-light .auth-logo-img {
-    width: 220px !important;
+    width: min(100%, 17rem) !important;
   }
 
   .auth-light .auth-form-slot .font-heading {
@@ -398,7 +398,7 @@ html.dark .auth-light,
   }
 
   .auth-light .auth-logo-img {
-    width: 210px !important;
+    width: min(100%, 16rem) !important;
   }
 
   .auth-light .auth-form-slot .font-heading {

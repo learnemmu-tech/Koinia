@@ -372,6 +372,8 @@ export async function createShortDraft(input: {
   if (!church?.organizationId) {
     throw new Error("Church not found.");
   }
+  const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+  await assertUsageAllowed(church.organizationId, "shorts");
 
   const [inserted] = await db
     .insert(videoShorts)
@@ -415,6 +417,13 @@ export async function publishShort(input: {
   );
   if (!isOwner && !isAdmin) {
     throw new Error("Unauthorized");
+  }
+
+  if (short.organizationId) {
+    const { assertSubscriptionWritable } = await import(
+      "@/lib/subscription/subscription-server"
+    );
+    await assertSubscriptionWritable(short.organizationId);
   }
 
   const now = new Date();

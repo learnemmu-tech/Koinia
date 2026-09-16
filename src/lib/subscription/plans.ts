@@ -80,7 +80,7 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     id: "free",
     name: "14-Day Free Trial",
     badgeName: "Trial",
-    tagline: "Explore FaithConnectHub for your church.",
+    tagline: "Explore FaithConnectHub for your church...",
     description:
       "A 14-day trial for a newly created church workspace. Limits apply; donations are not included.",
     monthlyPrice: 0,

@@ -10,7 +10,8 @@ type AuthPlatformBrandProps = {
 
 /**
  * Horizontal FaithConnectHub lockup for Sign In / Sign Up only.
- * Intrinsic size is 327×85; displayed width stays modest on all viewports.
+ * Medium display size: larger than the original compact mark, without
+ * filling the form column. Aspect ratio is unchanged.
  */
 export function AuthPlatformBrand({
   className,
@@ -26,12 +27,12 @@ export function AuthPlatformBrand({
       aria-label="FaithConnectHub"
     >
       <Image
-        src="/images/faithconnecthub-lockup-auth.png"
+        src="/images/faithconnecthub-lockup-transparent.png"
         alt="FaithConnectHub"
-        width={327}
-        height={85}
+        width={352}
+        height={90}
         priority
-        className="auth-logo-img h-auto w-[min(100%,248px)] max-w-full bg-transparent object-contain object-left"
+        className="auth-logo-img h-auto w-[min(100%,18.5rem)] max-w-full bg-transparent object-contain object-left"
       />
     </Link>
   );

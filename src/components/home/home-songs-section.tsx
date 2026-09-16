@@ -25,8 +25,8 @@ export function HomeSongsSection({ songs }: HomeSongsSectionProps) {
       />
       {visible.length === 0 ?
         <HomeEmptyState
-          title="No songs yet"
-          description="Check back soon for new worship songs."
+          title="No worship songs added yet"
+          description="Build your church's worship library by adding your first song."
         />
       : <HomeCollectionRail className="md:mx-0 md:grid md:grid-cols-3 md:items-start md:overflow-visible md:px-0 lg:grid-cols-5">
           {visible.map((song) => (

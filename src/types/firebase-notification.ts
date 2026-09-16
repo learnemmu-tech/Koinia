@@ -6,7 +6,8 @@ export type NotificationContentType =
   | "prayer"
   | "prayer_request_submitted"
   | "membership_approved"
-  | "book";
+  | "book"
+  | "trial_lifecycle";
 
 export type FirebaseNotification = {
   id: string;

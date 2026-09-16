@@ -18,7 +18,7 @@ export function TrialLifecycleBanner() {
 
   const message =
     trial.phase === "expired" ?
-      "Your 14-day trial has ended. Existing content is preserved and remains available to view."
+      "Your FaithConnectHub trial has ended. Your existing data is safe, but restricted access now applies. Subscribe to restore paid features."
     : trial.phase === "urgent" ?
       `Your trial expires in ${days} ${dayLabel}. Existing content will be preserved.`
     : `Your 14-day trial ends in ${days} ${dayLabel}. Existing content will be preserved.`;
@@ -35,8 +35,8 @@ export function TrialLifecycleBanner() {
       role="status"
     >
       {message}{" "}
-      <Link href="/pricing" className="font-medium underline underline-offset-2">
-        View plans
+      <Link href={trial.phase === "expired" ? "/pricing" : "/dashboard/billing"} className="font-medium underline underline-offset-2">
+        {trial.phase === "expired" ? "Choose a plan" : trial.phase === "urgent" ? "Start subscription" : "View plans"}
       </Link>
     </div>
   );

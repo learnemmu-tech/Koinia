@@ -55,6 +55,8 @@ function NotificationTypeIcon({
       return <HeartHandshake className={className} aria-hidden />;
     case "membership_approved":
       return <Users className={className} aria-hidden />;
+    case "trial_lifecycle":
+      return <Bell className={className} aria-hidden />;
     default:
       return <Music className={className} aria-hidden />;
   }

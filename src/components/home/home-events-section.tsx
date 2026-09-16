@@ -29,8 +29,8 @@ export function HomeEventsSection({ events }: HomeEventsSectionProps) {
       />
       {visible.length === 0 ?
         <HomeEmptyState
-          title="No upcoming events"
-          description="Check back soon for new gatherings."
+          title="No events scheduled yet"
+          description="Create your first church event to keep your community connected."
         />
       : <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {visible.map((event) => (

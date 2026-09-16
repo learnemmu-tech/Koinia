@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Mail, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { RazorpaySubscriptionButton } from "@/components/subscription/razorpay-subscription-button";
 import {
   Card,
   CardContent,
@@ -183,9 +184,14 @@ export function PricingPageClient() {
                   <Button variant="outline" className="w-full" asChild>
                     <Link href="/signup">{plan.ctaLabel ?? "Start 14-day trial"}</Link>
                   </Button>
-                : <Button className="w-full" disabled>
-                    Coming Soon
-                  </Button>}
+                : planId === "starter" || planId === "professional" ?
+                  <div className="w-full">
+                    <RazorpaySubscriptionButton
+                      planId={planId}
+                      label="Start Subscription"
+                    />
+                  </div>
+                : null}
               </CardFooter>
             </Card>
           );

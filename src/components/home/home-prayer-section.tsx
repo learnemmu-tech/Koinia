@@ -23,7 +23,7 @@ export function HomePrayerSection({ requests }: HomePrayerSectionProps) {
       {visible.length === 0 ?
         <HomeEmptyState
           title="No prayer requests yet"
-          description="Check back soon to pray with the community."
+          description="This prayer wall is ready. Members can share requests once your church begins posting them."
         />
       : <HomeCollectionRail className="md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-4">
           {visible.map((request) => (

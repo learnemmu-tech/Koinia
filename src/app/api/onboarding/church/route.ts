@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const country = body.country?.trim();
     const city = body.city?.trim();
     const state = body.state?.trim();
-    const workspaceType = body.workspaceType?.trim() ?? "independent_church";
+    const requestedWorkspaceType = body.workspaceType?.trim() ?? "independent_church";
 
     if (!name) {
       return NextResponse.json(
@@ -46,12 +46,14 @@ export async function POST(request: Request) {
     if (!state) {
       return NextResponse.json({ error: "State is required" }, { status: 400 });
     }
-    if (!isWorkspaceType(workspaceType)) {
+    if (!isWorkspaceType(requestedWorkspaceType)) {
       return NextResponse.json(
         { error: "Invalid workspace type" },
         { status: 400 }
       );
     }
+
+    const workspaceType: WorkspaceType = "independent_church";
 
     const payload: FirstChurchOnboardingInput = {
       name,

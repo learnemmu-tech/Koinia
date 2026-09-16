@@ -22,7 +22,7 @@ export const siteConfig = {
   author: {
     name: "FaithConnectHub",
     url: "https://www.youtube.com  ",
-    email: "privacy@faithconnecthub.org",
+    email: "emmanuel012k@gmail.com",
     x: "",
   },
 

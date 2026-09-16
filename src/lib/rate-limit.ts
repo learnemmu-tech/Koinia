@@ -114,6 +114,19 @@ export async function rateLimitDonationCheckout(
   );
 }
 
+export async function rateLimitSubscriptionRequest(
+  identifier: string,
+  limit = 10,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(
+    `subscription:${identifier}`,
+    "fch-subscription",
+    limit,
+    windowMs
+  );
+}
+
 /** Authenticated uploads — blunt force / storage abuse. */
 export async function rateLimitUploadRequest(
   identifier: string,

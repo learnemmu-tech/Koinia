@@ -161,6 +161,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "prayer_request_submitted",
   "membership_approved",
   "book",
+  "trial_lifecycle",
 ]);
 
 export const favoriteItemTypeEnum = pgEnum("favorite_item_type", [

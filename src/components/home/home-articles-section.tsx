@@ -29,8 +29,8 @@ export function HomeArticlesSection({ articles }: HomeArticlesSectionProps) {
       />
       {visible.length === 0 ?
         <HomeEmptyState
-          title="No articles yet"
-          description="Check back soon for new writing from the community."
+          title="No articles published yet"
+          description="Share teachings, reflections, and updates with your church community."
         />
       : <HomeCollectionRail className="md:mx-0 md:grid md:grid-cols-2 md:items-stretch md:overflow-visible md:px-0 lg:grid-cols-4">
           {visible.map((article) => (

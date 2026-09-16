@@ -78,14 +78,36 @@ async function listEligibleChurchEmailRecipients(input: {
   return [...recipients.values()];
 }
 
-async function sendEmailBatch<T>(
+async function sendEmailBatch(
   recipients: EmailRecipient[],
-  send: (recipient: EmailRecipient) => Promise<T>
+  send: (recipient: EmailRecipient) => Promise<SendEmailResult | void>
 ): Promise<void> {
   const batchSize = 25;
   for (let index = 0; index < recipients.length; index += batchSize) {
     const batch = recipients.slice(index, index + batchSize);
-    await Promise.allSettled(batch.map(send));
+    const results = await Promise.allSettled(batch.map(send));
+    for (const result of results) {
+      if (result.status === "rejected") {
+        const message =
+          result.reason instanceof Error ? result.reason.message : "unknown";
+        console.error("[email] recipient send failed", { error: message });
+        continue;
+      }
+      const value = result.value;
+      if (
+        value &&
+        typeof value === "object" &&
+        "success" in value &&
+        value.success === false
+      ) {
+        console.error("[email] recipient send unsuccessful", {
+          error:
+            "error" in value && typeof value.error === "string"
+              ? value.error
+              : "unknown",
+        });
+      }
+    }
   }
 }
 
@@ -433,6 +455,10 @@ export async function triggerEventAnnouncementEmails(
       preferenceKey: "event",
       excludeClerkId,
     });
+    console.info("[email] event announcement", {
+      eventId,
+      recipientCount: recipients.length,
+    });
 
     dispatchSuperAdminNotification("admin-event-published", {
       type: "content_published",
@@ -469,7 +495,13 @@ export async function triggerContentAnnouncementEmails(
     switch (type) {
       case "song": {
         const song = await getSongById(contentId);
-        if (!song || song.published === false) return;
+        if (!song || song.published === false) {
+          console.info("[email] song announcement skipped", {
+            contentId,
+            reason: !song ? "not-found" : "unpublished",
+          });
+          return;
+        }
 
         const artist = getSongArtistLine(song);
         const description = [artist, song.scriptureReference, song.category]
@@ -480,6 +512,10 @@ export async function triggerContentAnnouncementEmails(
           churchId: song.churchId,
           preferenceKey: "song",
           excludeClerkId,
+        });
+        console.info("[email] song announcement", {
+          contentId,
+          recipientCount: recipients.length,
         });
 
         dispatchSuperAdminNotification("admin-song-published", {
@@ -505,12 +541,22 @@ export async function triggerContentAnnouncementEmails(
 
       case "sermon": {
         const sermon = await getSermonById(contentId);
-        if (!sermon || !sermon.isPublished) return;
+        if (!sermon || !sermon.isPublished) {
+          console.info("[email] sermon announcement skipped", {
+            contentId,
+            reason: !sermon ? "not-found" : "unpublished",
+          });
+          return;
+        }
 
         const recipients = await listEligibleChurchEmailRecipients({
           churchId: sermon.churchId,
           preferenceKey: "sermon",
           excludeClerkId,
+        });
+        console.info("[email] sermon announcement", {
+          contentId,
+          recipientCount: recipients.length,
         });
 
         dispatchSuperAdminNotification("admin-sermon-published", {
@@ -537,12 +583,22 @@ export async function triggerContentAnnouncementEmails(
 
       case "article": {
         const article = await getArticleById(contentId);
-        if (!article || !article.isPublished) return;
+        if (!article || !article.isPublished) {
+          console.info("[email] article announcement skipped", {
+            contentId,
+            reason: !article ? "not-found" : "unpublished",
+          });
+          return;
+        }
 
         const recipients = await listEligibleChurchEmailRecipients({
           churchId: article.churchId,
           preferenceKey: "article",
           excludeClerkId,
+        });
+        console.info("[email] article announcement", {
+          contentId,
+          recipientCount: recipients.length,
         });
 
         dispatchSuperAdminNotification("admin-article-published", {
@@ -579,6 +635,10 @@ export async function triggerContentAnnouncementEmails(
           churchId: campaign.churchId,
           preferenceKey: "donation",
           excludeClerkId,
+        });
+        console.info("[email] donation campaign announcement", {
+          contentId,
+          recipientCount: recipients.length,
         });
 
         dispatchSuperAdminNotification("admin-donation-campaign-published", {

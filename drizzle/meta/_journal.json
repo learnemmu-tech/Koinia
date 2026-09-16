@@ -50,6 +50,27 @@
       "when": 1789000000000,
       "tag": "0006_notification_book_type",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789498471198,
+      "tag": "0007_razorpay_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789549023546,
+      "tag": "0008_tidy_infant_terrible",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789551929002,
+      "tag": "0009_clammy_thor_girl",
+      "breakpoints": true
     }
   ]
 }

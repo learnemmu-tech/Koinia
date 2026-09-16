@@ -24,11 +24,15 @@ type RazorpayPayment = {
 };
 
 function getRazorpayKeyId(): string | null {
-  return process.env.RAZORPAY_KEY_ID?.trim() || null;
+  return process.env.RAZORPAY_KEY?.trim() || process.env.RAZORPAY_KEY_ID?.trim() || null;
 }
 
 function getRazorpayKeySecret(): string | null {
-  return process.env.RAZORPAY_KEY_SECRET?.trim() || null;
+  return (
+    process.env.RAZORPAY_SECRET_KEY?.trim() ||
+    process.env.RAZORPAY_KEY_SECRET?.trim() ||
+    null
+  );
 }
 
 function getRazorpayWebhookSecret(): string | null {
@@ -43,7 +47,7 @@ function getAuthHeader(): string {
   const keyId = getRazorpayKeyId();
   const keySecret = getRazorpayKeySecret();
   if (!keyId || !keySecret) {
-    throw new Error("Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+    throw new Error("Razorpay is not configured.");
   }
   return `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`;
 }

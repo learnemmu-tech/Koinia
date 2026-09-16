@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 
 import { completeDonationPayment } from "@/lib/donation-server";
+import {
+  parseRazorpaySubscriptionEvent,
+  verifyRazorpayWebhookSignature,
+} from "@/lib/payments/razorpay-subscriptions";
 import { getPaymentProvider } from "@/lib/payments";
+import {
+  applyRazorpaySubscriptionEvent,
+  claimRazorpayWebhookEvent,
+  failSubscriptionCheckoutByProviderId,
+  markRazorpayWebhookEventProcessed,
+} from "@/lib/subscription/razorpay-subscription-server";
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +30,51 @@ export async function POST(request: Request) {
     const signature = request.headers.get("x-razorpay-signature");
     if (!signature) {
       return NextResponse.json({ error: "Missing signature." }, { status: 400 });
+    }
+
+    if (!verifyRazorpayWebhookSignature(payload, signature)) {
+      return NextResponse.json({ error: "Invalid webhook signature." }, { status: 400 });
+    }
+
+    const subscriptionEvent = parseRazorpaySubscriptionEvent(payload);
+    if (subscriptionEvent.event === "payment.failed") {
+      const paymentSubscriptionId = (
+        subscriptionEvent as typeof subscriptionEvent & {
+          payload?: { payment?: { entity?: { subscription_id?: string } } };
+        }
+      ).payload?.payment?.entity?.subscription_id;
+      if (paymentSubscriptionId) {
+        const eventId =
+          subscriptionEvent.id ?? createHash("sha256").update(payload).digest("hex");
+        const claimed = await claimRazorpayWebhookEvent({
+          eventId,
+          eventType: subscriptionEvent.event,
+          subscriptionId: paymentSubscriptionId,
+        });
+        if (!claimed) return NextResponse.json({ received: true });
+        await failSubscriptionCheckoutByProviderId(paymentSubscriptionId);
+        await markRazorpayWebhookEventProcessed(eventId);
+        return NextResponse.json({ received: true });
+      }
+    }
+    if (subscriptionEvent.event.startsWith("subscription.")) {
+      const subscription = subscriptionEvent.payload?.subscription?.entity;
+      if (!subscription) {
+        return NextResponse.json({ error: "Invalid subscription webhook." }, { status: 400 });
+      }
+
+      const eventId =
+        subscriptionEvent.id ?? createHash("sha256").update(payload).digest("hex");
+      const claimed = await claimRazorpayWebhookEvent({
+        eventId,
+        eventType: subscriptionEvent.event,
+        subscriptionId: subscription.id,
+      });
+      if (!claimed) return NextResponse.json({ received: true });
+
+      await applyRazorpaySubscriptionEvent(subscription, subscriptionEvent.event);
+      await markRazorpayWebhookEventProcessed(eventId);
+      return NextResponse.json({ received: true });
     }
 
     const provider = getPaymentProvider("razorpay");

@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import {
+  dispatchChurchContentPublishEmails,
+  isStoredContentPublished,
+  willUpdatePublishContent,
+} from "@/lib/email/schedule-content-publish";
+import {
   addSong,
   createArticle,
   createEvent,
@@ -25,8 +30,8 @@ import { userCanManageChurch } from "@/lib/postgres/session";
 import { getChurchById } from "@/lib/postgres/tenants";
 import {
   assertChurchUsageAllowed,
+  assertSubscriptionWritable,
   isSubscriptionLimitError,
-  SubscriptionLimitError,
 } from "@/lib/subscription/subscription-server";
 import { timed } from "@/lib/perf";
 import type { CreateArticleInput, UpdateArticleInput } from "@/types/firebase-article";
@@ -53,6 +58,9 @@ function isCollection(value: string): value is CollectionName {
 type ContentRecord = {
   contentScope?: string;
   churchId?: string | null;
+  published?: boolean;
+  isPublished?: boolean;
+  status?: string;
 };
 
 async function _churchIdForRecord(
@@ -131,6 +139,7 @@ export async function POST(request: Request) {
     const contentScope =
       typeof data.contentScope === "string" ? data.contentScope : "organization";
     const isPlatformCreate = op === "create" && contentScope === "platform_public";
+    let existingRecord: ContentRecord | null = null;
 
     if (op === "create") {
       if (isPlatformCreate) {
@@ -160,6 +169,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Missing id." }, { status: 400 });
       }
       const record = await loadRecord(collection, recordId);
+      existingRecord = record;
       const allowed = await userCanManageContentRecord(
         decoded.uid,
         decoded.email,
@@ -167,6 +177,12 @@ export async function POST(request: Request) {
       );
       if (!allowed) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      if (record?.churchId) {
+        const church = await getChurchById(record.churchId);
+        if (church?.organizationId) {
+          await assertSubscriptionWritable(church.organizationId);
+        }
       }
     }
 
@@ -210,6 +226,15 @@ export async function POST(request: Request) {
           break;
       }
       marks.mutate = Date.now() - mutateStarted;
+      const createdRecord = await loadRecord(collection, id);
+      await dispatchChurchContentPublishEmails({
+        collection,
+        contentId: id,
+        excludeClerkId: decoded.uid,
+        isNewlyPublished:
+          !isPlatformCreate &&
+          isStoredContentPublished(collection, createdRecord),
+      });
       if (process.env.NODE_ENV !== "production") {
         console.info(
           `[PERF] POST /api/content create/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
@@ -262,6 +287,14 @@ export async function POST(request: Request) {
         break;
     }
     marks.mutate = Date.now() - mutateStarted;
+    await dispatchChurchContentPublishEmails({
+      collection,
+      contentId: recordId,
+      excludeClerkId: decoded.uid,
+      isNewlyPublished:
+        existingRecord?.contentScope !== "platform_public" &&
+        willUpdatePublishContent(collection, data, existingRecord),
+    });
     if (process.env.NODE_ENV !== "production") {
       console.info(
         `[PERF] POST /api/content update/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`

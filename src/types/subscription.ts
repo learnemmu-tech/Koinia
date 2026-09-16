@@ -68,10 +68,16 @@ export type ChurchSubscription = {
   currentPeriodStart?: number;
   currentPeriodEnd?: number;
   cancelAtPeriodEnd: boolean;
+  provider?: string;
+  providerStatus?: string;
+  razorpaySubscriptionId?: string;
+  razorpayPlanId?: string;
+  razorpayCustomerId?: string;
+  canceledAt?: number;
   /** Optional per-tenant overrides (e.g. enterprise custom deals). */
   featureFlags?: Partial<SubscriptionFeatureFlags>;
   usage?: SubscriptionUsage;
-  /** Future payment integration fields */
+  /** Historical Stripe fields retained for existing data. */
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   createdAt: number;

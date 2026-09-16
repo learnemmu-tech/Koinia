@@ -10,7 +10,9 @@ function verifyRazorpaySignature(
   paymentId: string,
   signature: string
 ): boolean {
-  const secret = process.env.RAZORPAY_KEY_SECRET?.trim();
+  const secret =
+    process.env.RAZORPAY_SECRET_KEY?.trim() ||
+    process.env.RAZORPAY_KEY_SECRET?.trim();
   if (!secret) return false;
 
   const expected = createHmac("sha256", secret)
