@@ -160,8 +160,12 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "prayer",
   "prayer_request_submitted",
   "membership_approved",
+  "membership_request",
   "book",
   "trial_lifecycle",
+  "short_pending_review",
+  "short_review_result",
+  "group_invitation",
 ]);
 
 export const favoriteItemTypeEnum = pgEnum("favorite_item_type", [
@@ -193,6 +197,50 @@ export const shortVisibilityEnum = pgEnum("short_visibility", [
   "church",
   "public",
 ]);
+
+export const shortModerationStatusEnum = pgEnum("short_moderation_status", [
+  "draft",
+  "pending_review",
+  "published",
+  "rejected",
+]);
+
+export type ShortModerationStatus =
+  (typeof shortModerationStatusEnum.enumValues)[number];
+
+export const churchVideoProviderEnum = pgEnum("church_video_provider", [
+  "youtube",
+  "vimeo",
+  "instagram",
+]);
+
+export type ChurchVideoProvider =
+  (typeof churchVideoProviderEnum.enumValues)[number];
+
+export const churchGroupStatusEnum = pgEnum("church_group_status", [
+  "active",
+  "archived",
+]);
+
+export type ChurchGroupStatus =
+  (typeof churchGroupStatusEnum.enumValues)[number];
+
+export const churchGroupInvitationStatusEnum = pgEnum(
+  "church_group_invitation_status",
+  ["pending", "accepted", "declined"]
+);
+
+export type ChurchGroupInvitationStatus =
+  (typeof churchGroupInvitationStatusEnum.enumValues)[number];
+
+export const churchGroupMemberRoleEnum = pgEnum("church_group_member_role", [
+  "owner",
+  "admin",
+  "member",
+]);
+
+export type ChurchGroupMemberRole =
+  (typeof churchGroupMemberRoleEnum.enumValues)[number];
 
 export const contentScopeEnum = pgEnum("content_scope", [
   "organization",

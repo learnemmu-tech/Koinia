@@ -1,0 +1,179 @@
+diff --git a/src/context/subscription-context.tsx b/src/context/subscription-context.tsx
+index 6f1d624..8ec57ec 100644
+--- a/src/context/subscription-context.tsx
++++ b/src/context/subscription-context.tsx
+@@ -94,7 +94,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
+ 
+   const checkUsageLimit = useCallback(
+     (limitKey: UsageLimitKey): boolean => {
+-      if (!data) return true;
++      if (!data) return false;
+       const check = data.usageChecks.find((item) => item.key === limitKey);
+       if (!check?.atLimit) return true;
+       openUpgradeModal({ limitKey });
+@@ -105,7 +105,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
+ 
+   const canUseFeature = useCallback(
+     (key: keyof SubscriptionSnapshot["features"]): boolean => {
+-      if (!data) return true;
++      if (!data) return false;
+       return Boolean(data.features[key]);
+     },
+     [data]
+diff --git a/src/lib/subscription/features.ts b/src/lib/subscription/features.ts
+index f0dcd19..c106742 100644
+--- a/src/lib/subscription/features.ts
++++ b/src/lib/subscription/features.ts
+@@ -6,7 +6,7 @@ import type {
+ } from "@/types/subscription";
+ 
+ import { getPlan } from "./plans";
+-import { getTrialLifecycle } from "./trial";
++import { getTrialLifecycle, hasValidSubscriptionAccess } from "./trial";
+ 
+ export function resolveFeatureFlags(
+   planId: PlanId,
+@@ -27,6 +27,11 @@ export function resolveFeatureFlagsFromSubscription(
+     subscription.planId,
+     subscription.featureFlags
+   );
++  if (!hasValidSubscriptionAccess(subscription)) {
++    return Object.fromEntries(
++      Object.keys(flags).map((key) => [key, false])
++    ) as SubscriptionFeatureFlags;
++  }
+   const trial = getTrialLifecycle(subscription);
+   return {
+     ...flags,
+diff --git a/src/lib/subscription/subscription-server.ts b/src/lib/subscription/subscription-server.ts
+index 2b2ef65..b026e8e 100644
+--- a/src/lib/subscription/subscription-server.ts
++++ b/src/lib/subscription/subscription-server.ts
+@@ -26,9 +26,16 @@ import {
+ } from "./limits";
+ import { getPlan } from "./plans";
+ import { buildDefaultSubscription } from "./subscription-firestore";
+-import { getTrialLifecycle, TRIAL_EXPIRED_MESSAGE } from "./trial";
++import {
++  getTrialLifecycle,
++  hasValidSubscriptionAccess,
++  TRIAL_EXPIRED_MESSAGE,
++} from "./trial";
+ import { computeOrganizationUsage } from "./usage-server";
+ 
++const ENTITLEMENT_EXPIRED_MESSAGE =
++  "Your subscription does not have active access. Existing content is preserved and remains available to view.";
++
+ export async function getSubscriptionByOrganizationId(
+   organizationId: string
+ ): Promise<ChurchSubscription> {
+@@ -68,6 +75,7 @@ export async function getSubscriptionSnapshot(
+   const usage = await computeOrganizationUsage(organizationId);
+   const usageChecks = buildUsageChecks(usage, limits);
+   const trial = getTrialLifecycle(subscription);
++  const accessValid = hasValidSubscriptionAccess(subscription);
+ 
+   return {
+     subscription,
+@@ -77,6 +85,7 @@ export async function getSubscriptionSnapshot(
+     usage,
+     usageChecks,
+     trial,
++    accessValid,
+   };
+ }
+ 
+@@ -114,9 +123,13 @@ export function isSubscriptionLimitError(
+   );
+ }
+ 
+-function assertTrialWritable(snapshot: SubscriptionSnapshot): void {
+-  if (snapshot.trial.phase === "expired") {
+-    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
++function assertEntitlementWritable(snapshot: SubscriptionSnapshot): void {
++  if (!snapshot.accessValid) {
++    throw new SubscriptionLimitError(
++      snapshot.trial.phase === "expired"
++        ? TRIAL_EXPIRED_MESSAGE
++        : ENTITLEMENT_EXPIRED_MESSAGE
++    );
+   }
+ }
+ 
+@@ -127,7 +140,7 @@ export async function assertUsageAllowed(
+   const orgId = organizationId.trim();
+   if (!orgId) return;
+   const snapshot = await getSubscriptionSnapshot(orgId);
+-  assertTrialWritable(snapshot);
++  assertEntitlementWritable(snapshot);
+   const check = snapshot.usageChecks.find((item) => item.key === key);
+   if (check?.atLimit) {
+     throw new SubscriptionLimitError(
+@@ -143,7 +156,7 @@ export async function assertFeatureAllowed(
+   const orgId = organizationId.trim();
+   if (!orgId) return;
+   const snapshot = await getSubscriptionSnapshot(orgId);
+-  assertTrialWritable(snapshot);
++  assertEntitlementWritable(snapshot);
+   if (!snapshot.features[key]) {
+     if (key === "canUseShepherdAi" && snapshot.trial.isTrial) {
+       throw new SubscriptionLimitError(
+diff --git a/src/lib/subscription/trial.ts b/src/lib/subscription/trial.ts
+index c9741e9..8c187f5 100644
+--- a/src/lib/subscription/trial.ts
++++ b/src/lib/subscription/trial.ts
+@@ -31,7 +31,10 @@ export function getTrialLifecycle(
+ 
+   const trialStart = subscription.trialStart;
+   const trialEnd = subscription.trialEnd;
+-  const hasWindow = trialStart != null && trialEnd != null;
++  const hasWindow =
++    subscription.status === "trialing" &&
++    trialStart != null &&
++    trialEnd != null;
+ 
+   if (!hasWindow) {
+     return {
+@@ -70,3 +73,32 @@ export function getTrialLifecycle(
+     shepherdDaysRemaining,
+   };
+ }
++
++export function hasValidSubscriptionAccess(
++  subscription: Pick<
++    ChurchSubscription,
++    "planId" | "status" | "trialStart" | "trialEnd" | "currentPeriodEnd"
++  >,
++  now = Date.now()
++): boolean {
++  if (subscription.planId === "free") {
++    return (
++      subscription.status === "trialing" &&
++      subscription.trialEnd != null &&
++      now < subscription.trialEnd
++    );
++  }
++
++  if (subscription.status === "active" || subscription.status === "past_due") {
++    return (
++      subscription.currentPeriodEnd == null ||
++      now < subscription.currentPeriodEnd
++    );
++  }
++
++  return (
++    subscription.status === "canceled" &&
++    subscription.currentPeriodEnd != null &&
++    now < subscription.currentPeriodEnd
++  );
++}
+diff --git a/src/types/subscription.ts b/src/types/subscription.ts
+index bddd3d7..fa0aa0e 100644
+--- a/src/types/subscription.ts
++++ b/src/types/subscription.ts
+@@ -124,4 +124,5 @@ export type SubscriptionSnapshot = {
+   usage: SubscriptionUsage;
+   usageChecks: UsageCheck[];
+   trial: TrialLifecycle;
++  accessValid: boolean;
+ };

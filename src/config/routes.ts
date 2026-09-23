@@ -30,6 +30,7 @@ export const protectedRoutes = [
   "/profile",
   "/favorites",
   "/groups",
+  "/community",
   "/profile/dashboard",
   "/prayer-requests/submit",
 ];

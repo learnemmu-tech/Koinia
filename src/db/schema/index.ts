@@ -10,4 +10,8 @@ export * from "./notifications";
 export * from "./user-library";
 export * from "./audit-logs";
 export * from "./shorts";
+export * from "./church-videos";
+export * from "./church-groups";
+export * from "./church-group-messages";
+export * from "./church-community-messages";
 export * from "./books";

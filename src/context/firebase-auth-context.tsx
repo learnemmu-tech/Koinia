@@ -133,6 +133,7 @@ export function FirebaseAuthProvider({
   const [loading, setLoading] = React.useState(true);
   const [profileReady, setProfileReady] = React.useState(false);
   const syncedUidRef = React.useRef<string | null>(null);
+  const syncedIdentityRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!isLoaded) {
@@ -151,6 +152,7 @@ export function FirebaseAuthProvider({
       setProfileReady(true);
       setLoading(false);
       syncedUidRef.current = null;
+      syncedIdentityRef.current = null;
       return;
     }
 
@@ -181,15 +183,33 @@ export function FirebaseAuthProvider({
     };
 
     bindFirebaseAuthCurrentUser(sessionUser);
+
+    const uid = sessionUser.uid;
+    const identityKey = [
+      uid,
+      sessionUser.email ?? "",
+      sessionUser.displayName ?? "",
+      sessionUser.photoURL ?? "",
+      sessionUser.emailVerified ? "1" : "0",
+    ].join("|");
+
+    if (
+      syncedUidRef.current === uid &&
+      syncedIdentityRef.current === identityKey
+    ) {
+      return;
+    }
+
     setUser(sessionUser);
     setAuthUser(toAuthUser(sessionUser));
 
-    const uid = sessionUser.uid;
     if (syncedUidRef.current === uid) {
+      syncedIdentityRef.current = identityKey;
       return;
     }
 
     syncedUidRef.current = uid;
+    syncedIdentityRef.current = identityKey;
 
     const cached = readUserCache(uid);
     if (cached?.profile) {

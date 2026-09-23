@@ -9,7 +9,12 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { contentScopeEnum, shortCategoryEnum, shortVisibilityEnum } from "./enums";
+import {
+  contentScopeEnum,
+  shortCategoryEnum,
+  shortModerationStatusEnum,
+  shortVisibilityEnum,
+} from "./enums";
 import { churches, users } from "./tenants";
 
 export const videoShorts = pgTable(
@@ -30,6 +35,9 @@ export const videoShorts = pgTable(
     category: shortCategoryEnum("category").notNull().default("Other"),
     duration: integer("duration"),
     visibility: shortVisibilityEnum("visibility").notNull().default("church"),
+    moderationStatus: shortModerationStatusEnum("moderation_status")
+      .notNull()
+      .default("draft"),
     viewCount: integer("view_count").notNull().default(0),
     likeCount: integer("like_count").notNull().default(0),
     commentCount: integer("comment_count").notNull().default(0),
@@ -63,6 +71,10 @@ export const videoShorts = pgTable(
     index("video_shorts_visibility_idx").on(table.visibility),
     index("video_shorts_created_at_idx").on(table.createdAt),
     index("video_shorts_content_scope_idx").on(table.contentScope),
+    index("video_shorts_church_id_moderation_status_idx").on(
+      table.churchId,
+      table.moderationStatus
+    ),
   ]
 );
 

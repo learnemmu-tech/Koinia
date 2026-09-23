@@ -6,8 +6,12 @@ export type NotificationContentType =
   | "prayer"
   | "prayer_request_submitted"
   | "membership_approved"
+  | "membership_request"
   | "book"
-  | "trial_lifecycle";
+  | "trial_lifecycle"
+  | "short_pending_review"
+  | "short_review_result"
+  | "group_invitation";
 
 export type FirebaseNotification = {
   id: string;

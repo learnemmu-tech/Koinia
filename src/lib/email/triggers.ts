@@ -15,6 +15,7 @@ import {
   listPlatformSuperAdminEmailRecipients,
 } from "@/lib/postgres/features";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { getUsersByIds } from "@/lib/postgres/session";
 import { getShortById } from "@/lib/postgres/shorts";
 import { getChurchById } from "@/lib/postgres/tenants";
 import { formatEventDate } from "@/lib/event-firestore";
@@ -674,6 +675,7 @@ export async function triggerShortPublishedEmails(
   try {
     const short = await getShortById(shortId);
     if (!short?.publishedAt || !short.videoUrl) return;
+    if (short.moderationStatus !== "published") return;
 
     if (!short.churchId || short.contentScope === "platform_public") return;
 
@@ -695,6 +697,73 @@ export async function triggerShortPublishedEmails(
     );
   } catch (error) {
     console.error("[email] short published trigger failed:", error);
+  }
+}
+
+export async function triggerShortPendingReviewNotifications(input: {
+  shortId: string;
+  churchId: string;
+  organizationId: string;
+  submitterUserId: string;
+  caption: string;
+}): Promise<void> {
+  try {
+    const church = await getChurchById(input.churchId);
+    if (!church?.organizationId) return;
+
+    const admins = await getChurchAdminUserIds({
+      churchId: input.churchId,
+      organizationId: input.organizationId || church.organizationId,
+      excludeUserId: input.submitterUserId,
+    });
+    if (admins.length === 0) return;
+
+    const [submitter] = await getUsersByIds([input.submitterUserId]);
+    const memberName =
+      `${submitter?.firstName ?? ""} ${submitter?.lastName ?? ""}`.trim() ||
+      "A member";
+    const caption = input.caption.trim() || "a Short";
+
+    await createUserNotifications({
+      userIds: admins.map((admin) => admin.userId),
+      type: "short_pending_review",
+      churchId: church.id,
+      organizationId: church.organizationId,
+      title: "Short awaiting review",
+      message: `${memberName} submitted “${caption}” for review.`,
+      contentTitle: caption,
+      contentId: input.shortId,
+    });
+  } catch (error) {
+    console.error("[notifications] short pending review failed:", error);
+  }
+}
+
+export async function triggerShortReviewResultNotification(input: {
+  shortId: string;
+  churchId: string;
+  organizationId: string;
+  submitterUserId: string;
+  approved: boolean;
+  caption: string;
+}): Promise<void> {
+  try {
+    if (!input.submitterUserId || !input.churchId) return;
+    const caption = input.caption.trim() || "your Short";
+    await createUserNotifications({
+      userIds: [input.submitterUserId],
+      type: "short_review_result",
+      churchId: input.churchId,
+      organizationId: input.organizationId,
+      title: input.approved ? "Short approved" : "Short not approved",
+      message: input.approved
+        ? `Your Short “${caption}” is now published.`
+        : `Your Short “${caption}” was not approved.`,
+      contentTitle: caption,
+      contentId: input.shortId,
+    });
+  } catch (error) {
+    console.error("[notifications] short review result failed:", error);
   }
 }
 
@@ -747,6 +816,50 @@ export function triggerJoinRequestNotification(input: {
       actionUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://faithconnecthub.com"}/dashboard/church-settings?tab=members`,
     })
   );
+}
+
+export async function triggerJoinRequestAdminNotifications(input: {
+  organizationId: string;
+  churchId: string;
+  churchName: string;
+  memberName: string;
+  requesterUserId: string;
+}): Promise<void> {
+  try {
+    const admins = await getChurchAdminUserIds({
+      churchId: input.churchId,
+      organizationId: input.organizationId,
+      excludeUserId: input.requesterUserId,
+    });
+    if (admins.length === 0) {
+      console.info("[notifications] join request in-app skipped", {
+        churchId: input.churchId,
+        reason: "no-admins",
+      });
+      return;
+    }
+
+    const displayName = input.memberName.trim() || "A new member";
+    await createUserNotifications({
+      userIds: admins.map((admin) => admin.userId),
+      type: "membership_request",
+      churchId: input.churchId,
+      organizationId: input.organizationId,
+      title: "New membership request",
+      message: `${displayName} requested to join ${input.churchName}.`,
+      contentTitle: displayName,
+      contentId: input.churchId,
+    });
+    console.info("[notifications] join request in-app", {
+      churchId: input.churchId,
+      recipientCount: admins.length,
+    });
+  } catch (error) {
+    console.error("[notifications] join request admin notify failed", {
+      churchId: input.churchId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
 }
 
 export async function triggerMembershipApprovedNotification(input: {

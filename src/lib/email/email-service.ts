@@ -7,6 +7,7 @@ import { DonationCampaignEmail } from "@/emails/templates/donation-campaign-emai
 import { DonationThankYouEmail } from "@/emails/templates/donation-thank-you-email";
 import { EventAnnouncementEmail } from "@/emails/templates/event-announcement-email";
 import { EventRegistrationEmail } from "@/emails/templates/event-registration-email";
+import { GroupInvitationEmail } from "@/emails/templates/group-invitation-email";
 import { MembershipApprovedEmail } from "@/emails/templates/membership-approved-email";
 import { OrganizationCreatedEmail } from "@/emails/templates/organization-created-email";
 import { PrayerApprovedEmail } from "@/emails/templates/prayer-approved-email";
@@ -73,6 +74,27 @@ export const EmailService = {
         organizationName: input.organizationName,
         churchName: input.churchName,
         organizationId: input.organizationId,
+      }),
+    });
+  },
+
+  async sendGroupInvitation(input: {
+    to: string;
+    userName: string;
+    inviterName: string;
+    groupName: string;
+    churchName: string;
+    groupId: string;
+  }): Promise<SendEmailResult> {
+    return sendEmail({
+      to: input.to,
+      subject: `You're invited to join ${input.groupName}`,
+      react: GroupInvitationEmail({
+        userName: input.userName,
+        inviterName: input.inviterName,
+        groupName: input.groupName,
+        churchName: input.churchName,
+        actionUrl: `${emailConfig.appUrl}/groups/${encodeURIComponent(input.groupId)}`,
       }),
     });
   },

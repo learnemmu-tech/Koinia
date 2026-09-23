@@ -123,6 +123,7 @@ export const PLATFORM_PUBLIC_SHOWCASE_TYPES = [
   "sermons",
   "articles",
   "shorts",
+  "videos",
   "events",
   "donations",
 ] as const;

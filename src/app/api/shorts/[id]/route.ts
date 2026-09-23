@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { triggerShortPublishedEmails } from "@/lib/email/triggers";
+import { triggerShortPublishedEmails, triggerShortPendingReviewNotifications, triggerShortReviewResultNotification } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import {
   deleteShort,
   getShortForViewer,
   incrementShortViewCount,
+  moderateShort,
   publishShort,
   updateShortMetadata,
   updateShortThumbnailUrl,
@@ -57,6 +58,41 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
+    if (body.action === "approve" || body.action === "reject") {
+      const updated = await moderateShort({
+        shortId: id,
+        clerkId: verified.uid,
+        email: verified.email,
+        action: body.action,
+      });
+      if (updated.churchId && updated.organizationId && updated.userId) {
+        try {
+          await triggerShortReviewResultNotification({
+            shortId: updated.id,
+            churchId: updated.churchId,
+            organizationId: updated.organizationId,
+            submitterUserId: updated.userId,
+            approved: body.action === "approve",
+            caption: updated.caption,
+          });
+        } catch (error) {
+          console.error("[shorts/review] member notify failed", error);
+        }
+      }
+      if (body.action === "approve") {
+        try {
+          await triggerShortPublishedEmails(updated.id, verified.uid);
+        } catch (error) {
+          console.error("[shorts/review] email dispatch failed", error);
+        }
+      }
+      return NextResponse.json({
+        id: updated.id,
+        moderationStatus: updated.moderationStatus,
+        publishedAt: updated.publishedAt,
+      });
+    }
+
     if (typeof body.videoUrl === "string" && body.videoUrl.trim()) {
       const updated = await publishShort({
         shortId: id,
@@ -74,6 +110,19 @@ export async function PATCH(request: Request, context: RouteContext) {
             ? (body.visibility as ShortVisibility)
             : undefined,
       });
+      if (updated.submittedForReview && updated.churchId && updated.organizationId) {
+        try {
+          await triggerShortPendingReviewNotifications({
+            shortId: updated.id,
+            churchId: updated.churchId,
+            organizationId: updated.organizationId,
+            submitterUserId: updated.userId,
+            caption: updated.caption,
+          });
+        } catch (error) {
+          console.error("[shorts/submit] admin notify failed", error);
+        }
+      }
       if (updated.isFirstPublish) {
         try {
           await triggerShortPublishedEmails(updated.id, verified.uid);
@@ -81,7 +130,12 @@ export async function PATCH(request: Request, context: RouteContext) {
           console.error("[shorts/publish] email dispatch failed", error);
         }
       }
-      return NextResponse.json({ id: updated.id, publishedAt: updated.publishedAt });
+      return NextResponse.json({
+        id: updated.id,
+        publishedAt: updated.publishedAt,
+        moderationStatus: updated.moderationStatus,
+        submittedForReview: updated.submittedForReview,
+      });
     }
 
     if ("thumbnailUrl" in body) {

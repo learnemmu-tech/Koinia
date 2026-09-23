@@ -1,20 +1,6 @@
-import { RequireAuth } from "@/components/auth/require-auth";
-import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Groups",
-  description: "Your worship groups",
-};
-
+/** Groups list lives on Community → Groups tab; keep route for bookmarks/notifications. */
 export default function GroupsPage() {
-  return (
-    <RequireAuth>
-      <div className={pageContentClass}>
-        <h1 className={typePageTitleClass}>Groups</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Manage and join worship groups.
-        </p>
-      </div>
-    </RequireAuth>
-  );
+  redirect("/community?tab=groups");
 }

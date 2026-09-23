@@ -3,17 +3,12 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { siteConfig } from "@/config/site";
-import { redirectIfOnboardingComplete } from "@/lib/auth/require-onboarding-complete-server";
-
-
 
 export default async function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await redirectIfOnboardingComplete();
-
   return (
 
     <div className="relative flex min-h-svh flex-col bg-gradient-to-b from-background via-background to-muted/30">

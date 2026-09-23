@@ -48,7 +48,11 @@ const config: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "img.clerk.com",
+        hostname: "img.youtube.com",
+      },
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
       },
       ...(supabaseImageHostname()
         ? [

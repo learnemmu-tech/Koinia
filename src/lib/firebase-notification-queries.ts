@@ -49,6 +49,11 @@ export const NOTIFICATION_PRESETS: Record<
     message: "Your church membership has been approved.",
     pathPrefix: "/dashboard",
   },
+  membership_request: {
+    title: "New membership request",
+    message: "Someone requested to join your church.",
+    pathPrefix: "/dashboard/members",
+  },
   book: {
     title: "New Book Published",
     message: "A new book has been published.",
@@ -58,6 +63,21 @@ export const NOTIFICATION_PRESETS: Record<
     title: "Trial update",
     message: "Your FaithConnectHub trial has an important update.",
     pathPrefix: "/dashboard/billing",
+  },
+  short_pending_review: {
+    title: "Short awaiting review",
+    message: "A member submitted a Short for review.",
+    pathPrefix: "/videos",
+  },
+  short_review_result: {
+    title: "Short review update",
+    message: "There is an update on your submitted Short.",
+    pathPrefix: "/videos",
+  },
+  group_invitation: {
+    title: "Group invitation",
+    message: "You've been invited to join a church group.",
+    pathPrefix: "/groups",
   },
 };
 
@@ -127,6 +147,22 @@ export function getNotificationContentPath(
   if (notification.type === "membership_approved") {
     return "/dashboard";
   }
+  if (notification.type === "membership_request") {
+    return "/dashboard/members";
+  }
+  if (notification.type === "short_pending_review") {
+    return "/videos?tab=shorts";
+  }
+  if (notification.type === "short_review_result") {
+    return notification.contentId
+      ? `/videos?tab=shorts&short=${encodeURIComponent(notification.contentId)}`
+      : "/videos?tab=shorts";
+  }
+  if (notification.type === "group_invitation") {
+    return notification.contentId
+      ? `/groups/${encodeURIComponent(notification.contentId)}`
+      : "/community?tab=groups";
+  }
   const preset = NOTIFICATION_PRESETS[notification.type] ?? NOTIFICATION_PRESETS.song;
   return `${preset.pathPrefix}/${encodeURIComponent(notification.contentId)}`;
 }
@@ -154,7 +190,7 @@ export function subscribeToNotifications(
   void tick();
   const interval = setInterval(() => {
     void tick();
-  }, 60_000);
+  }, 20_000);
 
   return () => {
     cancelled = true;

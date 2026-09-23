@@ -109,6 +109,10 @@ const NOTIFICATION_PRESETS: Record<
     title: "Membership Approved",
     message: "Your church membership has been approved.",
   },
+  membership_request: {
+    title: "New membership request",
+    message: "Someone requested to join your church.",
+  },
   book: {
     title: "New Book Published",
     message: "A new book has been published.",
@@ -116,6 +120,18 @@ const NOTIFICATION_PRESETS: Record<
   trial_lifecycle: {
     title: "Trial update",
     message: "Your FaithConnectHub trial has an important update.",
+  },
+  short_pending_review: {
+    title: "Short awaiting review",
+    message: "A member submitted a Short for review.",
+  },
+  short_review_result: {
+    title: "Short review update",
+    message: "There is an update on your submitted Short.",
+  },
+  group_invitation: {
+    title: "Group invitation",
+    message: "You've been invited to join a church group.",
   },
 };
 

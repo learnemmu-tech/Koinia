@@ -2,9 +2,7 @@
 
 
 
-import { useEffect, useState } from "react";
-
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 
 import { Loader2, Plus } from "lucide-react";
 
@@ -15,6 +13,7 @@ import { toast } from "sonner";
 
 
 import { OnboardingWizardShell } from "@/components/onboarding/onboarding-wizard-shell";
+import { ONBOARDING_SUCCESS_PATH } from "@/lib/auth/auth-paths";
 
 import { WorkspaceTypeSelector } from "@/components/onboarding/workspace-type-selector";
 
@@ -34,16 +33,11 @@ import {
 
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 
-import { setAuthSession } from "@/lib/auth/set-auth-session";
-
-import { useOrganization } from "@/context/organization-context";
-
 import { buildCreateWorkspaceAuthHref, WAITING_APPROVAL_PATH } from "@/lib/auth/auth-flow";
 
 import { useWorkspaceAccess } from "@/hooks/use-workspace-access";
 
 import { firebaseAuth } from "@/lib/firebase-auth-service";
-import { buildPostOnboardingProfilePatch, isWorkspaceProfileComplete } from "@/lib/auth/wait-for-user-profile";
 
 import { COUNTRIES } from "@/lib/countries";
 
@@ -59,21 +53,7 @@ export function ChurchOnboardingForm() {
 
   const router = useRouter();
 
-  const queryClient = useQueryClient();
-
-  const { authUser, refreshProfile, profileReady } = useFirebaseAuth();
-
-  const {
-
-    churches,
-
-    loading: orgLoading,
-
-    refetch,
-
-    membership,
-
-  } = useOrganization();
+  const { authUser, profileReady } = useFirebaseAuth();
 
   const { isMembershipPending } = useWorkspaceAccess();
 
@@ -104,6 +84,7 @@ export function ChurchOnboardingForm() {
   const [logoPreview, setLogoPreview] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
 
 
 
@@ -156,6 +137,10 @@ export function ChurchOnboardingForm() {
 
     event.preventDefault();
 
+    if (submittingRef.current || loading) {
+      return;
+    }
+
 
 
     if (!name.trim()) {
@@ -206,6 +191,7 @@ export function ChurchOnboardingForm() {
 
 
 
+    submittingRef.current = true;
     setLoading(true);
 
     try {
@@ -289,12 +275,6 @@ export function ChurchOnboardingForm() {
         throw new Error("Workspace creation did not return an organization id.");
       }
 
-      const profilePatch = buildPostOnboardingProfilePatch({
-        organizationId: result.organizationId,
-        churchId: result.churchId,
-        activeBranchId: result.branchId,
-      });
-
       if (logoFile && result.churchId && !logoUrl) {
 
         const formData = new FormData();
@@ -331,46 +311,10 @@ export function ChurchOnboardingForm() {
 
 
 
-      const resolvedProfile = await refreshProfile(profilePatch);
-
-      if (!resolvedProfile || !isWorkspaceProfileComplete(resolvedProfile)) {
-        throw new Error("Failed to create workspace.");
-      }
-
-      await refetch();
-
-      let activeMembership = membership;
-
-      if (resolvedProfile) {
-        const orgResponse = await fetch("/api/organization", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (orgResponse.ok) {
-          const orgData = (await orgResponse.json()) as {
-            membership?: typeof membership;
-            churches?: unknown[];
-          };
-
-          activeMembership = orgData.membership ?? activeMembership;
-        }
-
-        setAuthSession(true, {
-          role: resolvedProfile.role,
-          profile: resolvedProfile,
-          membership: activeMembership,
-          churchesCount: churches.length + 1,
-          workspaceType: "independent_church",
-        });
-      }
-
-      await queryClient.refetchQueries({ queryKey: ["membership-routing"] });
-      await queryClient.refetchQueries({ queryKey: ["organization"] });
-
-      router.replace("/dashboard");
-      router.refresh();
+      router.replace(ONBOARDING_SUCCESS_PATH);
 
     } catch (error) {
+      submittingRef.current = false;
 
       toast.error(
 

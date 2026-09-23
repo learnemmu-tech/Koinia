@@ -7,7 +7,14 @@ import { isWorkspaceRoute } from "@/lib/dashboard-routes";
 const AUTH_ONLY_PATHS = ["/signin", "/signup", "/forgot-password", "/sso-callback"];
 const POST_AUTH_CONTINUE_PATH = "/auth/continue";
 
-const PUBLIC_CONTENT_LIST_PATHS = ["/songs", "/sermons", "/articles", "/shorts", "/books"];
+const PUBLIC_CONTENT_LIST_PATHS = [
+  "/songs",
+  "/sermons",
+  "/articles",
+  "/shorts",
+  "/videos",
+  "/books",
+];
 
 function isPathMatch(pathname: string, paths: string[]) {
   return paths.some(
@@ -19,6 +26,7 @@ const PROTECTED_PREFIXES = [
   "/profile",
   "/favorites",
   "/groups",
+  "/community",
   "/profile/dashboard",
   "/me",
   "/settings",

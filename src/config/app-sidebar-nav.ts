@@ -18,6 +18,7 @@ import {
   Settings2,
   Shield,
   Users,
+  MessageCircle,
 } from "lucide-react";
 
 import { ShepherdIcon } from "@/components/shepherd/shepherd-icon";
@@ -134,11 +135,15 @@ export const CONTENT_NAV_ITEMS: AppNavItem[] = [
     searchKeywords: ["articles", "posts", "blog"],
   },
   {
-    label: "Shorts",
-    href: "/shorts",
+    label: "Videos",
+    href: "/videos",
     icon: Clapperboard,
-    match: startsWith("/shorts"),
-    searchKeywords: ["shorts", "videos", "clips"],
+    match: (pathname) =>
+      pathname === "/videos" ||
+      pathname.startsWith("/videos/") ||
+      pathname === "/shorts" ||
+      pathname.startsWith("/shorts/"),
+    searchKeywords: ["videos", "shorts", "clips", "youtube"],
   },
   {
     label: "Events",
@@ -157,6 +162,23 @@ export const CONTENT_NAV_ITEMS: AppNavItem[] = [
 ];
 
 export const COMMUNITY_NAV_ITEMS: AppNavItem[] = [
+  {
+    label: "Chat",
+    href: "/community",
+    icon: MessageCircle,
+    match: (pathname) =>
+      pathname === "/community" ||
+      pathname.startsWith("/community/") ||
+      pathname === "/groups" ||
+      pathname.startsWith("/groups/"),
+    searchKeywords: [
+      "chat",
+      "community",
+      "community chat",
+      "groups",
+      "small groups",
+    ],
+  },
   {
     label: "Donations",
     href: "/donations",

@@ -14,6 +14,12 @@ export type ShortCategory = (typeof SHORT_CATEGORIES)[number];
 
 export type ShortVisibility = "church" | "public";
 
+export type ShortModerationStatus =
+  | "draft"
+  | "pending_review"
+  | "published"
+  | "rejected";
+
 export type VideoShortCreator = {
   id: string;
   firstName: string;
@@ -33,6 +39,7 @@ export type VideoShort = {
   category: ShortCategory;
   duration: number | null;
   visibility: ShortVisibility;
+  moderationStatus: ShortModerationStatus;
   viewCount: number;
   likeCount: number;
   commentCount: number;

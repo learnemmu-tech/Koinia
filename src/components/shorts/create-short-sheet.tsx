@@ -55,6 +55,7 @@ type CreateShortSheetProps = {
   onPublished?: () => void;
   contentScope?: "organization" | "platform_public";
   churchId?: string;
+  submitForReview?: boolean;
 };
 
 type FieldErrors = {
@@ -85,6 +86,7 @@ export function CreateShortSheet({
   onPublished,
   contentScope = "organization",
   churchId = "",
+  submitForReview = false,
 }: CreateShortSheetProps) {
   const tc = useTranslations("common");
   const ts = useTranslations("shorts");
@@ -351,7 +353,7 @@ export function CreateShortSheet({
         }
       }
 
-      await publishShort(
+      const result = await publishShort(
         draft.id,
         {
           videoUrl,
@@ -364,7 +366,11 @@ export function CreateShortSheet({
         await requireToken()
       );
 
-      toast.success("Short published!");
+      toast.success(
+        result.submittedForReview || submitForReview
+          ? "Your Short has been submitted for review."
+          : "Short published!"
+      );
       reset();
       onOpenChange(false);
       onPublished?.();
@@ -407,10 +413,12 @@ export function CreateShortSheet({
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border/60 px-5 py-4 sm:px-6">
           <SheetHeader className="space-y-1 text-left">
             <SheetTitle className="text-lg font-semibold tracking-tight sm:text-xl">
-              Create a Short
+              {submitForReview ? "Submit a Short" : "Create a Short"}
             </SheetTitle>
             <SheetDescription className="text-[13px] leading-snug text-muted-foreground">
-              Share a moment of faith, worship, or encouragement.
+              {submitForReview
+                ? "Your Short will be reviewed by church administrators before it is published."
+                : "Share a moment of faith, worship, or encouragement."}
             </SheetDescription>
           </SheetHeader>
           <button
@@ -708,7 +716,7 @@ export function CreateShortSheet({
                     </>
                   : <>
                       <Clapperboard className="size-4" aria-hidden />
-                      {ts("create")}
+                      {submitForReview ? "Submit Short" : ts("create")}
                     </>
                   }
                 </Button>

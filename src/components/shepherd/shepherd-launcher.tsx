@@ -27,6 +27,15 @@ export function ShepherdLauncher() {
 
   if (loading || !user) return null;
   if (pathname === "/shepherd" || pathname.startsWith("/shepherd/")) return null;
+  if (pathname === "/waiting-approval" || pathname.startsWith("/waiting-approval/")) {
+    return null;
+  }
+  if (pathname === "/community" || pathname.startsWith("/community/")) {
+    return null;
+  }
+  if (pathname === "/groups" || pathname.startsWith("/groups/")) {
+    return null;
+  }
   if (!mounted) return null;
 
   const launcher = (
@@ -35,8 +44,6 @@ export function ShepherdLauncher() {
       aria-label="Open Shepherd AI"
       className={cn(
         "shepherd-launcher shepherd-theme group fixed z-40",
-        // Mobile: true bottom-right of the viewport (+ safe area).
-        // Only lift when the global audio player is actually visible.
         showPlayer ?
           "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-4 sm:bottom-[calc(6.25rem+env(safe-area-inset-bottom,0px))] sm:right-6"
         : "bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] right-4 sm:bottom-6 sm:right-6",

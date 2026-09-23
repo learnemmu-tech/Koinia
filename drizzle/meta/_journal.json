@@ -71,6 +71,62 @@
       "when": 1789551929002,
       "tag": "0009_clammy_thor_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789560000000,
+      "tag": "0010_membership_request_notification",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789565000000,
+      "tag": "0011_videos_and_short_moderation",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789566000000,
+      "tag": "0012_short_review_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789569000000,
+      "tag": "0013_church_groups",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789572000000,
+      "tag": "0014_church_community_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1789575000000,
+      "tag": "0015_community_chat_interactions",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789578000000,
+      "tag": "0016_church_group_membership_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1789581000000,
+      "tag": "0017_church_group_messages",
+      "breakpoints": true
     }
   ]
 }

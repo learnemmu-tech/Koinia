@@ -12,7 +12,8 @@ import { useContentAuthDialog } from "@/context/content-auth-dialog-context";
 import { ShortFeedItem } from "@/components/shorts/short-feed-item";
 import { ShortCommentsSheet } from "@/components/shorts/short-comments-sheet";
 import { CreateShortSheet } from "@/components/shorts/create-short-sheet";
-import { fetchShortsFeed, toggleShortLike } from "@/lib/shorts-client";
+import { PendingShortsReview } from "@/components/shorts/pending-shorts-review";
+import { fetchPendingReviewShorts, fetchShortsFeed, toggleShortLike } from "@/lib/shorts-client";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -20,20 +21,28 @@ type ShortsPageClientProps = {
   initialShorts: VideoShort[];
   churchName?: string;
   canPost: boolean;
+  canManage?: boolean;
+  submitForReview?: boolean;
   initialShortId?: string;
   createContentScope?: "organization" | "platform_public";
   createChurchId?: string;
   churchId?: string;
+  initialPendingShorts?: VideoShort[];
+  embedded?: boolean;
 };
 
 export function ShortsPageClient({
   initialShorts,
   churchName,
   canPost,
+  canManage = false,
+  submitForReview = false,
   initialShortId,
   createContentScope = "organization",
   createChurchId = "",
   churchId = "",
+  initialPendingShorts = [],
+  embedded = false,
 }: ShortsPageClientProps) {
   const { user } = useFirebaseAuth();
   const { openDialog } = useContentAuthDialog();
@@ -73,6 +82,7 @@ export function ShortsPageClient({
   });
   const [commentsShortId, setCommentsShortId] = React.useState<string | null>(null);
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [pendingShorts, setPendingShorts] = React.useState(initialPendingShorts);
   const [filterLoading, setFilterLoading] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [searchOpen, setSearchOpen] = React.useState(false);
@@ -340,10 +350,28 @@ export function ShortsPageClient({
     [shorts, activeId]
   );
 
+  const createLabel = submitForReview ? t("submitShort") : t("addShort");
+
+  async function reloadPending() {
+    if (!canManage) return;
+    const token = await getToken();
+    const pendingChurchId = createChurchId || churchId;
+    if (!token || !pendingChurchId) return;
+    try {
+      const items = await fetchPendingReviewShorts(pendingChurchId, token);
+      setPendingShorts(items);
+    } catch {
+      // Keep the last known pending list.
+    }
+  }
+
   return (
     <div
-      data-page-fullbleed
-      className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background"
+      data-page-fullbleed={!embedded ? true : undefined}
+      className={cn(
+        "flex w-full flex-col bg-background",
+        embedded ? "min-h-[70vh]" : "h-full min-h-0 overflow-hidden"
+      )}
     >
       <div className="z-20 shrink-0 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-md md:px-6">
         <div className="mx-auto flex min-h-10 w-full max-w-5xl items-center gap-2 md:gap-3">
@@ -356,7 +384,7 @@ export function ShortsPageClient({
             <Video className="size-5 shrink-0 text-primary" aria-hidden />
             <div className="min-w-0 leading-none">
               <h1 className="truncate font-heading text-base font-semibold tracking-tight text-foreground">
-                {t("title")}
+                {embedded ? t("title") : t("title")}
               </h1>
               {churchName ?
                 <p className="mt-0.5 truncate text-[11px] font-medium leading-none text-muted-foreground">
@@ -439,18 +467,31 @@ export function ShortsPageClient({
             ))}
           </div>
 
-          {canPost ?
+              {canPost ?
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
               className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary px-2.5 text-[12px] font-semibold leading-none text-primary-foreground transition-colors duration-200 active:bg-primary/80 hover-hover:hover:bg-primary/90"
             >
               <Plus className="size-3.5" aria-hidden />
-              {t("create")}
+              {createLabel}
             </button>
           : null}
         </div>
       </div>
+
+      {canManage && (createChurchId || churchId) ?
+        <div className="px-3 pt-3 md:px-6">
+          <PendingShortsReview
+            shorts={pendingShorts}
+            getToken={getToken}
+            onChanged={() => {
+              void reloadFeed(filter, query.trim());
+              void reloadPending();
+            }}
+          />
+        </div>
+      : null}
 
       {shorts.length === 0 ?
         <div className="mx-auto flex min-h-0 flex-1 max-w-md flex-col items-center justify-center px-6 py-16 text-center">
@@ -479,13 +520,13 @@ export function ShortsPageClient({
               </Button>
             </>
           : <>
-              <h2 className="text-lg font-semibold text-foreground">{t("empty")}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t("emptyPublished")}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Be the first to share a moment of faith, worship, or encouragement.
               </p>
               {canPost ?
                 <Button className="mt-6" onClick={() => setCreateOpen(true)}>
-                  {t("create")}
+                  {createLabel}
                 </Button>
               : null}
             </>
@@ -541,9 +582,13 @@ export function ShortsPageClient({
         open={createOpen}
         onOpenChange={setCreateOpen}
         getToken={getToken}
-        onPublished={() => void reloadFeed(filter, query.trim())}
+        onPublished={() => {
+          void reloadFeed(filter, query.trim());
+          void reloadPending();
+        }}
         contentScope={createContentScope}
         churchId={createChurchId}
+        submitForReview={submitForReview}
       />
     </div>
   );

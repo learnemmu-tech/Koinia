@@ -106,6 +106,21 @@ export async function uploadOnboardingLogoLocal(
   );
 }
 
+export async function uploadGroupImageLocal(
+  groupId: string,
+  formData: FormData,
+  idToken: string,
+  replaceUrl?: string,
+  onProgress?: (percent: number) => void
+): Promise<string> {
+  return postUpload(
+    buildUploadUrl("cover", groupId, { kind: "group", replaceUrl }),
+    formData,
+    idToken,
+    onProgress
+  );
+}
+
 export async function uploadSongFileLocal(
   songId: string,
   fileType: "cover" | "audio",

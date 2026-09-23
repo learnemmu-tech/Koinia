@@ -204,7 +204,49 @@ export async function publishShort(
     },
     body: JSON.stringify(input),
   });
-  return parseJson<{ id: string; publishedAt?: string }>(response);
+  return parseJson<{
+    id: string;
+    publishedAt?: string | null;
+    moderationStatus?: string;
+    submittedForReview?: boolean;
+  }>(response);
+}
+
+export async function fetchPendingReviewShorts(
+  churchId: string,
+  token: string
+): Promise<VideoShort[]> {
+  const params = new URLSearchParams({
+    filter: "pending_review",
+    churchId,
+    contentMode: "tenant",
+  });
+  const response = await fetch(`/api/shorts?${params.toString()}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  const data = await parseJson<{ shorts: VideoShort[] }>(response);
+  return data.shorts;
+}
+
+export async function moderateShort(
+  shortId: string,
+  action: "approve" | "reject",
+  token: string
+) {
+  const response = await fetch(`/api/shorts/${encodeURIComponent(shortId)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify({ action }),
+  });
+  return parseJson<{
+    id: string;
+    moderationStatus?: string;
+    publishedAt?: string | null;
+  }>(response);
 }
 
 export async function updateShortCover(

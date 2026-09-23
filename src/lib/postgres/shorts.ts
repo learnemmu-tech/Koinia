@@ -24,6 +24,7 @@ import {
 import { getChurchById } from "@/lib/postgres/tenants";
 import type {
   ShortCategory,
+  ShortModerationStatus,
   ShortVisibility,
   ShortsFeedFilter,
   VideoShort,
@@ -93,6 +94,7 @@ function mapShortRow(
     category: row.category as ShortCategory,
     duration: row.duration,
     visibility: row.visibility as ShortVisibility,
+    moderationStatus: row.moderationStatus as ShortModerationStatus,
     viewCount: row.viewCount,
     likeCount: row.likeCount,
     commentCount: row.commentCount,
@@ -131,13 +133,26 @@ export async function canViewShort(
   clerkId: string | null,
   email: string | undefined
 ): Promise<boolean> {
-  if (!short.videoUrl || !short.publishedAt) return false;
-  if (short.contentScope === "platform_public") {
-    return short.visibility === "public";
+  const isPubliclyPublished =
+    Boolean(short.videoUrl) &&
+    Boolean(short.publishedAt) &&
+    short.moderationStatus === "published";
+
+  if (isPubliclyPublished) {
+    if (short.contentScope === "platform_public") {
+      return short.visibility === "public";
+    }
+    if (short.visibility === "public") return true;
+    if (!clerkId || !short.churchId) return false;
+    return userCanAccessChurchContent(clerkId, email, short.churchId);
   }
-  if (short.visibility === "public") return true;
-  if (!clerkId || !short.churchId) return false;
-  return userCanAccessChurchContent(clerkId, email, short.churchId);
+
+  if (!clerkId || !short.videoUrl) return false;
+
+  const appUser = await getAppUserByClerkId(clerkId);
+  if (!appUser) return false;
+  if (appUser.id === short.userId) return true;
+  return userCanManageShortRecord(clerkId, email, short);
 }
 
 async function requireViewableShort(
@@ -249,6 +264,7 @@ export async function listShortsForScope(input: {
       and(
         isNotNull(videoShorts.videoUrl),
         isNotNull(videoShorts.publishedAt),
+        eq(videoShorts.moderationStatus, "published"),
         scopeCondition,
         searchCondition
       )
@@ -344,6 +360,7 @@ export async function createShortDraft(input: {
         caption: input.caption.trim(),
         category: input.category,
         visibility: "public",
+        moderationStatus: "draft",
       })
       .returning();
 
@@ -385,6 +402,7 @@ export async function createShortDraft(input: {
       caption: input.caption.trim(),
       category: input.category,
       visibility: input.visibility,
+      moderationStatus: "draft",
     })
     .returning();
 
@@ -419,6 +437,10 @@ export async function publishShort(input: {
     throw new Error("Unauthorized");
   }
 
+  if (!isAdmin && short.moderationStatus === "published") {
+    throw new Error("Unauthorized");
+  }
+
   if (short.organizationId) {
     const { assertSubscriptionWritable } = await import(
       "@/lib/subscription/subscription-server"
@@ -427,7 +449,11 @@ export async function publishShort(input: {
   }
 
   const now = new Date();
-  const isFirstPublish = !short.publishedAt;
+  const publishDirectly = isAdmin;
+  const isFirstPublish =
+    publishDirectly &&
+    (!short.publishedAt || short.moderationStatus !== "published");
+
   const [updated] = await db
     .update(videoShorts)
     .set({
@@ -437,13 +463,131 @@ export async function publishShort(input: {
       caption: input.caption?.trim() ?? short.caption,
       category: input.category ?? short.category,
       visibility: input.visibility ?? short.visibility,
-      publishedAt: short.publishedAt ?? now,
+      publishedAt: publishDirectly ? (short.publishedAt ?? now) : null,
+      moderationStatus: publishDirectly ? "published" : "pending_review",
       updatedAt: now,
     })
     .where(eq(videoShorts.id, short.id))
     .returning();
 
-  return { ...updated!, isFirstPublish };
+  return {
+    ...updated!,
+    isFirstPublish,
+    submittedForReview: !publishDirectly && short.moderationStatus !== "pending_review",
+  };
+}
+
+export async function listPendingReviewShorts(input: {
+  clerkId: string;
+  email?: string;
+  churchId: string;
+}): Promise<VideoShort[]> {
+  const allowed = await userCanManageChurch(
+    input.clerkId,
+    input.email,
+    input.churchId
+  );
+  if (!allowed) {
+    throw new Error("Forbidden");
+  }
+
+  const church = await getChurchById(input.churchId);
+  const churchName = church?.name?.trim() || "Church";
+
+  const rows = await db
+    .select()
+    .from(videoShorts)
+    .where(
+      and(
+        eq(videoShorts.churchId, input.churchId),
+        eq(videoShorts.moderationStatus, "pending_review"),
+        isNotNull(videoShorts.videoUrl)
+      )
+    )
+    .orderBy(desc(videoShorts.updatedAt))
+    .limit(50);
+
+  const creators = await loadCreatorsMap(rows.map((row) => row.userId));
+  return rows.map((row) =>
+    mapShortRow(
+      row,
+      creators.get(row.userId) ?? {
+        id: row.userId,
+        firstName: "",
+        lastName: "",
+        displayName: "Member",
+        photoUrl: null,
+      },
+      churchName,
+      false,
+      true
+    )
+  );
+}
+
+export async function countPendingReviewShorts(churchId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(videoShorts)
+    .where(
+      and(
+        eq(videoShorts.churchId, churchId),
+        eq(videoShorts.moderationStatus, "pending_review"),
+        isNotNull(videoShorts.videoUrl)
+      )
+    );
+  return Number(row?.count ?? 0);
+}
+
+export async function moderateShort(input: {
+  shortId: string;
+  clerkId: string;
+  email?: string;
+  action: "approve" | "reject";
+}) {
+  const short = await getShortById(input.shortId);
+  if (!short) throw new Error("Short not found.");
+
+  const isAdmin = await userCanManageShortRecord(
+    input.clerkId,
+    input.email,
+    short
+  );
+  if (!isAdmin) {
+    throw new Error("Unauthorized");
+  }
+
+  if (short.moderationStatus !== "pending_review") {
+    throw new Error("Short is not awaiting review.");
+  }
+
+  if (short.organizationId) {
+    const { assertSubscriptionWritable } = await import(
+      "@/lib/subscription/subscription-server"
+    );
+    await assertSubscriptionWritable(short.organizationId);
+  }
+
+  const now = new Date();
+  const [updated] = await db
+    .update(videoShorts)
+    .set(
+      input.action === "approve" ?
+        {
+          moderationStatus: "published" as const,
+          publishedAt: short.publishedAt ?? now,
+          updatedAt: now,
+        }
+      : {
+          moderationStatus: "rejected" as const,
+          publishedAt: null,
+          updatedAt: now,
+        }
+    )
+    .where(eq(videoShorts.id, short.id))
+    .returning();
+
+  return updated!;
 }
 
 export async function updateShortMetadata(input: {

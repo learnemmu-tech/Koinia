@@ -134,7 +134,7 @@ const FEATURES: Record<FeatureKey, FeatureItem> = {
     iconWrapClass: "bg-emerald-400/10",
   },
   shorts: {
-    href: "/shorts",
+    href: "/videos?tab=shorts",
     icon: Play,
     label: "Video Shorts",
     desc: "Short messages and inspiration",

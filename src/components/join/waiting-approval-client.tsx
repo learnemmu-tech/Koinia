@@ -224,20 +224,17 @@ export function WaitingApprovalClient() {
       </div>
       <h1 className="mt-6 font-heading text-2xl font-bold">Waiting for approval</h1>
       <p className="mt-4 text-muted-foreground">
-        Your request has been sent to{" "}
-        <span className="font-medium text-foreground">{pending.churchName}</span>.
-        Please wait until a church administrator approves your membership.
+        Your request to join{" "}
+        <span className="font-medium text-foreground">{pending.churchName}</span>{" "}
+        has been sent to a church administrator.
       </p>
       <p className="mt-3 text-sm text-muted-foreground">
-        This page updates automatically when your request is approved.
+        You&apos;ll be notified when your request is approved.
       </p>
       <div className="mt-6 inline-flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="size-3.5 animate-spin" aria-hidden />
         Listening for approval...
       </div>
-      <Button asChild variant="outline" className="mt-8">
-        <Link href="/">Go to Home</Link>
-      </Button>
     </div>
   );
 }

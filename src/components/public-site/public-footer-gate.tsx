@@ -8,5 +8,8 @@ export function PublicFooterGate({ children }: { children: ReactNode }) {
   if (pathname === "/shorts" || pathname.startsWith("/shorts/")) {
     return null;
   }
+  if (pathname === "/videos" || pathname.startsWith("/videos/")) {
+    return null;
+  }
   return children;
 }

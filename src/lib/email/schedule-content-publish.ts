@@ -5,6 +5,13 @@ import {
   triggerEventAnnouncementEmails,
   type ContentPublishEmailType,
 } from "@/lib/email/triggers";
+import {
+  createPublishNotifications,
+  getArticleById,
+  getEventById,
+  getSermonById,
+  getSongById,
+} from "@/lib/postgres/features";
 
 type ContentCollection = "songs" | "sermons" | "articles" | "events";
 
@@ -65,11 +72,98 @@ function collectionToEmailType(
   }
 }
 
+function collectionToNotificationType(
+  collection: ContentCollection
+): "song" | "sermon" | "article" | "event" {
+  switch (collection) {
+    case "songs":
+      return "song";
+    case "sermons":
+      return "sermon";
+    case "articles":
+      return "article";
+    case "events":
+      return "event";
+  }
+}
+
+async function dispatchChurchContentPublishInApp(input: {
+  collection: ContentCollection;
+  contentId: string;
+}): Promise<void> {
+  const contentId = input.contentId.trim();
+  if (!contentId) return;
+
+  try {
+    let churchId = "";
+    let contentTitle = "";
+    let image: string | undefined;
+
+    switch (input.collection) {
+      case "songs": {
+        const song = await getSongById(contentId);
+        churchId = song?.churchId ?? "";
+        contentTitle = song?.songTitle?.trim() || song?.title?.trim() || "";
+        image = song?.imageUrl;
+        break;
+      }
+      case "sermons": {
+        const sermon = await getSermonById(contentId);
+        churchId = sermon?.churchId ?? "";
+        contentTitle = sermon?.title?.trim() || "";
+        image = sermon?.coverImage;
+        break;
+      }
+      case "articles": {
+        const article = await getArticleById(contentId);
+        churchId = article?.churchId ?? "";
+        contentTitle = article?.title?.trim() || "";
+        image = article?.coverImage;
+        break;
+      }
+      case "events": {
+        const event = await getEventById(contentId);
+        churchId = event?.churchId ?? "";
+        contentTitle = event?.title?.trim() || "";
+        image = event?.bannerImage;
+        break;
+      }
+    }
+
+    if (!churchId || !contentTitle) {
+      console.error("[notifications] content publish in-app skipped", {
+        collection: input.collection,
+        contentId,
+        reason: !churchId ? "missing-church" : "missing-title",
+      });
+      return;
+    }
+
+    const notificationId = await createPublishNotifications({
+      type: collectionToNotificationType(input.collection),
+      contentId,
+      contentTitle,
+      image,
+      churchId,
+    });
+    console.info("[notifications] content publish in-app", {
+      collection: input.collection,
+      contentId,
+      churchId,
+      notificationId,
+    });
+  } catch (error) {
+    console.error("[notifications] content publish in-app failed", {
+      collection: input.collection,
+      contentId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+}
+
 /**
- * Email is secondary to saving content. Awaited in the content route so delivery
- * is not dropped when the client token expires after a long upload, and not
- * killed by returning from a serverless handler before the send completes.
- * Failures never throw.
+ * In-app + email fan-out after content is saved. Awaited so Vercel does not
+ * freeze the isolate before delivery work starts. Failures never throw.
  */
 export async function dispatchChurchContentPublishEmails(input: {
   collection: ContentCollection;
@@ -80,6 +174,11 @@ export async function dispatchChurchContentPublishEmails(input: {
   if (!input.isNewlyPublished || !input.contentId.trim()) {
     return;
   }
+
+  await dispatchChurchContentPublishInApp({
+    collection: input.collection,
+    contentId: input.contentId,
+  });
 
   try {
     if (input.collection === "events") {

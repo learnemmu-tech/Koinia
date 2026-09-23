@@ -23,7 +23,7 @@ function initials(name: string) {
 }
 
 function HomeShortCard({ short }: { short: VideoShort }) {
-  const href = `/shorts?short=${encodeURIComponent(short.id)}`;
+  const href = `/videos?tab=shorts&short=${encodeURIComponent(short.id)}`;
   const poster = short.thumbnailUrl || DEFAULT_SONG_COVER;
   const parsed = parseShortCaption(short.caption, short.category);
   const caption = parsed.title || parsed.description || short.caption.trim();
@@ -96,7 +96,7 @@ export function HomeShortsSection({ shorts }: HomeShortsSectionProps) {
         id="home-shorts-heading"
         title="Short Videos"
         description="Quick moments of faith, encouragement, worship, and community."
-        href="/shorts"
+        href="/videos?tab=shorts"
         viewAllLabel="View All Shorts"
       />
       {visible.length === 0 ?

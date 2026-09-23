@@ -8,6 +8,7 @@ import {
 } from "@/lib/content/content-scope";
 import {
   createShortDraft,
+  listPendingReviewShorts,
   listShortsForScope,
 } from "@/lib/postgres/shorts";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
@@ -36,12 +37,38 @@ function parseVisibility(value: unknown): ShortVisibility {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const pendingReview = searchParams.get("filter") === "pending_review";
   const filter = (searchParams.get("filter") === "latest"
     ? "latest"
     : "church") as ShortsFeedFilter;
   const queryText = (searchParams.get("q") ?? "").trim().slice(0, 120);
   const churchIdParam = searchParams.get("churchId")?.trim() ?? "";
   const contentMode = searchParams.get("contentMode")?.trim();
+
+  if (pendingReview) {
+    const verified = await verifyBearerToken(request).catch(() => null);
+    if (!verified) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!churchIdParam) {
+      return NextResponse.json({ shorts: [] });
+    }
+    try {
+      const shorts = await listPendingReviewShorts({
+        clerkId: verified.uid,
+        email: verified.email,
+        churchId: churchIdParam,
+      });
+      return NextResponse.json({ shorts });
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : "";
+      if (raw === "Forbidden") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      console.error("[api/shorts pending]", error);
+      return NextResponse.json({ error: "Failed to load pending Shorts." }, { status: 500 });
+    }
+  }
 
   let contentQuery = PUBLIC_PLATFORM_CONTENT_QUERY;
   if (contentMode === "tenant" && churchIdParam) {

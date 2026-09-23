@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { isOnboardingPath, SUPER_ADMIN_BASE, WAITING_APPROVAL_PATH } from "@/lib/auth/auth-paths";
+import { isOnboardingPath, isOnboardingSuccessPath, SUPER_ADMIN_BASE, WAITING_APPROVAL_PATH } from "@/lib/auth/auth-paths";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { shouldRedirectAuthenticatedSuperAdminFromPath } from "@/lib/auth/super-admin-routing";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
@@ -69,7 +69,10 @@ export function OnboardingGuard() {
     }
 
     if (isOnboardingPath(pathname)) {
-      if (profile?.needsChurchOnboarding === false) {
+      if (
+        profile?.needsChurchOnboarding === false &&
+        !isOnboardingSuccessPath(pathname)
+      ) {
         routedRef.current = pathname;
         router.replace(WORKSPACE_BASE);
       }

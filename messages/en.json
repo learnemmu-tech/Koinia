@@ -102,9 +102,12 @@
     "sermons": "Sermons",
     "articles": "Articles",
     "shorts": "Shorts",
+    "videos": "Videos",
     "events": "Events",
     "donations": "Donations",
     "prayerRequests": "Prayer Requests",
+    "groups": "Groups",
+    "community": "Community",
     "books": "Books",
     "library": "Library",
     "superAdmin": "Super Admin",
@@ -797,6 +800,9 @@
     "create": "Create",
     "likeFailed": "Couldn't like this Short. Try again.",
     "empty": "No Shorts yet.",
+    "emptyPublished": "No shorts published yet",
+    "addShort": "Add Short",
+    "submitShort": "Submit Short",
     "retry": "Retry"
   },
   "notifications": {

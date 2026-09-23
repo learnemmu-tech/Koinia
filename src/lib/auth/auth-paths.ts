@@ -1,6 +1,7 @@
 /** Auth and membership flow paths — no imports to avoid circular deps. */
 
 export const CREATE_WORKSPACE_PATH = "/onboarding";
+export const ONBOARDING_SUCCESS_PATH = "/onboarding/success";
 export const POST_AUTH_CONTINUE_PATH = "/auth/continue";
 /** Safe SSO/Clerk fallback when redirectUrlComplete is dropped — preserves callbackUrl. */
 export const POST_AUTH_CONTINUE_HOME =
@@ -83,6 +84,13 @@ export function isOnboardingPath(pathname: string): boolean {
   return (
     pathname === CREATE_WORKSPACE_PATH ||
     pathname.startsWith(`${CREATE_WORKSPACE_PATH}/`)
+  );
+}
+
+export function isOnboardingSuccessPath(pathname: string): boolean {
+  return (
+    pathname === ONBOARDING_SUCCESS_PATH ||
+    pathname.startsWith(`${ONBOARDING_SUCCESS_PATH}/`)
   );
 }
 

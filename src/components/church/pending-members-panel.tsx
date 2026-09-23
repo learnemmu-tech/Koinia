@@ -39,12 +39,12 @@ export function PendingMembersPanel({ branchId }: PendingMembersPanelProps) {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { silent?: boolean }) => {
     if (!organization) return;
     const user = firebaseAuth.currentUser;
     if (!user) return;
 
-    setLoading(true);
+    if (!options?.silent) setLoading(true);
     try {
       const token = await user.getIdToken();
       const res = await fetch(
@@ -55,12 +55,16 @@ export function PendingMembersPanel({ branchId }: PendingMembersPanelProps) {
         setData((await res.json()) as PendingResponse);
       }
     } finally {
-      setLoading(false);
+      if (!options?.silent) setLoading(false);
     }
   }, [organization, branchId]);
 
   useEffect(() => {
     void load();
+    const interval = window.setInterval(() => {
+      void load({ silent: true });
+    }, 15_000);
+    return () => window.clearInterval(interval);
   }, [load]);
 
   async function review(membershipId: string, action: "approve" | "reject") {

@@ -34,6 +34,7 @@ export function useInvalidateAdminQueries() {
     },
     invalidateMembers: async () => {
       await queryClient.invalidateQueries({ queryKey: ["admin-users", churchScopeKey(churchId)] });
+      await queryClient.invalidateQueries({ queryKey: ["sidebar-admin-badges"] });
     },
     invalidateDonations: async () => {
       await queryClient.invalidateQueries({ queryKey: ["admin-donation-campaigns"] });

@@ -63,7 +63,24 @@ export async function updatePrayerRequestStatus(
   requestId: string,
   status: PrayerRequestStatus
 ): Promise<void> {
+  const { getPrayerRequestById } = await import("@/lib/postgres/features");
+  const existing = await getPrayerRequestById(requestId);
   await updatePrayerRequest(requestId, { status });
+  if (status === "approved" && existing?.status !== "approved") {
+    try {
+      const {
+        triggerPrayerApprovedEmail,
+        triggerPrayerApprovedMemberNotifications,
+      } = await import("@/lib/email/triggers");
+      await triggerPrayerApprovedMemberNotifications(requestId);
+      await triggerPrayerApprovedEmail(requestId);
+    } catch (error) {
+      console.error("[notifications] prayer approved dispatch failed", {
+        prayerId: requestId,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  }
 }
 
 export async function deletePrayerRequest(requestId: string): Promise<void> {

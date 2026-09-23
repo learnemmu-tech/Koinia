@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchWithAuth } from "@/lib/api-client";
 import { useChurchManagementAccess } from "@/hooks/use-church-management-access";
 import { useWorkspaceTenantScope } from "@/hooks/use-workspace-tenant-scope";
-import { QUERY_GC_TIME, QUERY_STALE_TIME } from "@/lib/react-query-config";
+import { QUERY_GC_TIME } from "@/lib/react-query-config";
 import type { FirebaseBranchMembership } from "@/types/branch-membership";
 
 export type SidebarAdminBadges = {
@@ -49,11 +49,11 @@ export function useSidebarAdminBadges(): SidebarAdminBadges {
   const { data: badges = EMPTY_BADGES } = useQuery({
     queryKey: ["sidebar-admin-badges", churchId, scope.organizationId],
     enabled,
-    refetchInterval: 5 * 60_000,
-    staleTime: QUERY_STALE_TIME,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
     gcTime: QUERY_GC_TIME,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     queryFn: async () => {
       const orgId = scope.organizationId ?? "";
       const [prayersRes, membersRes] = await Promise.all([

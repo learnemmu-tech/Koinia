@@ -11,6 +11,7 @@ import {
   getSongById,
 } from "@/lib/postgres/content-mutations";
 import { getDonationCampaignById } from "@/lib/postgres/features";
+import { userCanUploadGroupImage } from "@/lib/postgres/groups";
 import { getOrgMembershipRow, userCanManageChurch } from "@/lib/postgres/session";
 import { getChurchById, getOrganizationById } from "@/lib/postgres/tenants";
 import type { StorageUploadKind } from "@/lib/storage-upload-kind";
@@ -35,6 +36,8 @@ const UPLOAD_KINDS: StorageUploadKind[] = [
   "article",
   "event",
   "donation",
+  "book",
+  "group",
 ];
 
 function isUploadKind(value: string | null): value is StorageUploadKind {
@@ -197,6 +200,7 @@ function isAuthorizedReplaceUrl(
     event: `events/${entityId}/`,
     donation: `donations/${entityId}/`,
     book: `books/${entityId}/`,
+    group: `groups/${entityId}/`,
   };
 
   const prefix = prefixes[kind];
@@ -251,6 +255,12 @@ async function authorizeUpload(
     return authorizeContentUpload(uid, email, await getEventById(entityId));
   } else if (kind === "donation") {
     return authorizeContentUpload(uid, email, await getDonationCampaignById(entityId));
+  } else if (kind === "group") {
+    const allowed = await userCanUploadGroupImage(uid, email, entityId);
+    if (!allowed) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return true;
   }
 
   if (!churchId) {

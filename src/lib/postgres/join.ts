@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { churchMemberships, churches, users } from "@/db/schema";
 import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
 import { getClerkIdentity } from "@/lib/email/verify-auth";
-import { triggerJoinRequestNotification } from "@/lib/email/triggers";
+import { triggerJoinRequestAdminNotifications, triggerJoinRequestNotification } from "@/lib/email/triggers";
 import {
   getJoinBlockedReason,
   isPublicJoinAllowed,
@@ -237,6 +237,13 @@ export async function joinUserToChurchBySlug(
     .where(eq(users.id, appUser.id));
 
   const identity = await getClerkIdentity(clerkId);
+  await triggerJoinRequestAdminNotifications({
+    organizationId: church.organizationId,
+    churchId: church.id,
+    churchName: church.name,
+    memberName: identity?.displayName ?? "",
+    requesterUserId: clerkId,
+  });
   void triggerJoinRequestNotification({
     organizationId: church.organizationId,
     branchId: church.id,

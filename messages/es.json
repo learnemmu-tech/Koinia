@@ -102,9 +102,12 @@
     "sermons": "Sermones",
     "articles": "Artículos",
     "shorts": "Shorts",
+    "videos": "Videos",
     "events": "Eventos",
     "donations": "Donaciones",
     "prayerRequests": "Peticiones de oración",
+    "groups": "Grupos",
+    "community": "Comunidad",
     "books": "Libros",
     "library": "Biblioteca",
     "superAdmin": "Superadministrador",
@@ -797,6 +800,9 @@
     "create": "Crear",
     "likeFailed": "No se pudo dar me gusta a este Short. Inténtelo de nuevo.",
     "empty": "Aún no hay Shorts.",
+    "emptyPublished": "Aún no hay shorts publicados",
+    "addShort": "Añadir Short",
+    "submitShort": "Enviar Short",
     "retry": "Reintentar"
   },
   "notifications": {

@@ -72,10 +72,14 @@ const PUBLIC_MOBILE_NAV: NavItem[] = [
     match: (p) => p === "/articles" || p.startsWith("/articles/"),
   },
   {
-    label: "Shorts",
-    href: "/shorts",
+    label: "Videos",
+    href: "/videos",
     icon: Clapperboard,
-    match: (p) => p === "/shorts" || p.startsWith("/shorts/"),
+    match: (p) =>
+      p === "/videos" ||
+      p.startsWith("/videos/") ||
+      p === "/shorts" ||
+      p.startsWith("/shorts/"),
   },
   {
     label: "Events",
