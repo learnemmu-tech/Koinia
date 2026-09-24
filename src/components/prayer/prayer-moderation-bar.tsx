@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { notifyIfPrayerApproved } from "@/lib/notify-if-published";
 import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";
 import {
@@ -43,6 +44,7 @@ export function PrayerModerationBar({
   const t = useTranslations("prayer");
   const tCommon = useTranslations("common");
   const { user } = useFirebaseAuth();
+  const allowWrite = useAllowTrialWrite();
   const tenantFields = useTenantNotifyFields();
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -57,6 +59,7 @@ export function PrayerModerationBar({
   };
 
   async function handleStatusChange(status: PrayerRequestStatus) {
+    if (!allowWrite({ action: "manage", resource: "prayer" })) return;
     setUpdating(true);
     try {
       await updatePrayerRequestStatus(request.id, status);
@@ -141,7 +144,10 @@ export function PrayerModerationBar({
           size="sm"
           variant="ghost"
           disabled={busy}
-          onClick={() => setConfirmOpen(true)}
+          onClick={() => {
+            if (!allowWrite({ action: "delete", resource: "prayer" })) return;
+            setConfirmOpen(true);
+          }}
           className="h-8 rounded-full px-3 text-destructive hover:text-destructive"
         >
           <Trash2 className="size-3.5" aria-hidden />

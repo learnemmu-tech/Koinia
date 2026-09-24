@@ -28,6 +28,13 @@ export async function updateChurch(
   churchId: string,
   input: UpdateChurchInput
 ): Promise<void> {
+  const church = await getChurchRowById(churchId);
+  if (church?.organizationId) {
+    const { assertSubscriptionWritable } = await import(
+      "@/lib/subscription/subscription-server"
+    );
+    await assertSubscriptionWritable(church.organizationId);
+  }
   await updateChurchRecord(churchId, input);
 }
 
@@ -41,5 +48,9 @@ export async function setChurchActive(
 export async function deleteChurch(churchId: string): Promise<void> {
   const church = await getChurchRowById(churchId);
   if (!church) return;
+  const { assertSubscriptionWritable } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertSubscriptionWritable(church.organizationId);
   await deleteChurchInOrganization(church.organizationId, churchId);
 }

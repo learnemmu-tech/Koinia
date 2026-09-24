@@ -33,6 +33,7 @@ import {
   assertSubscriptionWritable,
   isSubscriptionLimitError,
 } from "@/lib/subscription/subscription-server";
+import { TRIAL_EXPIRED_MESSAGE } from "@/lib/subscription/trial";
 import { timed } from "@/lib/perf";
 import type { CreateArticleInput, UpdateArticleInput } from "@/types/firebase-article";
 import type { CreateEventInput, UpdateEventInput } from "@/types/firebase-event";
@@ -178,11 +179,18 @@ export async function POST(request: Request) {
       if (!allowed) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      if (record?.churchId) {
-        const church = await getChurchById(record.churchId);
-        if (church?.organizationId) {
-          await assertSubscriptionWritable(church.organizationId);
+      if (record?.contentScope !== "platform_public") {
+        const church = record?.churchId
+          ? await getChurchById(record.churchId)
+          : null;
+        const organizationId = church?.organizationId?.trim();
+        if (!organizationId) {
+          return NextResponse.json(
+            { error: TRIAL_EXPIRED_MESSAGE },
+            { status: 403 }
+          );
         }
+        await assertSubscriptionWritable(organizationId);
       }
     }
 

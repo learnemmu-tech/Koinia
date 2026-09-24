@@ -27,7 +27,12 @@ export async function POST(request: Request) {
       subscriptionId: body.subscriptionId.trim(),
     });
 
-    return NextResponse.json({ abandoned });
+    return NextResponse.json({
+      abandoned,
+      organizationId: auth.organizationId,
+      subscriptionId: body.subscriptionId.trim(),
+      state: abandoned ? "abandoned" : "not_transitioned",
+    });
   } catch (error) {
     const authError = authErrorResponse(error);
     if (

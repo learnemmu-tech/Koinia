@@ -475,6 +475,10 @@ export async function createChurchGroup(input: {
   if (!church?.organizationId) {
     throw new GroupAccessError("Not found", "not_found");
   }
+  const { assertSubscriptionWritable } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertSubscriptionWritable(church.organizationId);
 
   const appUser = await requireAppUser(input.clerkId);
   const [inserted] = await db
@@ -592,6 +596,10 @@ export async function updateChurchGroup(input: {
   imageUrl?: string | null;
 }): Promise<ChurchGroupSummary> {
   const group = await requireGroupEditor(input);
+  const { assertSubscriptionWritable } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertSubscriptionWritable(group.organizationId);
   const name = input.name?.trim();
   if (name !== undefined && !name) {
     throw new GroupAccessError("Group name is required.", "invalid");
@@ -662,6 +670,10 @@ export async function archiveChurchGroup(input: {
   groupId: string;
 }): Promise<void> {
   const group = await requireVisibleGroup({ ...input, manage: true });
+  const { assertSubscriptionWritable } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertSubscriptionWritable(group.organizationId);
   await db
     .update(churchGroups)
     .set({ status: "archived", updatedAt: new Date() })

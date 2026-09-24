@@ -27,6 +27,7 @@ import {
 import { useActiveChurch } from "@/context/active-church-context";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useOrganization } from "@/context/organization-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { adminSectionClass } from "@/lib/responsive-classes";
 import type { FirebaseChurch } from "@/types/firebase-church";
 
@@ -79,6 +80,7 @@ export function MultiOrgDashboard() {
     loading,
     refetch,
   } = useOrganization();
+  const allowWrite = useAllowTrialWrite();
   const churchStats = useChurchCardStats();
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -97,10 +99,12 @@ export function MultiOrgDashboard() {
       setActiveChurchId(churchId);
     }
     if (searchParams.get("createChurch") === "1") {
-      setCreateModalOpen(true);
+      if (allowWrite({ action: "create", resource: "church" })) {
+        setCreateModalOpen(true);
+      }
       router.replace("/dashboard");
     }
-  }, [searchParams, setActiveChurchId, router]);
+  }, [searchParams, setActiveChurchId, router, allowWrite]);
 
   function openChurchSettings(churchId: string) {
     setActiveChurchId(churchId);
@@ -145,7 +149,10 @@ export function MultiOrgDashboard() {
           <Button
             size="lg"
             className="mt-8"
-            onClick={() => setCreateModalOpen(true)}
+            onClick={() => {
+              if (!allowWrite({ action: "create", resource: "church" })) return;
+              setCreateModalOpen(true);
+            }}
           >
             <Plus className="mr-2 size-4" />
             Create Your First Church
@@ -160,7 +167,12 @@ export function MultiOrgDashboard() {
                 this organization
               </p>
             </div>
-            <Button onClick={() => setCreateModalOpen(true)}>
+            <Button
+              onClick={() => {
+                if (!allowWrite({ action: "create", resource: "church" })) return;
+                setCreateModalOpen(true);
+              }}
+            >
               <Plus className="mr-2 size-4" />
               Add Church
             </Button>

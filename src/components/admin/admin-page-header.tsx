@@ -4,7 +4,9 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { typePageTitleClass } from "@/lib/responsive-classes";
+import type { TrialWriteRequest } from "@/lib/subscription/trial-write";
 import { Plus } from "lucide-react";
 
 type AdminPageHeaderProps = {
@@ -14,6 +16,7 @@ type AdminPageHeaderProps = {
   actionLabel?: string;
   onAction?: () => void;
   actionDisabled?: boolean;
+  trialWrite?: TrialWriteRequest;
   children?: ReactNode;
 };
 
@@ -24,9 +27,11 @@ export function AdminPageHeader({
   actionLabel,
   onAction,
   actionDisabled = false,
+  trialWrite,
   children,
 }: AdminPageHeaderProps) {
   const t = useTranslations("common");
+  const allowWrite = useAllowTrialWrite();
   const label = eyebrow ?? t("admin");
 
   return (
@@ -48,7 +53,10 @@ export function AdminPageHeader({
           {actionLabel && onAction ? (
             <Button
               size="sm"
-              onClick={onAction}
+              onClick={() => {
+                if (trialWrite && !allowWrite(trialWrite)) return;
+                onAction();
+              }}
               disabled={actionDisabled}
               className="h-11 w-full gap-2 rounded-full px-5 font-semibold shadow sm:h-9 sm:w-auto"
             >

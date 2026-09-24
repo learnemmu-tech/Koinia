@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useOrganization } from "@/context/organization-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { adminSectionClass } from "@/lib/responsive-classes";
 import { isMultiChurchOrgWorkspace } from "@/lib/organization/workspace-type";
 
@@ -24,6 +25,7 @@ export function CreateFirstChurchCard() {
   const router = useRouter();
   const { authUser } = useFirebaseAuth();
   const { organization, branchesByChurch, refetch } = useOrganization();
+  const allowWrite = useAllowTrialWrite();
   const [modalOpen, setModalOpen] = useState(false);
 
   const totalChurches = Object.values(branchesByChurch).flat().length;
@@ -55,7 +57,13 @@ export function CreateFirstChurchCard() {
           </div>
         </CardHeader>
         <CardContent>
-          <Button size="lg" onClick={() => setModalOpen(true)}>
+          <Button
+            size="lg"
+            onClick={() => {
+              if (!allowWrite({ action: "create", resource: "church" })) return;
+              setModalOpen(true);
+            }}
+          >
             <Plus className="mr-2 size-4" />
             {t("createChurch")}
           </Button>

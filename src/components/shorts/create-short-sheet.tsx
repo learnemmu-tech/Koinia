@@ -47,6 +47,7 @@ import {
 } from "@/lib/shorts-client";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 
 type CreateShortSheetProps = {
   open: boolean;
@@ -107,6 +108,11 @@ export function CreateShortSheet({
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [coverFile, setCoverFile] = React.useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = React.useState<string | null>(null);
+  useTrialWriteMountGuard(
+    { action: "create", resource: "short", contentScope },
+    open,
+    () => onOpenChange(false)
+  );
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const coverInputRef = React.useRef<HTMLInputElement>(null);
 

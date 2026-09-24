@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import {
   archiveChurchGroup,
   leaveChurchGroup,
@@ -54,6 +55,7 @@ export function GroupDetailClient({
 }: GroupDetailClientProps) {
   const router = useRouter();
   const { user } = useFirebaseAuth();
+  const allowWrite = useAllowTrialWrite();
   const [group, setGroup] = useState(initialGroup);
   const [membersOpen, setMembersOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -189,7 +191,10 @@ export function GroupDetailClient({
                   type="button"
                   size="sm"
                   className="h-9 rounded-lg"
-                  onClick={() => setInviteOpen(true)}
+                  onClick={() => {
+                    if (!allowWrite({ action: "manage", resource: "group" })) return;
+                    setInviteOpen(true);
+                  }}
                 >
                   Invite Members
                 </Button>
@@ -208,7 +213,12 @@ export function GroupDetailClient({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
                   {actorIsOwner || canEdit ?
-                    <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        if (!allowWrite({ action: "edit", resource: "group" })) return;
+                        setEditOpen(true);
+                      }}
+                    >
                       Edit group
                     </DropdownMenuItem>
                   : null}
@@ -217,7 +227,12 @@ export function GroupDetailClient({
                       <DropdownMenuItem onSelect={() => setMembersOpen(true)}>
                         Manage members
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setInviteOpen(true)}>
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          if (!allowWrite({ action: "manage", resource: "group" })) return;
+                          setInviteOpen(true);
+                        }}
+                      >
                         Invite members
                       </DropdownMenuItem>
                     </>
@@ -235,7 +250,10 @@ export function GroupDetailClient({
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"
-                        onSelect={() => setArchiveOpen(true)}
+                        onSelect={() => {
+                          if (!allowWrite({ action: "delete", resource: "group" })) return;
+                          setArchiveOpen(true);
+                        }}
                       >
                         Archive group
                       </DropdownMenuItem>

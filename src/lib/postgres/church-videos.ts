@@ -11,10 +11,26 @@ import { parseChurchVideoUrl } from "@/lib/media-url-validation";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { userCanManageChurch } from "@/lib/postgres/session";
 import { getChurchById } from "@/lib/postgres/tenants";
+import { TRIAL_EXPIRED_MESSAGE } from "@/lib/subscription/trial";
 import type { ChurchVideo } from "@/types/church-video";
 import type { ShortCategory } from "@/types/video-short";
 
 type VideoRow = typeof churchVideos.$inferSelect;
+
+async function assertVideoOrganizationWritable(
+  organizationId?: string | null,
+  contentScope?: string | null
+): Promise<void> {
+  if (contentScope === "platform_public") return;
+  const { assertSubscriptionWritable, SubscriptionLimitError } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  const orgId = organizationId?.trim();
+  if (!orgId) {
+    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+  }
+  await assertSubscriptionWritable(orgId);
+}
 
 function mapVideoRow(row: VideoRow, canManage = false): ChurchVideo {
   return {
@@ -257,13 +273,7 @@ export async function updateChurchVideo(input: {
   if (!row) throw new Error("Video not found");
 
   await requireManageVideo(input.clerkId, input.email, row);
-
-  if (row.organizationId) {
-    const { assertSubscriptionWritable } = await import(
-      "@/lib/subscription/subscription-server"
-    );
-    await assertSubscriptionWritable(row.organizationId);
-  }
+  await assertVideoOrganizationWritable(row.organizationId, row.contentScope);
 
   let externalUrl = row.externalUrl;
   let provider = row.provider;
@@ -324,6 +334,7 @@ export async function deleteChurchVideo(input: {
   const row = await getChurchVideoById(input.videoId);
   if (!row) throw new Error("Video not found");
   await requireManageVideo(input.clerkId, input.email, row);
+  await assertVideoOrganizationWritable(row.organizationId, row.contentScope);
   await db.delete(churchVideos).where(eq(churchVideos.id, row.id));
 }
 

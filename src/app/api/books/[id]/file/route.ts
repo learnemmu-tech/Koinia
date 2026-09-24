@@ -15,6 +15,7 @@ import {
   updateDigitalFileMetadata,
   userHasDigitalEntitlement,
 } from "@/lib/postgres/books";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
 import {
   createProtectedBookDownloadUrl,
   deleteProtectedBookObject,
@@ -113,23 +114,30 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const previousKey = await getBookFileObjectKey(book.id);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const uploaded = await putProtectedBookObject({
-    organizationId: book.organizationId,
-    bookId: book.id,
-    ext: "pdf",
-    body: buffer,
-    contentType: "application/pdf",
-  });
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploaded = await putProtectedBookObject({
+      organizationId: book.organizationId,
+      bookId: book.id,
+      ext: "pdf",
+      body: buffer,
+      contentType: "application/pdf",
+    });
 
-  await updateDigitalFileMetadata({
-    bookId: book.id,
-    fileObjectKey: uploaded.objectKey,
-    fileName: file.name,
-    fileSize: file.size,
-    mimeType: "application/pdf",
-  });
-  await deleteProtectedBookObject(previousKey);
+    await updateDigitalFileMetadata({
+      bookId: book.id,
+      fileObjectKey: uploaded.objectKey,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: "application/pdf",
+    });
+    await deleteProtectedBookObject(previousKey);
+  } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    throw error;
+  }
 
   return NextResponse.json({
     fileName: file.name,

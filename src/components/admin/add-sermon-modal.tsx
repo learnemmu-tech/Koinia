@@ -34,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 import { createSermon, updateSermon } from "@/lib/content-mutations-client";
 import {
   isValidAudioUrl,
@@ -148,6 +149,15 @@ export function AddSermonModal({
   const { user, authUser } = useFirebaseAuth();
   const { invalidateSermons } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
+  useTrialWriteMountGuard(
+    {
+      action: initialSermon ? "edit" : "create",
+      resource: "sermon",
+      contentScope,
+    },
+    isOpen,
+    onClose
+  );
   const [coverFile, setCoverFile] = useState<File | undefined>();
   const [coverPreview, setCoverPreview] = useState("");
   const [loading, setLoading] = useState(false);

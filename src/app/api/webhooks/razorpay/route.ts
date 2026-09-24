@@ -38,12 +38,35 @@ export async function POST(request: Request) {
 
     const subscriptionEvent = parseRazorpaySubscriptionEvent(payload);
     if (subscriptionEvent.event === "payment.failed") {
-      const paymentSubscriptionId = (
+      const payment = (
         subscriptionEvent as typeof subscriptionEvent & {
-          payload?: { payment?: { entity?: { subscription_id?: string } } };
+          payload?: {
+            payment?: {
+              entity?: {
+                id?: string;
+                subscription_id?: string;
+                error_code?: string;
+                error_description?: string;
+                error_source?: string;
+                error_step?: string;
+                error_reason?: string;
+              };
+            };
+          };
         }
-      ).payload?.payment?.entity?.subscription_id;
+      ).payload?.payment?.entity;
+      const paymentSubscriptionId = payment?.subscription_id;
       if (paymentSubscriptionId) {
+        console.error("[webhooks/razorpay] payment.failed", {
+          event: subscriptionEvent.event,
+          subscriptionId: paymentSubscriptionId,
+          paymentId: payment?.id,
+          code: payment?.error_code,
+          source: payment?.error_source,
+          step: payment?.error_step,
+          reason: payment?.error_reason,
+          description: payment?.error_description,
+        });
         const eventId =
           subscriptionEvent.id ?? createHash("sha256").update(payload).digest("hex");
         const claimed = await claimRazorpayWebhookEvent({

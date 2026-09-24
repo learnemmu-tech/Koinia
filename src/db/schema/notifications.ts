@@ -9,14 +9,16 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { notificationTypeEnum } from "./enums";
-import { churches, users } from "./tenants";
+import { churches, organizations, users } from "./tenants";
 
 export const notifications = pgTable(
   "notifications",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id").notNull(),
-    churchId: uuid("church_id").notNull(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    churchId: uuid("church_id"),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),

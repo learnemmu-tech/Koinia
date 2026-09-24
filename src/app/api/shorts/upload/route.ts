@@ -12,6 +12,8 @@ import {
 import {
   userCanAccessChurchContent,
 } from "@/lib/postgres/session";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
+import { TRIAL_EXPIRED_MESSAGE } from "@/lib/subscription/trial";
 import {
   MAX_SHORT_THUMBNAIL_BYTES,
   MAX_SHORT_VIDEO_BYTES,
@@ -83,6 +85,28 @@ async function authorizeUpload(request: NextRequest, shortId: string) {
     );
     if (!allowed) {
       return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    }
+  }
+
+  if (short.contentScope !== "platform_public") {
+    const { assertSubscriptionWritable } = await import(
+      "@/lib/subscription/subscription-server"
+    );
+    const organizationId = short.organizationId?.trim();
+    if (!organizationId) {
+      return {
+        error: NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 403 }),
+      };
+    }
+    try {
+      await assertSubscriptionWritable(organizationId);
+    } catch (error) {
+      if (isSubscriptionLimitError(error)) {
+        return {
+          error: NextResponse.json({ error: error.message }, { status: 403 }),
+        };
+      }
+      throw error;
     }
   }
 

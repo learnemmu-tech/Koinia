@@ -28,6 +28,7 @@ import {
   getCampaignProgressPercent,
 } from "@/lib/donation-firestore";
 import { getSongCoverUrl } from "@/lib/utils";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 
 type DonationCampaignListProps = {
   campaigns: FirebaseDonationCampaign[];
@@ -46,6 +47,7 @@ export function DonationCampaignList({
 }: DonationCampaignListProps) {
   const t = useTranslations("donations");
   const tCommon = useTranslations("common");
+  const allowWrite = useAllowTrialWrite();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -68,6 +70,7 @@ export function DonationCampaignList({
   }
 
   async function handleToggleStatus(campaign: FirebaseDonationCampaign) {
+    if (!allowWrite({ action: "manage", resource: "donation" })) return;
     setUpdating(campaign.id);
     try {
       const nextStatus = campaign.status === "active" ? "inactive" : "active";
@@ -158,6 +161,7 @@ export function DonationCampaignList({
                       variant="destructive"
                       disabled={deleting === campaign.id}
                       onClick={() => {
+                        if (!allowWrite({ action: "delete", resource: "donation" })) return;
                         setSelected(campaign);
                         setDeleteConfirmOpen(true);
                       }}

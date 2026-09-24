@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useOrganization } from "@/context/organization-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { filterBySearch, paginateItems } from "@/lib/admin-list-utils";
 import { isIndependentChurchWorkspace } from "@/lib/organization/workspace-type";
 import {
@@ -67,6 +68,7 @@ function OrganizationSettingsForm() {
   const tForms = useTranslations("forms");
   const { authUser } = useFirebaseAuth();
   const { organization, loading, refetch } = useOrganization();
+  const allowWrite = useAllowTrialWrite();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [logo, setLogo] = useState("");
@@ -81,6 +83,7 @@ function OrganizationSettingsForm() {
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
+    if (!allowWrite({ action: "manage", resource: "church" })) return;
     if (!organization || !authUser) return;
 
     setSaving(true);
@@ -192,6 +195,7 @@ function OrganizationChurchesPanel() {
   const { authUser } = useFirebaseAuth();
   const { organization, branchesByChurch, loading, refetch } =
     useOrganization();
+  const allowWrite = useAllowTrialWrite();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -222,6 +226,7 @@ function OrganizationChurchesPanel() {
   );
 
   async function handleDeleteChurch(branchId: string) {
+    if (!allowWrite({ action: "delete", resource: "church" })) return;
     if (!organization || !authUser) return;
     setBusyBranchId(branchId);
     try {
@@ -246,6 +251,7 @@ function OrganizationChurchesPanel() {
         title={t("churchesTitle")}
         description={t("churchesOrgDescription")}
         actionLabel={t("createChurch")}
+        trialWrite={{ action: "create", resource: "church" }}
         onAction={() => {
           setEditingBranch(null);
           setModalOpen(true);
@@ -290,6 +296,7 @@ function OrganizationChurchesPanel() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      if (!allowWrite({ action: "edit", resource: "church" })) return;
                       setEditingBranch(branch);
                       setBranchModalOpen(true);
                     }}
@@ -365,6 +372,7 @@ export function OrganizationBranchesPanel() {
   const { authUser } = useFirebaseAuth();
   const { organization, churches, branchesByChurch, loading, refetch } =
     useOrganization();
+  const allowWrite = useAllowTrialWrite();
   const [selectedChurchId, setSelectedChurchId] = useState<string>("");
   const [branchModalOpen, setBranchModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<FirebaseBranch | null>(
@@ -385,6 +393,7 @@ export function OrganizationBranchesPanel() {
   : [];
 
   async function handleDeleteBranch(branchId: string) {
+    if (!allowWrite({ action: "delete", resource: "church" })) return;
     if (!organization || !authUser) return;
     setBusyBranchId(branchId);
     try {
@@ -449,6 +458,7 @@ export function OrganizationBranchesPanel() {
         title={t("churchesTitle")}
         description={t("churchesOrgManageDescription")}
         actionLabel={t("createChurch")}
+        trialWrite={{ action: "create", resource: "church" }}
         onAction={() => {
           setEditingBranch(null);
           setBranchModalOpen(true);
@@ -503,6 +513,7 @@ export function OrganizationBranchesPanel() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      if (!allowWrite({ action: "edit", resource: "church" })) return;
                       setEditingBranch(branch);
                       setBranchModalOpen(true);
                     }}

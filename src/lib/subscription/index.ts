@@ -31,6 +31,10 @@ export { getSubscriptionByChurchId, getSubscriptionSnapshot, ensureSubscriptionD
 export {
   getTrialEndDate,
   getTrialLifecycle,
+  getDueTrialLifecycleEventKeys,
+  getSubscriptionEntitlement,
+  hasActivePaidEntitlement,
+  resolveTrialWindow,
   SHEPHERD_TRIAL_DAYS,
   TRIAL_DURATION_DAYS,
   TRIAL_EXPIRED_MESSAGE,

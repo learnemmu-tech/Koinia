@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 
 type AddVideoSheetProps = {
   open: boolean;
@@ -56,6 +57,11 @@ export function AddVideoSheet({
   const [tags, setTags] = React.useState("");
   const [published, setPublished] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  useTrialWriteMountGuard(
+    { action: "create", resource: "video", contentScope },
+    open,
+    () => onOpenChange(false)
+  );
 
   function reset() {
     setTitle("");

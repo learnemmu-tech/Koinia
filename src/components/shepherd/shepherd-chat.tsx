@@ -71,7 +71,7 @@ type Props = {
 export function ShepherdChat({ initialMode, displayName: _displayName }: Props) {
   const { getToken } = useAuth();
   const subscription = useSubscriptionOptional();
-  const shepherdAllowed = subscription?.canUseFeature("canUseShepherdAi") ?? true;
+  const shepherdAllowed = subscription?.canUseFeature("canUseShepherdAi") ?? false;
   const [mode, setMode] = useState<ShepherdAudienceMode>(initialMode);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");

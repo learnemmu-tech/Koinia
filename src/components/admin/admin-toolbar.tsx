@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAllowTrialWrite } from "@/context/subscription-context";
+import type { TrialWriteRequest } from "@/lib/subscription/trial-write";
 
 type AdminToolbarProps = {
   search: string;
@@ -15,6 +17,7 @@ type AdminToolbarProps = {
   actionLabel?: string;
   onAction?: () => void;
   actionDisabled?: boolean;
+  trialWrite?: TrialWriteRequest;
 };
 
 export function AdminToolbar({
@@ -25,8 +28,10 @@ export function AdminToolbar({
   actionLabel,
   onAction,
   actionDisabled = false,
+  trialWrite,
 }: AdminToolbarProps) {
   const t = useTranslations("common");
+  const allowWrite = useAllowTrialWrite();
   return (
       <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="relative w-full min-w-0 sm:max-w-sm">
@@ -43,7 +48,10 @@ export function AdminToolbar({
         {actionLabel && onAction ?
           <Button
             size="sm"
-            onClick={onAction}
+            onClick={() => {
+              if (trialWrite && !allowWrite(trialWrite)) return;
+              onAction();
+            }}
             disabled={actionDisabled}
             className="h-11 w-full gap-2 rounded-full px-4 font-semibold shadow-sm sm:h-9 sm:w-auto"
           >

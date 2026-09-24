@@ -14,6 +14,7 @@ import {
 import type { BookAdminScope } from "@/lib/books/admin-scope";
 import type { UpsertBookInput } from "@/lib/books/validation";
 import { isPostgresUuid } from "@/lib/postgres/uuid";
+import { TRIAL_EXPIRED_MESSAGE } from "@/lib/subscription/trial";
 import type {
   BookDigitalEdition,
   BookPhysicalEdition,
@@ -259,11 +260,23 @@ export async function userHasDigitalEntitlement(
   return Boolean(row);
 }
 
+async function assertBookOrganizationWritable(organizationId?: string | null) {
+  const { assertSubscriptionWritable, SubscriptionLimitError } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  const orgId = organizationId?.trim();
+  if (!orgId) {
+    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+  }
+  await assertSubscriptionWritable(orgId);
+}
+
 export async function createBook(input: {
   organizationId: string;
   createdBy: string;
   data: UpsertBookInput;
 }): Promise<BookRecord> {
+  await assertBookOrganizationWritable(input.organizationId);
   const slug = await uniqueSlug(
     input.organizationId,
     input.data.title,
@@ -301,6 +314,7 @@ export async function updateBook(
   organizationId: string,
   data: UpsertBookInput
 ): Promise<BookRecord> {
+  await assertBookOrganizationWritable(organizationId);
   const slug = await uniqueSlug(
     organizationId,
     data.title,
@@ -404,6 +418,8 @@ export async function updateBookCover(
   bookId: string,
   coverImageUrl: string | null
 ): Promise<void> {
+  const existing = await getBookById(bookId);
+  await assertBookOrganizationWritable(existing?.organizationId);
   await db.update(books).set({ coverImageUrl }).where(eq(books.id, bookId));
 }
 
@@ -414,6 +430,8 @@ export async function updateDigitalFileMetadata(input: {
   fileSize: number;
   mimeType: string;
 }): Promise<void> {
+  const existing = await getBookById(input.bookId);
+  await assertBookOrganizationWritable(existing?.organizationId);
   await db
     .update(bookDigitalEditions)
     .set({
@@ -426,6 +444,8 @@ export async function updateDigitalFileMetadata(input: {
 }
 
 export async function deleteBook(bookId: string): Promise<void> {
+  const existing = await getBookById(bookId);
+  await assertBookOrganizationWritable(existing?.organizationId);
   await db.delete(books).where(eq(books.id, bookId));
 }
 

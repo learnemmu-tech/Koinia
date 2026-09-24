@@ -22,6 +22,7 @@ import {
 } from "@/lib/postgres/books";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { notifyIfBookNewlyPublished } from "@/lib/books/publish-notifications";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -118,16 +119,23 @@ export async function PATCH(request: Request, context: RouteContext) {
     await deleteProtectedBookObject(fileKey);
   }
 
-  const book = await updateBook(id, scope.organizationId, parsed.data);
-  await notifyIfBookNewlyPublished({
-    bookId: book.id,
-    title: book.title,
-    coverImageUrl: book.coverImageUrl,
-    churchId: book.churchId,
-    status: book.status,
-    previousStatus: existing.status,
-  });
-  return NextResponse.json({ book });
+  try {
+    const book = await updateBook(id, scope.organizationId, parsed.data);
+    await notifyIfBookNewlyPublished({
+      bookId: book.id,
+      title: book.title,
+      coverImageUrl: book.coverImageUrl,
+      churchId: book.churchId,
+      status: book.status,
+      previousStatus: existing.status,
+    });
+    return NextResponse.json({ book });
+  } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    throw error;
+  }
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
@@ -148,7 +156,14 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const fileKey = await getBookFileObjectKey(id);
-  await deleteBook(id);
+  try {
+    await deleteBook(id);
+  } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    throw error;
+  }
   await Promise.all([
     deleteProtectedBookObject(fileKey),
     deleteStoredMediaUrls(existing.coverImageUrl),

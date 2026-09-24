@@ -1,23 +1,54 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 
+import { clerkClient } from "@clerk/nextjs/server";
+
 import { rateLimitSubscriptionRequest } from "@/lib/rate-limit";
 import {
   createRazorpaySubscription,
+  ensureRazorpayCustomer,
   getRazorpayPublicKey,
   updateRazorpaySubscriptionPlan,
 } from "@/lib/payments/razorpay-subscriptions";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import {
   getOrganizationSubscription,
   hasOpenRazorpaySubscription,
   claimSubscriptionCheckoutAttempt,
   markSubscriptionCheckoutCreated,
   markSubscriptionCheckoutFailed,
+  persistRazorpayCustomerId,
 } from "@/lib/subscription/razorpay-subscription-server";
 import {
   authErrorResponse,
   requireBillingAdmin,
 } from "@/lib/subscription/subscription-api-auth";
+
+async function resolvePayerPrefill(clerkId: string) {
+  const appUser = await getAppUserByClerkId(clerkId);
+  const name = [appUser?.firstName, appUser?.lastName]
+    .filter((value) => Boolean(value?.trim()))
+    .join(" ")
+    .trim();
+  const email = appUser?.email.trim() || undefined;
+  let contact: string | undefined;
+  try {
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(clerkId);
+    const phone =
+      clerkUser.primaryPhoneNumber?.phoneNumber ??
+      clerkUser.phoneNumbers[0]?.phoneNumber;
+    contact = phone?.replace(/\s+/g, "") || undefined;
+  } catch {
+    contact = undefined;
+  }
+  return {
+    name: name || undefined,
+    email,
+    contact,
+  };
+}
+
 export async function POST(request: Request) {
   let attemptId: string | undefined;
   try {
@@ -76,12 +107,36 @@ export async function POST(request: Request) {
       planId,
     });
     attemptId = claim.attempt.id;
+    const prefill = await resolvePayerPrefill(auth.clerkId);
+    const existingCustomerId = existing?.razorpayCustomerId ?? null;
+    let customerId: string | null = existingCustomerId;
+    try {
+      customerId = await ensureRazorpayCustomer({
+        existingCustomerId,
+        name: prefill.name,
+        email: prefill.email,
+        contact: prefill.contact,
+      });
+      if (customerId) {
+        await persistRazorpayCustomerId({
+          organizationId: auth.organizationId,
+          customerId,
+        });
+      }
+    } catch (error) {
+      console.error("[api/subscription/razorpay/create] customer", {
+        organizationId: auth.organizationId,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+
     if (claim.kind === "reuse" && claim.attempt.providerSubscriptionId) {
       return NextResponse.json({
         mode: "checkout",
         key: getRazorpayPublicKey(),
         subscriptionId: claim.attempt.providerSubscriptionId,
         planId,
+        prefill,
       });
     }
     if (claim.kind === "conflict") {
@@ -105,6 +160,7 @@ export async function POST(request: Request) {
       key: getRazorpayPublicKey(),
       subscriptionId: subscription.id,
       planId,
+      prefill,
     });
   } catch (error) {
     if (attemptId) await markSubscriptionCheckoutFailed(attemptId);

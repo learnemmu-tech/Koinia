@@ -30,6 +30,7 @@ import { addSong, updateSong } from "@/lib/content-mutations-client";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
 import { useSubscriptionOptional } from "@/context/subscription-context";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";
 import { notifyIfNewlyPublished } from "@/lib/notify-if-published";
 import { SONG_CATEGORIES } from "@/types/firebase-song";
@@ -164,6 +165,15 @@ export function AddMusicModal({
   const { invalidateSongs } = useInvalidateAdminQueries();
   const subscription = useSubscriptionOptional();
   const tenantFields = useTenantNotifyFields();
+  useTrialWriteMountGuard(
+    {
+      action: initialSong ? "edit" : "create",
+      resource: "song",
+      contentScope,
+    },
+    isOpen,
+    onClose
+  );
   const [formData, setFormData] = useState<SongFormData>(EMPTY_FORM);
   const [files, setFiles] = useState<{ cover?: File; audio?: File }>({});
   const [coverPreview, setCoverPreview] = useState("");

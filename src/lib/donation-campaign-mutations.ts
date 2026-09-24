@@ -16,16 +16,24 @@ export async function createDonationCampaign(
 ): Promise<string> {
   const organizationId = input.organizationId?.trim();
   const churchId = input.churchId?.trim();
-  if (organizationId) {
-    const { assertFeatureAllowed } = await import(
-      "@/lib/subscription/subscription-server"
-    );
-    await assertFeatureAllowed(organizationId, "canCreateDonations");
-  } else if (churchId) {
-    const { assertChurchFeatureAllowed } = await import(
-      "@/lib/subscription/subscription-server"
-    );
-    await assertChurchFeatureAllowed(churchId, "canCreateDonations");
+  if (input.contentScope !== "platform_public") {
+    if (organizationId) {
+      const { assertFeatureAllowed } = await import(
+        "@/lib/subscription/subscription-server"
+      );
+      await assertFeatureAllowed(organizationId, "canCreateDonations");
+    } else if (churchId) {
+      const { assertChurchFeatureAllowed } = await import(
+        "@/lib/subscription/subscription-server"
+      );
+      await assertChurchFeatureAllowed(churchId, "canCreateDonations");
+    } else {
+      const { SubscriptionLimitError } = await import(
+        "@/lib/subscription/subscription-server"
+      );
+      const { TRIAL_EXPIRED_MESSAGE } = await import("@/lib/subscription/trial");
+      throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+    }
   }
   const id = await insertCampaign(input);
   if (input.status === "active") {

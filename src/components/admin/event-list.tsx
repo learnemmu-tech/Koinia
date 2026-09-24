@@ -23,6 +23,7 @@ import { deleteEvent, updateEvent } from "@/lib/content-mutations-client";
 import { notifyIfEventPublished } from "@/lib/notify-if-published";
 import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { getSongCoverUrl } from "@/lib/utils";
 
 type EventListProps = {
@@ -41,6 +42,7 @@ export function EventList({
   const t = useTranslations("events");
   const tCommon = useTranslations("common");
   const { user } = useFirebaseAuth();
+  const allowWrite = useAllowTrialWrite();
   const tenantFields = useTenantNotifyFields();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -64,6 +66,7 @@ export function EventList({
   }
 
   async function handlePublish(event: FirebaseEvent) {
+    if (!allowWrite({ action: "publish", resource: "event" })) return;
     setPublishing(event.id);
     try {
       await updateEvent(event.id, { status: "published" });
@@ -208,6 +211,7 @@ export function EventList({
                     size="sm"
                     variant="ghost"
                     onClick={() => {
+                      if (!allowWrite({ action: "delete", resource: "event" })) return;
                       setSelected(event);
                       setDeleteConfirmOpen(true);
                     }}

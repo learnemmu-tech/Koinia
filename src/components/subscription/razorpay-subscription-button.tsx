@@ -21,9 +21,16 @@ type RazorpayCheckout = {
 
 type RazorpayPaymentFailedResponse = {
   error?: {
-    description?: string;
+    code?: string;
+    source?: string;
+    step?: string;
     reason?: string;
-    metadata?: { subscription_id?: string };
+    description?: string;
+    field?: string;
+    metadata?: Record<string, string> & {
+      subscription_id?: string;
+      payment_id?: string;
+    };
   };
 };
 
@@ -33,14 +40,64 @@ type RazorpaySubscriptionButtonProps = {
   onComplete?: () => void;
 };
 
+type CheckoutPrefill = {
+  name?: string;
+  email?: string;
+  contact?: string;
+};
+
 type CreateResponse = {
   mode?: "checkout" | "scheduled_change";
   key?: string;
   subscriptionId?: string;
   planId?: PlanId;
+  prefill?: CheckoutPrefill;
   message?: string;
   error?: string;
 };
+
+type CleanupResponse = {
+  failed?: boolean;
+  abandoned?: boolean;
+  organizationId?: string;
+  state?: string;
+  error?: string;
+};
+
+async function postCheckoutCleanup(
+  endpoint: "/api/subscription/razorpay/failure" | "/api/subscription/razorpay/abandon",
+  token: string,
+  subscriptionId: string,
+  diagnostics?: RazorpayPaymentFailedResponse["error"]
+): Promise<{ ok: boolean; status: number; data: CleanupResponse }> {
+  const cleanupResponse = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      subscriptionId,
+      ...(endpoint.endsWith("/failure") && diagnostics
+        ? {
+            diagnostics: {
+              code: diagnostics.code,
+              source: diagnostics.source,
+              step: diagnostics.step,
+              reason: diagnostics.reason,
+              description: diagnostics.description,
+              field: diagnostics.field,
+              subscriptionId: diagnostics.metadata?.subscription_id ?? subscriptionId,
+              paymentId: diagnostics.metadata?.payment_id,
+              metadata: diagnostics.metadata,
+            },
+          }
+        : {}),
+    }),
+  });
+  const data = (await cleanupResponse.json().catch(() => ({}))) as CleanupResponse;
+  return { ok: cleanupResponse.ok, status: cleanupResponse.status, data };
+}
 
 async function loadRazorpayScript(): Promise<boolean> {
   if (window.Razorpay) return true;
@@ -100,10 +157,12 @@ export function RazorpaySubscriptionButton({
           endpoint,
           reason,
           subscriptionId,
+          diagnostics,
         }: {
           endpoint: "/api/subscription/razorpay/failure" | "/api/subscription/razorpay/abandon";
           reason: string;
           subscriptionId: string;
+          diagnostics?: RazorpayPaymentFailedResponse["error"];
         }) => {
           if (cleanupStarted) return;
           cleanupStarted = true;
@@ -112,40 +171,38 @@ export function RazorpaySubscriptionButton({
             if (!cleanupUser) {
               throw new Error("Authenticated user is no longer available.");
             }
-            const cleanupToken = await cleanupUser.getIdToken(true);
-            const cleanupResponse = await fetch(endpoint, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${cleanupToken}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ subscriptionId }),
-            });
-            const cleanupData = (await cleanupResponse.json().catch(() => ({}))) as {
-              failed?: boolean;
-              abandoned?: boolean;
-              organizationId?: string;
-              state?: string;
-            };
-            const transitioned = cleanupData.failed === true || cleanupData.abandoned === true;
-            if (!cleanupResponse.ok || !transitioned) {
-              console.error("[razorpay checkout cleanup]", {
-                organizationId: cleanupData.organizationId ?? "unknown",
+            let lastStatus = 0;
+            let lastState = "request_failed";
+            let lastError = "";
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+              const cleanupToken = await cleanupUser.getIdToken(attempt > 0);
+              const result = await postCheckoutCleanup(
+                endpoint,
+                cleanupToken,
                 subscriptionId,
-                httpStatus: cleanupResponse.status,
-                failureReason: reason,
-                state: cleanupData.state ?? "not_transitioned",
-              });
+                diagnostics
+              );
+              lastStatus = result.status;
+              lastState = result.data.state ?? "not_transitioned";
+              lastError = result.data.error ?? "";
+              const transitioned =
+                result.data.failed === true || result.data.abandoned === true;
+              if (result.ok && transitioned) return;
+              const retryable = result.status >= 500 || result.status === 0;
+              if (!retryable || attempt === 2) break;
+              await new Promise((resolve) =>
+                setTimeout(resolve, 400 * (attempt + 1))
+              );
             }
+            console.warn(
+              `[razorpay checkout cleanup] ${reason} subscription=${subscriptionId} http=${lastStatus} state=${lastState}${lastError ? ` error=${lastError}` : ""}`
+            );
           } catch (error) {
-            console.error("[razorpay checkout cleanup]", {
-              organizationId: "unknown",
-              subscriptionId,
-              httpStatus: 0,
-              failureReason: reason,
-              state: "request_failed",
-              error: error instanceof Error ? error.message : "request failed",
-            });
+            console.warn(
+              `[razorpay checkout cleanup] ${reason} subscription=${subscriptionId} request failed: ${
+                error instanceof Error ? error.message : "request failed"
+              }`
+            );
           }
         };
         const razorpay = new window.Razorpay!({
@@ -154,7 +211,12 @@ export function RazorpaySubscriptionButton({
           name: "FaithConnectHub",
           description: `${planId === "starter" ? "Starter" : "Professional"} subscription`,
           prefill: {
-            email: user.email ?? undefined,
+            name: data.prefill?.name || user.displayName || undefined,
+            email: data.prefill?.email || user.email || undefined,
+            ...(data.prefill?.contact ? { contact: data.prefill.contact } : {}),
+          },
+          notes: {
+            planId,
           },
           theme: { color: "#1f6f78" },
           handler: async (checkoutResponse: {
@@ -199,15 +261,18 @@ export function RazorpaySubscriptionButton({
         }) as RazorpayCheckout;
         razorpay.on?.("payment.failed", async (rawResponse) => {
           const failureResponse = rawResponse as RazorpayPaymentFailedResponse;
+          const error = failureResponse.error;
           const failedSubscriptionId =
-            failureResponse.error?.metadata?.subscription_id ?? checkoutSubscriptionId;
+            error?.metadata?.subscription_id ?? checkoutSubscriptionId;
           await releaseCheckout({
             endpoint: "/api/subscription/razorpay/failure",
             reason:
-              failureResponse.error?.description ??
-              failureResponse.error?.reason ??
+              error?.description ??
+              error?.reason ??
+              error?.code ??
               "payment.failed",
             subscriptionId: failedSubscriptionId,
+            diagnostics: error,
           });
           reject(new Error("Payment could not be completed."));
         });

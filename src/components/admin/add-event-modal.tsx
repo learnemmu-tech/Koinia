@@ -49,6 +49,7 @@ import { uploadSongFileLocal } from "@/lib/local-upload";
 import { MAX_IMAGE_SIZE_LABEL, validateImageFile } from "@/lib/upload-limits";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 
 type AddEventModalProps = {
   isOpen: boolean;
@@ -74,6 +75,15 @@ export function AddEventModal({
   const { user } = useFirebaseAuth();
   const { invalidateEvents } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
+  useTrialWriteMountGuard(
+    {
+      action: initialEvent ? "edit" : "create",
+      resource: "event",
+      contentScope,
+    },
+    isOpen,
+    onClose
+  );
   const [bannerFile, setBannerFile] = useState<File | undefined>();
   const [bannerPreview, setBannerPreview] = useState("");
   const [loading, setLoading] = useState(false);

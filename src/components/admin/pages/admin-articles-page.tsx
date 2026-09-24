@@ -18,6 +18,7 @@ import {
   useAdminChurchId,
 } from "@/hooks/use-admin-collections";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { filterBySearch, paginateItems } from "@/lib/admin-list-utils";
 import type { FirebaseArticle } from "@/types/firebase-article";
 
@@ -34,6 +35,7 @@ export function AdminArticlesPageClient({ embedded = false }: { embedded?: boole
   const searchParams = useSearchParams();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
+  const allowWrite = useAllowTrialWrite();
   const { data: articles, loading, loadMore, hasMore, loadingMore } =
     useAdminArticles();
   const { invalidateArticles } = useInvalidateAdminQueries();
@@ -46,6 +48,7 @@ export function AdminArticlesPageClient({ embedded = false }: { embedded?: boole
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
+      if (!allowWrite({ action: "create", resource: "article" })) return;
       setSelectedArticle(null);
       setModalOpen(true);
       return;
@@ -56,10 +59,11 @@ export function AdminArticlesPageClient({ embedded = false }: { embedded?: boole
 
     const article = articles.find((item) => item.id === editId);
     if (article) {
+      if (!allowWrite({ action: "edit", resource: "article" })) return;
       setSelectedArticle(article);
       setModalOpen(true);
     }
-  }, [searchParams, articles, loading]);
+  }, [searchParams, articles, loading, allowWrite]);
 
   useEffect(() => {
     setPage(1);
@@ -91,6 +95,7 @@ export function AdminArticlesPageClient({ embedded = false }: { embedded?: boole
           title={t("title")}
           description={t("adminDescription")}
           actionLabel={t("add")}
+          trialWrite={{ action: "create", resource: "article" }}
           onAction={() => {
             setSelectedArticle(null);
             setModalOpen(true);
@@ -106,6 +111,7 @@ export function AdminArticlesPageClient({ embedded = false }: { embedded?: boole
         onSearchChange={setSearch}
         searchPlaceholder={t("searchPlaceholder")}
         actionLabel={embedded ? t("add") : undefined}
+        trialWrite={{ action: "create", resource: "article" }}
         onAction={
           embedded ?
             () => {
@@ -121,6 +127,7 @@ export function AdminArticlesPageClient({ embedded = false }: { embedded?: boole
         articles={pageItems}
         loading={loading}
         onEdit={(article) => {
+          if (!allowWrite({ action: "edit", resource: "article" })) return;
           setSelectedArticle(article);
           setModalOpen(true);
         }}

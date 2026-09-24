@@ -104,9 +104,12 @@ export type PlanDefinition = {
 
 export type TrialPhase = "none" | "active" | "reminder" | "urgent" | "expired";
 
+export type SubscriptionAccess = "paid" | "trial" | "expired";
+
 export type TrialLifecycle = {
   isTrial: boolean;
   phase: TrialPhase;
+  access: SubscriptionAccess;
   daysIntoTrial: number | null;
   daysRemaining: number | null;
   shepherdAiAvailable: boolean;

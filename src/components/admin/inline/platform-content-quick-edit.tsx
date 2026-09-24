@@ -54,6 +54,10 @@ export function PlatformContentQuickEdit(props: PlatformContentQuickEditProps) {
         href={tenantEditHref}
         label={label}
         className={className}
+        trialWrite={{
+          action: "edit",
+          resource: props.kind,
+        }}
       />
     );
   }

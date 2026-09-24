@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useOrganization } from "@/context/organization-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { resolveBranchEnrollmentSettings } from "@/lib/enrollment";
 import { firebaseAuth } from "@/lib/firebase-auth-service";
 import { buildJoinChurchUrl } from "@/lib/join-url";
@@ -67,6 +68,7 @@ export function ChurchJoinUrlCard({
 }: ChurchJoinUrlCardProps) {
   const t = useTranslations("churchJoin");
   const { refetch } = useOrganization();
+  const allowWrite = useAllowTrialWrite();
   const enrollment = resolveBranchEnrollmentSettings(settings);
   const [slug, setSlug] = useState(initialSlug);
   const [enrollmentMode, setEnrollmentMode] = useState<EnrollmentMode>(
@@ -141,6 +143,7 @@ export function ChurchJoinUrlCard({
   }
 
   async function handleEnrollmentChange(mode: EnrollmentMode) {
+    if (!allowWrite({ action: "manage", resource: "church" })) return;
     setEnrollmentMode(mode);
     setSaving(true);
     try {
@@ -155,6 +158,7 @@ export function ChurchJoinUrlCard({
   }
 
   async function handleJoinUrlToggle(enabled: boolean) {
+    if (!allowWrite({ action: "manage", resource: "church" })) return;
     setJoinUrlEnabled(enabled);
     setSaving(true);
     try {
@@ -169,6 +173,7 @@ export function ChurchJoinUrlCard({
   }
 
   async function handleRegenerateSlug() {
+    if (!allowWrite({ action: "manage", resource: "church" })) return;
     setRegenerating(true);
     try {
       await patchSettings({ regenerateSlug: true });

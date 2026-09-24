@@ -9,6 +9,7 @@ import type { ShortsFeedFilter } from "@/types/video-short";
 import { Button } from "@/components/ui/button";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useContentAuthDialog } from "@/context/content-auth-dialog-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { ShortFeedItem } from "@/components/shorts/short-feed-item";
 import { ShortCommentsSheet } from "@/components/shorts/short-comments-sheet";
 import { CreateShortSheet } from "@/components/shorts/create-short-sheet";
@@ -46,6 +47,7 @@ export function ShortsPageClient({
 }: ShortsPageClientProps) {
   const { user } = useFirebaseAuth();
   const { openDialog } = useContentAuthDialog();
+  const allowWrite = useAllowTrialWrite();
   const t = useTranslations("shorts");
   const tc = useTranslations("common");
   const feedScope = React.useMemo<{
@@ -470,7 +472,18 @@ export function ShortsPageClient({
               {canPost ?
             <button
               type="button"
-              onClick={() => setCreateOpen(true)}
+              onClick={() => {
+                if (
+                  !allowWrite({
+                    action: "create",
+                    resource: "short",
+                    contentScope: createContentScope,
+                  })
+                ) {
+                  return;
+                }
+                setCreateOpen(true);
+              }}
               className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-primary/20 bg-primary px-2.5 text-[12px] font-semibold leading-none text-primary-foreground transition-colors duration-200 active:bg-primary/80 hover-hover:hover:bg-primary/90"
             >
               <Plus className="size-3.5" aria-hidden />
@@ -525,7 +538,21 @@ export function ShortsPageClient({
                 Be the first to share a moment of faith, worship, or encouragement.
               </p>
               {canPost ?
-                <Button className="mt-6" onClick={() => setCreateOpen(true)}>
+                <Button
+                  className="mt-6"
+                  onClick={() => {
+                    if (
+                      !allowWrite({
+                        action: "create",
+                        resource: "short",
+                        contentScope: createContentScope,
+                      })
+                    ) {
+                      return;
+                    }
+                    setCreateOpen(true);
+                  }}
+                >
                   {createLabel}
                 </Button>
               : null}

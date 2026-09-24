@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { GroupAccessError } from "@/lib/postgres/groups";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
 
 export function groupErrorResponse(error: unknown) {
+  if (isSubscriptionLimitError(error)) {
+    return NextResponse.json({ error: error.message }, { status: 403 });
+  }
   if (error instanceof GroupAccessError) {
     const status =
       error.code === "forbidden" ? 403

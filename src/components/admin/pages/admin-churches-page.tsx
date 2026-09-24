@@ -10,6 +10,7 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminToolbar } from "@/components/admin/admin-toolbar";
 import { adminSectionClass } from "@/lib/responsive-classes";
 import { useAdminChurches } from "@/hooks/use-admin-collections";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { filterBySearch, paginateItems } from "@/lib/admin-list-utils";
 import type { FirebaseChurch } from "@/types/firebase-church";
 
@@ -25,6 +26,7 @@ export function AdminChurchesPageClient() {
   const t = useTranslations("dashboard");
   const tNav = useTranslations("navigation");
   const { data: churches, loading } = useAdminChurches();
+  const allowWrite = useAllowTrialWrite();
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -54,6 +56,7 @@ export function AdminChurchesPageClient() {
         title={t("churchesTitle")}
         description={t("churchesPlatformDescription")}
         actionLabel={tNav("addChurch")}
+        trialWrite={{ action: "create", resource: "church" }}
         onAction={() => {
           setSelectedChurch(null);
           setModalOpen(true);
@@ -70,6 +73,7 @@ export function AdminChurchesPageClient() {
         churches={pageItems}
         loading={loading}
         onEdit={(church) => {
+          if (!allowWrite({ action: "edit", resource: "church" })) return;
           setSelectedChurch(church);
           setModalOpen(true);
         }}

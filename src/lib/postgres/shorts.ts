@@ -22,6 +22,7 @@ import {
   userCanManageChurch,
 } from "@/lib/postgres/session";
 import { getChurchById } from "@/lib/postgres/tenants";
+import { TRIAL_EXPIRED_MESSAGE } from "@/lib/subscription/trial";
 import type {
   ShortCategory,
   ShortModerationStatus,
@@ -33,6 +34,21 @@ import type {
 } from "@/types/video-short";
 
 type ShortRow = typeof videoShorts.$inferSelect;
+
+async function assertShortOrganizationWritable(short: {
+  organizationId?: string | null;
+  contentScope?: string | null;
+}): Promise<void> {
+  if (short.contentScope === "platform_public") return;
+  const { assertSubscriptionWritable, SubscriptionLimitError } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  const organizationId = short.organizationId?.trim();
+  if (!organizationId) {
+    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+  }
+  await assertSubscriptionWritable(organizationId);
+}
 
 /** Supabase Storage path segment only — not database ownership. */
 export function shortStoragePathPrefix(short: {
@@ -441,12 +457,7 @@ export async function publishShort(input: {
     throw new Error("Unauthorized");
   }
 
-  if (short.organizationId) {
-    const { assertSubscriptionWritable } = await import(
-      "@/lib/subscription/subscription-server"
-    );
-    await assertSubscriptionWritable(short.organizationId);
-  }
+  await assertShortOrganizationWritable(short);
 
   const now = new Date();
   const publishDirectly = isAdmin;
@@ -561,12 +572,7 @@ export async function moderateShort(input: {
     throw new Error("Short is not awaiting review.");
   }
 
-  if (short.organizationId) {
-    const { assertSubscriptionWritable } = await import(
-      "@/lib/subscription/subscription-server"
-    );
-    await assertSubscriptionWritable(short.organizationId);
-  }
+  await assertShortOrganizationWritable(short);
 
   const now = new Date();
   const [updated] = await db
@@ -610,6 +616,8 @@ export async function updateShortMetadata(input: {
   );
   if (!isOwner && !isAdmin) throw new Error("Unauthorized");
 
+  await assertShortOrganizationWritable(short);
+
   const [updated] = await db
     .update(videoShorts)
     .set({
@@ -641,6 +649,8 @@ export async function updateShortThumbnailUrl(input: {
     short
   );
   if (!isOwner && !isAdmin) throw new Error("Unauthorized");
+
+  await assertShortOrganizationWritable(short);
 
   const previousUrl = short.thumbnailUrl;
   const nextUrl = input.thumbnailUrl?.trim() || null;
@@ -690,6 +700,8 @@ export async function deleteShort(input: {
     short
   );
   if (!isOwner && !isAdmin) throw new Error("Unauthorized");
+
+  await assertShortOrganizationWritable(short);
 
   await deleteStoredMediaUrls(short.videoUrl, short.thumbnailUrl);
   await db.delete(videoShorts).where(eq(videoShorts.id, short.id));

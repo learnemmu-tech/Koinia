@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { resolveBookAdminScope, scopeAllowsBook } from "@/lib/books/admin-scope";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { getBookById, updateBookCover } from "@/lib/postgres/books";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
 import {
   deleteStoredMediaUrls,
   uploadPublicObject,
@@ -39,17 +40,24 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const uploaded = await uploadPublicObject({
-    kind: "book",
-    entityId: book.id,
-    ext,
-    body: buffer,
-    contentType: file.type || "image/jpeg",
-  });
+  try {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploaded = await uploadPublicObject({
+      kind: "book",
+      entityId: book.id,
+      ext,
+      body: buffer,
+      contentType: file.type || "image/jpeg",
+    });
 
-  await deleteStoredMediaUrls(book.coverImageUrl);
-  await updateBookCover(book.id, uploaded.publicUrl);
-  return NextResponse.json({ url: uploaded.publicUrl });
+    await deleteStoredMediaUrls(book.coverImageUrl);
+    await updateBookCover(book.id, uploaded.publicUrl);
+    return NextResponse.json({ url: uploaded.publicUrl });
+  } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
+    throw error;
+  }
 }

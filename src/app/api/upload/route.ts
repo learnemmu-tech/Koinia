@@ -14,6 +14,7 @@ import { getDonationCampaignById } from "@/lib/postgres/features";
 import { userCanUploadGroupImage } from "@/lib/postgres/groups";
 import { getOrgMembershipRow, userCanManageChurch } from "@/lib/postgres/session";
 import { getChurchById, getOrganizationById } from "@/lib/postgres/tenants";
+import { roleMeetsMinimum } from "@/types/membership";
 import type { StorageUploadKind } from "@/lib/storage-upload-kind";
 import { rateLimitUploadRequest } from "@/lib/rate-limit";
 import {
@@ -21,7 +22,11 @@ import {
   getStorageObjectKeyFromUrl,
   uploadPublicObject,
 } from "@/lib/supabase-storage";
-import { roleMeetsMinimum } from "@/types/membership";
+import {
+  assertChurchContentWritable,
+  assertSubscriptionWritable,
+  isSubscriptionLimitError,
+} from "@/lib/subscription/subscription-server";
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const MAX_AUDIO_SIZE = 20 * 1024 * 1024;
@@ -325,6 +330,44 @@ export async function POST(request: NextRequest) {
       return authorized;
     }
 
+    try {
+      if (kind === "organization-logo") {
+        await assertSubscriptionWritable(entityId);
+      } else if (kind === "church-logo" || kind === "church-cover") {
+        await assertChurchContentWritable(entityId);
+      } else if (kind === "group") {
+        const { getChurchGroupDetail } = await import("@/lib/postgres/groups");
+        const group = await getChurchGroupDetail({
+          clerkId: decoded.uid,
+          email: decoded.email,
+          groupId: entityId,
+        });
+        await assertSubscriptionWritable(group.organizationId);
+      } else if (kind !== "onboarding") {
+        const record =
+          kind === "song" ? await getSongById(entityId)
+          : kind === "sermon" ? await getSermonById(entityId)
+          : kind === "article" ? await getArticleById(entityId)
+          : kind === "event" ? await getEventById(entityId)
+          : kind === "donation" ? await getDonationCampaignById(entityId)
+          : kind === "book" ? await (await import("@/lib/postgres/books")).getBookById(entityId)
+          : null;
+        const organizationId =
+          record && "organizationId" in record ? record.organizationId : null;
+        const churchId = record && "churchId" in record ? record.churchId : null;
+        if (organizationId) {
+          await assertSubscriptionWritable(organizationId);
+        } else if (typeof churchId === "string" && churchId) {
+          await assertChurchContentWritable(churchId);
+        }
+      }
+    } catch (error) {
+      if (isSubscriptionLimitError(error)) {
+        return NextResponse.json({ error: error.message }, { status: 403 });
+      }
+      throw error;
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
     if (!(file instanceof File)) {
@@ -405,6 +448,9 @@ export async function POST(request: NextRequest) {
       size: buffer.length,
     });
   } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("[Upload] Error:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }

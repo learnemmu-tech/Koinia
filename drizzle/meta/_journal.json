@@ -127,6 +127,13 @@
       "when": 1789581000000,
       "tag": "0017_church_group_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789584000000,
+      "tag": "0018_org_level_notifications",
+      "breakpoints": true
     }
   ]
 }

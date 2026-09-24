@@ -196,6 +196,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteSong } from "@/lib/content-mutations-client";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 
 type MusicListProps = {
   songs: FirebaseSong[];
@@ -207,11 +208,13 @@ type MusicListProps = {
 export function MusicList({ songs, loading, onEdit, onDelete }: MusicListProps) {
   const t = useTranslations("songs");
   const tCommon = useTranslations("common");
+  const allowWrite = useAllowTrialWrite();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedSong, setSelectedSong] = useState<FirebaseSong | null>(null);
 
   function handleDeleteClick(song: FirebaseSong) {
+    if (!allowWrite({ action: "delete", resource: "song" })) return;
     setSelectedSong(song);
     setDeleteConfirmOpen(true);
   }

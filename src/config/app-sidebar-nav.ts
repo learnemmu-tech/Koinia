@@ -355,14 +355,19 @@ const ORGANIZATION_ADMIN_ONLY_HREFS = new Set([
 
 export function filterSidebarSectionsForRole(
   sections: SidebarNavSection[],
-  options: { canManageOrganization: boolean }
+  options: {
+    canManageOrganization: boolean;
+    canUseShepherdAi?: boolean;
+  }
 ): SidebarNavSection[] {
-  if (options.canManageOrganization) return sections;
-
   return sections
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => {
+        if (item.href === SHEPHERD_NAV_ITEM.href && options.canUseShepherdAi === false) {
+          return false;
+        }
+        if (options.canManageOrganization) return true;
         if (ORGANIZATION_ADMIN_ONLY_HREFS.has(item.href)) return false;
         if (item.href.includes("createChurch=")) return false;
         return true;

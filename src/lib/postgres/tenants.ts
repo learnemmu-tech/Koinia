@@ -240,18 +240,31 @@ export async function ensureSubscriptionDocument(organizationId: string) {
     .where(eq(subscriptions.organizationId, orgId))
     .limit(1);
   if (existing) return existing;
-  const now = new Date();
+  const [org] = await db
+    .select({ createdAt: organizations.createdAt })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+  if (!org) return null;
+  const trialStart = org.createdAt ?? new Date();
   const [created] = await db
     .insert(subscriptions)
     .values({
       organizationId: orgId,
       planId: "free",
       status: "trialing",
-      trialStart: now,
-      trialEnd: getTrialEndDate(now),
+      trialStart,
+      trialEnd: getTrialEndDate(trialStart),
     })
+    .onConflictDoNothing()
     .returning();
-  return created ?? null;
+  if (created) return created;
+  const [raced] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.organizationId, orgId))
+    .limit(1);
+  return raced ?? null;
 }
 
 export async function createOrganization(

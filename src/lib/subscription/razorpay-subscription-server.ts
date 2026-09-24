@@ -12,7 +12,9 @@ import { sql } from "drizzle-orm";
 import type { PlanId } from "@/types/subscription";
 import type { RazorpaySubscriptionResponse } from "@/lib/payments/razorpay-subscriptions";
 import {
+  fetchRazorpaySubscription,
   getPlanIdFromRazorpayPlanId,
+  getRazorpayPlanId,
   mapRazorpayPeriodDate,
 } from "@/lib/payments/razorpay-subscriptions";
 
@@ -193,12 +195,13 @@ export async function abandonSubscriptionCheckoutAttempt({
       .where(eq(subscriptionCheckoutAttempts.organizationId, organizationId))
       .limit(1);
 
-    if (
-      !attempt ||
-      attempt.providerSubscriptionId !== subscriptionId ||
-      (attempt.status !== "creating" && attempt.status !== "pending")
-    ) {
-      return false;
+    if (!attempt) return true;
+    if (attempt.providerSubscriptionId !== subscriptionId) return false;
+    if (TERMINAL_CHECKOUT_ATTEMPT_STATUSES.has(attempt.status.toLowerCase())) {
+      return true;
+    }
+    if (attempt.status !== "creating" && attempt.status !== "pending") {
+      return true;
     }
 
     const updated = await tx
@@ -233,12 +236,13 @@ export async function failSubscriptionCheckoutAttempt({
       .where(eq(subscriptionCheckoutAttempts.organizationId, organizationId))
       .limit(1);
 
-    if (
-      !attempt ||
-      attempt.providerSubscriptionId !== subscriptionId ||
-      (attempt.status !== "creating" && attempt.status !== "pending")
-    ) {
-      return false;
+    if (!attempt) return true;
+    if (attempt.providerSubscriptionId !== subscriptionId) return false;
+    if (TERMINAL_CHECKOUT_ATTEMPT_STATUSES.has(attempt.status.toLowerCase())) {
+      return true;
+    }
+    if (attempt.status !== "creating" && attempt.status !== "pending") {
+      return true;
     }
 
     const updated = await tx
@@ -323,6 +327,25 @@ export function hasOpenRazorpaySubscription(
   return true;
 }
 
+export async function persistRazorpayCustomerId({
+  organizationId,
+  customerId,
+}: {
+  organizationId: string;
+  customerId: string;
+}) {
+  const trimmed = customerId.trim();
+  if (!trimmed) return;
+  await db
+    .update(subscriptions)
+    .set({
+      provider: "razorpay",
+      razorpayCustomerId: trimmed,
+      updatedAt: new Date(),
+    })
+    .where(eq(subscriptions.organizationId, organizationId));
+}
+
 export async function markRazorpayCheckoutAuthorized({
   organizationId,
   subscriptionId,
@@ -342,13 +365,32 @@ export async function markRazorpayCheckoutAuthorized({
   if (!attempt || attempt.organizationId !== organizationId) {
     throw new Error("Subscription checkout attempt not found.");
   }
+  if (!isPaidPlan(attempt.planId)) {
+    throw new Error("Subscription checkout attempt not found.");
+  }
+
+  let subscription: RazorpaySubscriptionResponse = {
+    id: subscriptionId,
+    plan_id: getRazorpayPlanId(attempt.planId),
+    status: "authenticated",
+    customer_id: current?.razorpayCustomerId ?? null,
+  };
+  try {
+    const fetched = await fetchRazorpaySubscription(subscriptionId);
+    subscription = {
+      ...fetched,
+      plan_id: fetched.plan_id || getRazorpayPlanId(attempt.planId),
+    };
+  } catch (error) {
+    console.error("[razorpay checkout authorize] subscription fetch failed", {
+      organizationId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+
   await activateCheckoutAttempt({
     attempt,
-    subscription: {
-      id: subscriptionId,
-      plan_id: attempt.planId,
-      status: "authenticated",
-    },
+    subscription,
   });
 }
 

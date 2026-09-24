@@ -25,6 +25,7 @@ import {
   useAdminEvents,
 } from "@/hooks/use-admin-collections";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { filterBySearch, paginateItems } from "@/lib/admin-list-utils";
 import type { FirebaseEvent } from "@/types/firebase-event";
 
@@ -42,6 +43,7 @@ export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean
   const searchParams = useSearchParams();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
+  const allowWrite = useAllowTrialWrite();
   const { data: events, loading, loadMore, hasMore, loadingMore } =
     useAdminEvents();
   const { invalidateEvents } = useInvalidateAdminQueries();
@@ -54,10 +56,11 @@ export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
+      if (!allowWrite({ action: "create", resource: "event" })) return;
       setSelectedEvent(null);
       setModalOpen(true);
     }
-  }, [searchParams]);
+  }, [searchParams, allowWrite]);
 
   useEffect(() => {
     setPage(1);
@@ -87,6 +90,7 @@ export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean
           title={t("title")}
           description={t("adminDescription")}
           actionLabel={t("create")}
+          trialWrite={{ action: "create", resource: "event" }}
           onAction={() => {
             setSelectedEvent(null);
             setModalOpen(true);
@@ -102,6 +106,7 @@ export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean
         onSearchChange={setSearch}
         searchPlaceholder={t("searchPlaceholder")}
         actionLabel={embedded ? t("create") : undefined}
+        trialWrite={{ action: "create", resource: "event" }}
         onAction={
           embedded ?
             () => {
@@ -131,6 +136,7 @@ export function AdminEventsPageClient({ embedded = false }: { embedded?: boolean
         events={pageItems}
         loading={loading}
         onEdit={(event) => {
+          if (!allowWrite({ action: "edit", resource: "event" })) return;
           setSelectedEvent(event);
           setModalOpen(true);
         }}

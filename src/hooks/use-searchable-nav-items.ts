@@ -10,6 +10,7 @@ import {
 import { useChurchManagementAccess } from "@/hooks/use-church-management-access";
 import { useOrganizationOptional } from "@/context/organization-context";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useSubscriptionOptional } from "@/context/subscription-context";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { flattenVisibleSidebarNavItems } from "@/lib/nav-search";
 import { useAuth } from "@clerk/nextjs";
@@ -26,7 +27,9 @@ export function useSearchableNavItems() {
   const { user, profile, loading } = useFirebaseAuth();
   const { isSignedIn } = useAuth();
   const organizationContext = useOrganizationOptional();
+  const subscription = useSubscriptionOptional();
   const organization = organizationContext?.organization;
+  const canUseShepherdAi = subscription?.canUseFeature("canUseShepherdAi") ?? false;
 
   return useMemo(() => {
     const churches = organizationContext?.churches ?? [];
@@ -45,7 +48,7 @@ export function useSearchableNavItems() {
       return flattenVisibleSidebarNavItems(
         filterSidebarSectionsForRole(
           getAdminSidebarSections(organization, churches),
-          { canManageOrganization }
+          { canManageOrganization, canUseShepherdAi }
         ),
         visibility
       );
@@ -59,12 +62,16 @@ export function useSearchableNavItems() {
     }
 
     return flattenVisibleSidebarNavItems(
-      getMemberSidebarSections(),
+      filterSidebarSectionsForRole(getMemberSidebarSections(), {
+        canManageOrganization: false,
+        canUseShepherdAi,
+      }),
       visibility
     );
   }, [
     canAccessChurchManagement,
     canManageOrganization,
+    canUseShepherdAi,
     isSignedIn,
     loading,
     organization,

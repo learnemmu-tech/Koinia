@@ -11,7 +11,6 @@ import {
 
 import { useAdminChurchId } from "@/hooks/use-admin-church-id";
 import { useSubscriptionQuery } from "@/hooks/use-subscription-query";
-import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useOrganizationOptional } from "@/context/organization-context";
 import type {
   PlanId,
@@ -23,12 +22,23 @@ import {
   getRecommendedPlanForLimit,
 } from "@/lib/subscription/limits";
 import { getPlan } from "@/lib/subscription/plans";
+import {
+  getTrialWriteUnavailableMessage,
+  isProtectedTrialWrite,
+  isTrialAccessExpired,
+  type TrialWriteRequest,
+} from "@/lib/subscription/trial-write";
 
 type UpgradeModalState = {
   open: boolean;
   limitKey?: UsageLimitKey;
   message?: string;
   recommendedPlanId?: PlanId;
+};
+
+type ExpiredActionState = {
+  open: boolean;
+  message: string;
 };
 
 type SubscriptionContextValue = {
@@ -38,6 +48,7 @@ type SubscriptionContextValue = {
   loading: boolean;
   error: string | null;
   refetch: () => void;
+  isTrialExpired: boolean;
   upgradeModal: UpgradeModalState;
   openUpgradeModal: (input: {
     limitKey: UsageLimitKey;
@@ -46,22 +57,27 @@ type SubscriptionContextValue = {
   closeUpgradeModal: () => void;
   checkUsageLimit: (limitKey: UsageLimitKey) => boolean;
   canUseFeature: (key: keyof SubscriptionSnapshot["features"]) => boolean;
+  allowWrite: (request: TrialWriteRequest) => boolean;
+  expiredAction: ExpiredActionState;
+  closeExpiredAction: () => void;
 };
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
-  const { authUser } = useFirebaseAuth();
   const churchId = useAdminChurchId();
   const organization = useOrganizationOptional();
   const organizationId = organization?.organization?.id ?? null;
   const [upgradeModal, setUpgradeModal] = useState<UpgradeModalState>({
     open: false,
   });
+  const [expiredAction, setExpiredAction] = useState<ExpiredActionState>({
+    open: false,
+    message: "",
+  });
 
-  const enabled = Boolean(authUser && organizationId);
-
-  const { data, isLoading, error, refetch } = useSubscriptionQuery(organizationId);
+  const { data, error, refetch } = useSubscriptionQuery(organizationId);
+  const organizationLoading = Boolean(organization?.loading);
 
   const openUpgradeModal = useCallback(
     (input: { limitKey: UsageLimitKey; message?: string }) => {
@@ -95,6 +111,26 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const checkUsageLimit = useCallback(
     (limitKey: UsageLimitKey): boolean => {
       if (!data) return true;
+      if (isTrialAccessExpired(data.trial) && data.trial.access !== "paid") {
+        const resource =
+          limitKey === "songs" ? "song"
+          : limitKey === "sermons" ? "sermon"
+          : limitKey === "articles" ? "article"
+          : limitKey === "events" ? "event"
+          : limitKey === "shorts" ? "short"
+          : limitKey === "prayerRequests" ? "prayer"
+          : limitKey === "donationCampaigns" ? "donation"
+          : limitKey === "churches" ? "church"
+          : "content";
+        setExpiredAction({
+          open: true,
+          message: getTrialWriteUnavailableMessage({
+            action: "create",
+            resource,
+          }),
+        });
+        return false;
+      }
       const check = data.usageChecks.find((item) => item.key === limitKey);
       if (!check?.atLimit) return true;
       openUpgradeModal({ limitKey });
@@ -105,10 +141,32 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const canUseFeature = useCallback(
     (key: keyof SubscriptionSnapshot["features"]): boolean => {
-      if (!data) return true;
+      if (!data) return false;
       return Boolean(data.features[key]);
     },
     [data]
+  );
+
+  const isTrialExpired = isTrialAccessExpired(data?.trial);
+
+  const closeExpiredAction = useCallback(() => {
+    setExpiredAction({ open: false, message: "" });
+  }, []);
+
+  const allowWrite = useCallback(
+    (request: TrialWriteRequest): boolean => {
+      if (!isProtectedTrialWrite(request)) return true;
+      if (!organizationId) return true;
+      if (!data) return true;
+      if (data.trial.access === "paid") return true;
+      if (!isTrialAccessExpired(data.trial)) return true;
+      setExpiredAction({
+        open: true,
+        message: getTrialWriteUnavailableMessage(request),
+      });
+      return false;
+    },
+    [data, organizationId]
   );
 
   const value = useMemo(
@@ -116,30 +174,39 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       organizationId,
       churchId,
       snapshot: data,
-      loading: enabled && isLoading,
+      loading:
+        organizationLoading ||
+        (Boolean(organizationId) && !data && !error),
       error: error instanceof Error ? error.message : null,
       refetch: () => {
         void refetch();
       },
+      isTrialExpired,
       upgradeModal,
       openUpgradeModal,
       closeUpgradeModal,
       checkUsageLimit,
       canUseFeature,
+      allowWrite,
+      expiredAction,
+      closeExpiredAction,
     }),
     [
       organizationId,
       churchId,
       data,
-      enabled,
-      isLoading,
       error,
+      organizationLoading,
       refetch,
+      isTrialExpired,
       upgradeModal,
       openUpgradeModal,
       closeUpgradeModal,
       checkUsageLimit,
       canUseFeature,
+      allowWrite,
+      expiredAction,
+      closeExpiredAction,
     ]
   );
 
@@ -161,4 +228,11 @@ export function useSubscription() {
 /** Safe hook for pages that may render outside admin context. */
 export function useSubscriptionOptional() {
   return useContext(SubscriptionContext);
+}
+
+const allowWriteFallback = (_request: TrialWriteRequest) => true;
+
+export function useAllowTrialWrite() {
+  const context = useSubscriptionOptional();
+  return context?.allowWrite ?? allowWriteFallback;
 }

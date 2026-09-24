@@ -29,6 +29,7 @@ import {
   useAdminSongs,
 } from "@/hooks/use-admin-collections";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import {
   filterByPublishStatus,
   filterBySearch,
@@ -48,6 +49,7 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
   const { organization } = useOrganization();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
+  const allowWrite = useAllowTrialWrite();
   const { data: songs, loading, error, loadMore, hasMore, loadingMore } =
     useAdminSongs();
   const { invalidateSongs } = useInvalidateAdminQueries();
@@ -60,6 +62,7 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
+      if (!allowWrite({ action: "create", resource: "song" })) return;
       setSelectedSong(null);
       setModalOpen(true);
       return;
@@ -70,10 +73,11 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
 
     const song = songs.find((item) => item.id === editId);
     if (song) {
+      if (!allowWrite({ action: "edit", resource: "song" })) return;
       setSelectedSong(song);
       setModalOpen(true);
     }
-  }, [searchParams, songs, loading]);
+  }, [searchParams, songs, loading, allowWrite]);
 
   useEffect(() => {
     setPage(1);
@@ -108,6 +112,7 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
           title={t("title")}
           description={t("adminDescription")}
           actionLabel={t("add")}
+          trialWrite={{ action: "create", resource: "song" }}
           onAction={() => {
             setSelectedSong(null);
             setModalOpen(true);
@@ -131,6 +136,7 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
         onSearchChange={setSearch}
         searchPlaceholder={t("searchPlaceholder")}
         actionLabel={embedded ? t("add") : undefined}
+        trialWrite={{ action: "create", resource: "song" }}
         onAction={
           embedded ?
             () => {
@@ -160,6 +166,7 @@ export function AdminSongsPageClient({ embedded = false }: { embedded?: boolean 
         songs={pageItems}
         loading={loading}
         onEdit={(song) => {
+          if (!allowWrite({ action: "edit", resource: "song" })) return;
           setSelectedSong(song);
           setModalOpen(true);
         }}

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 import {
   saveBook,
   uploadBookCover,
@@ -86,6 +87,11 @@ export function BookForm({
 }) {
   const router = useRouter();
   const { user } = useFirebaseAuth();
+  useTrialWriteMountGuard(
+    { action: book ? "edit" : "create", resource: "book" },
+    true,
+    () => router.replace("/dashboard/books")
+  );
   const t = useTranslations("books");
   const tc = useTranslations("common");
   const tf = useTranslations("forms");

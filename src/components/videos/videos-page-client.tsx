@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TabEmptyState } from "@/components/worship/songs-tab-content";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { fetchChurchVideos } from "@/lib/videos-client";
 import { contentCardGridClassName, typePageTitleClass } from "@/lib/responsive-classes";
 
@@ -44,6 +45,7 @@ export function VideosPageClient({
   pendingShorts,
 }: VideosPageClientProps) {
   const { user } = useFirebaseAuth();
+  const allowWrite = useAllowTrialWrite();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -106,7 +108,18 @@ export function VideosPageClient({
             type="button"
             size="sm"
             className="shrink-0 gap-1.5 rounded-full"
-            onClick={() => setAddOpen(true)}
+            onClick={() => {
+              if (
+                !allowWrite({
+                  action: "create",
+                  resource: "video",
+                  contentScope: createContentScope,
+                })
+              ) {
+                return;
+              }
+              setAddOpen(true);
+            }}
           >
             <Plus className="size-4" aria-hidden />
             Add Video
@@ -135,7 +148,21 @@ export function VideosPageClient({
               <TabEmptyState message="No videos published yet" />
               {canManageVideos ?
                 <div className="flex justify-center">
-                  <Button onClick={() => setAddOpen(true)} className="gap-1.5">
+                  <Button
+                    onClick={() => {
+                      if (
+                        !allowWrite({
+                          action: "create",
+                          resource: "video",
+                          contentScope: createContentScope,
+                        })
+                      ) {
+                        return;
+                      }
+                      setAddOpen(true);
+                    }}
+                    className="gap-1.5"
+                  >
                     <Plus className="size-4" />
                     Add Video
                   </Button>

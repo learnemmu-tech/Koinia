@@ -1,9 +1,9 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { subscriptions } from "@/db/schema";
+import { organizations, subscriptions } from "@/db/schema";
 import { resolveTenantScopeForChurch } from "@/lib/organization/resolve-tenant-scope";
 import {
   getChurchById,
@@ -26,8 +26,75 @@ import {
 } from "./limits";
 import { getPlan } from "./plans";
 import { buildDefaultSubscription } from "./subscription-firestore";
-import { getTrialLifecycle, TRIAL_EXPIRED_MESSAGE } from "./trial";
+import {
+  getTrialLifecycle,
+  resolveTrialWindow,
+  TRIAL_DURATION_DAYS,
+  TRIAL_EXPIRED_MESSAGE,
+} from "./trial";
 import { computeOrganizationUsage } from "./usage-server";
+
+async function getOrganizationCreatedAt(
+  organizationId: string
+): Promise<Date | null> {
+  const [row] = await db
+    .select({ createdAt: organizations.createdAt })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+  return row?.createdAt ?? null;
+}
+
+function applyTrialWindow(
+  subscription: ChurchSubscription,
+  fallbackStart: Date | null
+): ChurchSubscription {
+  const window = resolveTrialWindow(subscription, fallbackStart);
+  if (!window) return subscription;
+  return {
+    ...subscription,
+    trialStart: window.trialStart,
+    trialEnd: window.trialEnd,
+  };
+}
+
+async function persistMissingTrialWindow(
+  organizationId: string,
+  window: { trialStart: number; trialEnd: number }
+): Promise<void> {
+  await db
+    .update(subscriptions)
+    .set({
+      trialStart: new Date(window.trialStart),
+      trialEnd: new Date(window.trialEnd),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(subscriptions.organizationId, organizationId),
+        sql`${subscriptions.trialStart} is null`,
+        sql`${subscriptions.trialEnd} is null`,
+        eq(subscriptions.planId, "free")
+      )
+    );
+}
+
+/** Idempotent: fills missing free-trial dates from organization.created_at only. */
+export async function persistLegacyTrialWindows(): Promise<number> {
+  const result = await db.execute(sql`
+    UPDATE subscriptions AS s
+    SET
+      trial_start = o.created_at,
+      trial_end = o.created_at + (${TRIAL_DURATION_DAYS}::int * interval '1 day'),
+      updated_at = now()
+    FROM organizations AS o
+    WHERE s.organization_id = o.id
+      AND s.plan_id = 'free'
+      AND s.trial_start IS NULL
+      AND s.trial_end IS NULL
+  `);
+  return Number((result as { rowCount?: number | null }).rowCount ?? 0);
+}
 
 export async function getSubscriptionByOrganizationId(
   organizationId: string
@@ -59,23 +126,37 @@ export async function getSubscriptionSnapshot(
   organizationId: string,
   preloadedSubscription?: ChurchSubscription
 ): Promise<SubscriptionSnapshot> {
-  const subscription =
+  const orgId = organizationId.trim();
+  const createdAt = orgId ? await getOrganizationCreatedAt(orgId) : null;
+  const loaded =
     preloadedSubscription ??
-    (await getSubscriptionByOrganizationId(organizationId));
-  const plan = getPlan(subscription.planId);
-  const paidPeriodExpired =
-    subscription.planId !== "free" &&
-    subscription.currentPeriodEnd != null &&
-    subscription.currentPeriodEnd <= Date.now();
-  const limits = getPlanLimits(paidPeriodExpired ? "free" : subscription.planId);
-  const features = resolveFeatureFlagsFromSubscription(subscription);
-  const usage = await computeOrganizationUsage(organizationId);
+    (orgId ? await getSubscriptionByOrganizationId(orgId) : buildDefaultSubscription("default"));
+  const window = resolveTrialWindow(loaded, createdAt);
+  if (
+    orgId &&
+    loaded.planId === "free" &&
+    loaded.trialStart == null &&
+    loaded.trialEnd == null &&
+    window
+  ) {
+    await persistMissingTrialWindow(orgId, window).catch((error) => {
+      console.error("[subscription] trial window backfill failed", {
+        organizationId: orgId,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    });
+  }
+  const subscription = applyTrialWindow(loaded, createdAt);
+  const trial = getTrialLifecycle(subscription, Date.now(), createdAt);
+  const paid = trial.access === "paid";
+  const limits = getPlanLimits(paid ? subscription.planId : "free");
+  const features = resolveFeatureFlagsFromSubscription(subscription, createdAt);
+  const usage = await computeOrganizationUsage(orgId || subscription.organizationId);
   const usageChecks = buildUsageChecks(usage, limits);
-  const trial = getTrialLifecycle(subscription);
 
   return {
     subscription,
-    plan,
+    plan: getPlan(subscription.planId),
     features,
     limits,
     usage,
@@ -119,7 +200,7 @@ export function isSubscriptionLimitError(
 }
 
 function assertTrialWritable(snapshot: SubscriptionSnapshot): void {
-  if (snapshot.trial.phase === "expired") {
+  if (snapshot.trial.access === "expired" || snapshot.trial.phase === "expired") {
     throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
   }
 }
@@ -128,7 +209,9 @@ export async function assertSubscriptionWritable(
   organizationId: string
 ): Promise<void> {
   const orgId = organizationId.trim();
-  if (!orgId) return;
+  if (!orgId) {
+    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+  }
   assertTrialWritable(await getSubscriptionSnapshot(orgId));
 }
 
@@ -137,7 +220,9 @@ export async function assertUsageAllowed(
   key: UsageLimitKey
 ): Promise<void> {
   const orgId = organizationId.trim();
-  if (!orgId) return;
+  if (!orgId) {
+    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+  }
   const snapshot = await getSubscriptionSnapshot(orgId);
   assertTrialWritable(snapshot);
   const check = snapshot.usageChecks.find((item) => item.key === key);
@@ -153,15 +238,28 @@ export async function assertFeatureAllowed(
   key: FeatureFlagKey
 ): Promise<void> {
   const orgId = organizationId.trim();
-  if (!orgId) return;
+  if (!orgId) {
+    throw new SubscriptionLimitError(
+      key === "canUseShepherdAi"
+        ? "Shepherd AI is not available for this workspace."
+        : TRIAL_EXPIRED_MESSAGE
+    );
+  }
   const snapshot = await getSubscriptionSnapshot(orgId);
-  assertTrialWritable(snapshot);
-  if (!snapshot.features[key]) {
-    if (key === "canUseShepherdAi" && snapshot.trial.isTrial) {
+  if (key === "canUseShepherdAi") {
+    if (!snapshot.features.canUseShepherdAi) {
       throw new SubscriptionLimitError(
-        "Shepherd AI is available for the first 10 days of your 14-day trial."
+        snapshot.trial.isTrial
+          ? "Shepherd AI is available for the first 10 days of your 14-day trial."
+          : snapshot.trial.access === "expired"
+            ? TRIAL_EXPIRED_MESSAGE
+            : "This feature is not included in your current plan."
       );
     }
+    return;
+  }
+  assertTrialWritable(snapshot);
+  if (!snapshot.features[key]) {
     throw new SubscriptionLimitError(
       "This feature is not included in your current plan."
     );
@@ -174,7 +272,9 @@ export async function assertChurchUsageAllowed(
 ): Promise<void> {
   const church = await getChurchById(churchId);
   const organizationId = church?.organizationId?.trim();
-  if (!organizationId) return;
+  if (!organizationId) {
+    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+  }
   await assertUsageAllowed(organizationId, key);
 }
 
@@ -184,6 +284,17 @@ export async function assertChurchFeatureAllowed(
 ): Promise<void> {
   const church = await getChurchById(churchId);
   const organizationId = church?.organizationId?.trim();
-  if (!organizationId) return;
+  if (!organizationId) {
+    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+  }
   await assertFeatureAllowed(organizationId, key);
+}
+
+export async function assertChurchContentWritable(churchId: string): Promise<void> {
+  const church = await getChurchById(churchId);
+  const organizationId = church?.organizationId?.trim();
+  if (!organizationId) {
+    throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+  }
+  await assertSubscriptionWritable(organizationId);
 }

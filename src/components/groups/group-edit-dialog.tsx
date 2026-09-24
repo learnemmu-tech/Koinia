@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateChurchGroup } from "@/lib/groups-client";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 
 type GroupEditDialogProps = {
   open: boolean;
@@ -43,6 +44,11 @@ export function GroupEditDialog({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [busy, setBusy] = useState(false);
+  useTrialWriteMountGuard(
+    { action: "edit", resource: "group" },
+    open,
+    () => onOpenChange(false)
+  );
 
   useEffect(() => {
     if (!open) return;

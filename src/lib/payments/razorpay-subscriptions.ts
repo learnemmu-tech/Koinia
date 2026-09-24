@@ -19,6 +19,13 @@ type RazorpaySubscriptionResponse = {
   change_scheduled_at?: number | null;
 };
 
+type RazorpayCustomerResponse = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  contact?: string | null;
+};
+
 type RazorpaySubscriptionEvent = {
   id?: string;
   event: string;
@@ -91,8 +98,8 @@ function getTotalCount(): number {
 
 async function razorpayRequest<T>(
   path: string,
-  method: "POST" | "PATCH",
-  body: Record<string, unknown>
+  method: "GET" | "POST" | "PATCH",
+  body?: Record<string, unknown>
 ): Promise<T> {
   const response = await fetch(`https://api.razorpay.com/v1${path}`, {
     method,
@@ -100,7 +107,7 @@ async function razorpayRequest<T>(
       Authorization: getAuthHeader(),
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
 
   if (!response.ok) {
@@ -111,6 +118,54 @@ async function razorpayRequest<T>(
   }
 
   return (await response.json()) as T;
+}
+
+export async function fetchRazorpaySubscription(
+  subscriptionId: string
+): Promise<RazorpaySubscriptionResponse> {
+  return razorpayRequest<RazorpaySubscriptionResponse>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}`,
+    "GET"
+  );
+}
+
+export async function ensureRazorpayCustomer({
+  existingCustomerId,
+  name,
+  email,
+  contact,
+}: {
+  existingCustomerId?: string | null;
+  name?: string;
+  email?: string;
+  contact?: string;
+}): Promise<string | null> {
+  const customerId = existingCustomerId?.trim();
+  if (customerId) {
+    try {
+      const existing = await razorpayRequest<RazorpayCustomerResponse>(
+        `/customers/${encodeURIComponent(customerId)}`,
+        "GET"
+      );
+      if (existing.id) return existing.id;
+    } catch {
+      // Recreate below if the stored id is no longer valid.
+    }
+  }
+
+  if (!email && !contact) return null;
+
+  const created = await razorpayRequest<RazorpayCustomerResponse>(
+    "/customers",
+    "POST",
+    {
+      ...(name ? { name } : {}),
+      ...(email ? { email } : {}),
+      ...(contact ? { contact } : {}),
+      fail_existing: 0,
+    }
+  );
+  return created.id ?? null;
 }
 
 export async function createRazorpaySubscription({
@@ -207,4 +262,4 @@ export function mapRazorpayPeriodDate(value?: number | null): Date | undefined {
   return typeof value === "number" && value > 0 ? new Date(value * 1000) : undefined;
 }
 
-export type { RazorpaySubscriptionResponse };
+export type { RazorpayCustomerResponse, RazorpaySubscriptionResponse };

@@ -151,16 +151,16 @@ export function BillingOverview({
             {trial.daysRemaining === 1 ? "day" : "days"}. Existing content will be preserved.
           </p>
         : null}
-        {trial.phase === "urgent" ?
-          <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            Your trial expires in {trial.daysRemaining}{" "}
-            {trial.daysRemaining === 1 ? "day" : "days"}. Your content stays available to view.
+        {trial.phase === "urgent" && trial.access !== "expired" ?
+          <p className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+            {trial.daysIntoTrial != null && trial.daysIntoTrial >= 14
+              ? "Your FaithConnectHub trial ends today. Upgrade your plan to continue creating and managing your church content after the trial."
+              : `Your trial expires in ${trial.daysRemaining} ${trial.daysRemaining === 1 ? "day" : "days"}. Your content stays available to view.`}
           </p>
         : null}
-        {trial.phase === "expired" ?
-          <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            Your 14-day trial has ended. Existing content is preserved. Paid checkout is not
-            available yet.
+        {trial.access === "expired" || trial.phase === "expired" ?
+          <p className="mt-4 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm">
+            Your 14-day trial has ended. Existing content is preserved and remains available to view. Upgrade your plan to restore content management.
           </p>
         : null}
         <div className="mt-4 flex flex-wrap gap-2">

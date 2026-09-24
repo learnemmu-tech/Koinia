@@ -46,6 +46,7 @@ import {
 } from "@/lib/donation-form-validation";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 import { notifyIfDonationCampaignPublished } from "@/lib/notify-if-published";
 import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";
 import { uploadSongFileLocal } from "@/lib/local-upload";
@@ -75,6 +76,15 @@ export function AddDonationCampaignModal({
   const { user } = useFirebaseAuth();
   const { invalidateDonations } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
+  useTrialWriteMountGuard(
+    {
+      action: initialCampaign ? "edit" : "create",
+      resource: "donation",
+      contentScope,
+    },
+    isOpen,
+    onClose
+  );
   const [bannerFile, setBannerFile] = useState<File | undefined>();
   const [bannerPreview, setBannerPreview] = useState("");
   const [loading, setLoading] = useState(false);

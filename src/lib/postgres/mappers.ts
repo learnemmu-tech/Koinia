@@ -386,7 +386,7 @@ export function mapNotification(
     id: row.id,
     type: row.type,
     userId: clerkUserId,
-    churchId: row.churchId,
+    churchId: row.churchId ?? "",
     title: row.title,
     message: row.message,
     contentTitle: row.contentTitle,

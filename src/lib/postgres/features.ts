@@ -37,6 +37,7 @@ import { getClerkIdByUserId, getClerkIdsByUserIds } from "@/lib/postgres/session
 import { getChurchRowById } from "@/lib/postgres/tenants";
 import { isPostgresUuid, postgresUuidOrEmpty } from "@/lib/postgres/uuid";
 import { deleteStoredMediaUrls } from "@/lib/supabase-storage";
+import { TRIAL_EXPIRED_MESSAGE } from "@/lib/subscription/trial";
 import type { CreateArticleInput, FirebaseArticle, UpdateArticleInput } from "@/types/firebase-article";
 import type {
   CreateDonationCampaignInput,
@@ -76,6 +77,30 @@ import { requirePlatformSuperAdmin } from "@/lib/auth/require-platform-super-adm
 import type { ContentScope } from "@/db/schema/enums";
 import type { SubscriptionUsage } from "@/types/subscription";
 import { EMPTY_USAGE } from "@/lib/subscription/limits";
+
+async function assertOrganizationContentWritable(input: {
+  organizationId?: string | null;
+  churchId?: string | null;
+  contentScope?: string | null;
+}): Promise<void> {
+  if (input.contentScope === "platform_public") return;
+  const { assertSubscriptionWritable, assertChurchContentWritable } =
+    await import("@/lib/subscription/subscription-server");
+  const organizationId = input.organizationId?.trim();
+  if (organizationId) {
+    await assertSubscriptionWritable(organizationId);
+    return;
+  }
+  const churchId = input.churchId?.trim();
+  if (churchId) {
+    await assertChurchContentWritable(churchId);
+    return;
+  }
+  const { SubscriptionLimitError } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  throw new SubscriptionLimitError(TRIAL_EXPIRED_MESSAGE);
+}
 
 const NOTIFICATION_PRESETS: Record<
   NotificationContentType,
@@ -282,10 +307,8 @@ export async function addSong(
   }
 
   const church = await requireChurch(churchId);
-  if (church.organizationId) {
-    const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
-    await assertUsageAllowed(church.organizationId, "songs");
-  }
+  const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+  await assertUsageAllowed(church.organizationId, "songs");
   const [row] = await db
     .insert(songs)
     .values({
@@ -312,6 +335,12 @@ export async function addSong(
 }
 
 export async function updateSong(songId: string, updates: UpdateSongInput): Promise<void> {
+  const existing = await getSongById(songId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   const patch: Partial<typeof songs.$inferInsert> = { updatedAt: new Date() };
   if (updates.songTitle !== undefined) patch.songTitle = updates.songTitle.trim();
   if (updates.alternateTitle !== undefined) {
@@ -337,6 +366,11 @@ export async function updateSong(songId: string, updates: UpdateSongInput): Prom
 
 export async function deleteSong(songId: string): Promise<void> {
   const existing = await getSongById(songId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   await deleteStoredMediaUrls(existing?.imageUrl, existing?.audioUrl);
   await db.delete(songs).where(eq(songs.id, songId));
 }
@@ -462,10 +496,8 @@ export async function createSermon(input: CreateSermonInput): Promise<string> {
   }
 
   const church = await requireChurch(input.churchId);
-  if (church.organizationId) {
-    const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
-    await assertUsageAllowed(church.organizationId, "sermons");
-  }
+  const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+  await assertUsageAllowed(church.organizationId, "sermons");
   const creator = input.createdBy ? await getAppUserByClerkId(input.createdBy) : null;
   const [row] = await db
     .insert(sermons)
@@ -492,6 +524,12 @@ export async function createSermon(input: CreateSermonInput): Promise<string> {
 }
 
 export async function updateSermon(sermonId: string, updates: UpdateSermonInput): Promise<void> {
+  const existing = await getSermonById(sermonId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   const patch: Partial<typeof sermons.$inferInsert> = { updatedAt: new Date() };
   if (updates.title !== undefined) patch.title = updates.title.trim();
   if (updates.subtitle !== undefined) patch.subtitle = updates.subtitle.trim() || null;
@@ -511,6 +549,11 @@ export async function updateSermon(sermonId: string, updates: UpdateSermonInput)
 
 export async function deleteSermon(sermonId: string): Promise<void> {
   const existing = await getSermonById(sermonId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   await deleteStoredMediaUrls(existing?.coverImage, existing?.audioUrl);
   await db.delete(sermons).where(eq(sermons.id, sermonId));
 }
@@ -630,10 +673,8 @@ export async function createArticle(input: CreateArticleInput): Promise<string> 
   }
 
   const church = await requireChurch(input.churchId);
-  if (church.organizationId) {
-    const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
-    await assertUsageAllowed(church.organizationId, "articles");
-  }
+  const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+  await assertUsageAllowed(church.organizationId, "articles");
   const creator = input.createdBy ? await getAppUserByClerkId(input.createdBy) : null;
   const [row] = await db
     .insert(articles)
@@ -660,6 +701,12 @@ export async function createArticle(input: CreateArticleInput): Promise<string> 
 }
 
 export async function updateArticle(articleId: string, updates: UpdateArticleInput): Promise<void> {
+  const existing = await getArticleById(articleId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   const patch: Partial<typeof articles.$inferInsert> = { updatedAt: new Date() };
   if (updates.title !== undefined) patch.title = updates.title.trim();
   if (updates.category !== undefined) patch.category = updates.category;
@@ -679,6 +726,11 @@ export async function updateArticle(articleId: string, updates: UpdateArticleInp
 
 export async function deleteArticle(articleId: string): Promise<void> {
   const existing = await getArticleById(articleId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   await deleteStoredMediaUrls(existing?.coverImage);
   await db.delete(articles).where(eq(articles.id, articleId));
 }
@@ -756,10 +808,8 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
   }
 
   const church = await requireChurch(input.churchId);
-  if (church.organizationId) {
-    const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
-    await assertUsageAllowed(church.organizationId, "events");
-  }
+  const { assertUsageAllowed } = await import("@/lib/subscription/subscription-server");
+  await assertUsageAllowed(church.organizationId, "events");
   const [row] = await db
     .insert(events)
     .values({
@@ -782,6 +832,12 @@ export async function createEvent(input: CreateEventInput): Promise<string> {
 }
 
 export async function updateEvent(eventId: string, updates: UpdateEventInput): Promise<void> {
+  const existing = await getEventById(eventId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   const patch: Partial<typeof events.$inferInsert> = { updatedAt: new Date() };
   if (updates.title !== undefined) patch.title = updates.title.trim();
   if (updates.description !== undefined) patch.description = updates.description;
@@ -797,6 +853,11 @@ export async function updateEvent(eventId: string, updates: UpdateEventInput): P
 
 export async function deleteEvent(eventId: string): Promise<void> {
   const existing = await getEventById(eventId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   await deleteStoredMediaUrls(existing?.bannerImage);
   await db.delete(events).where(eq(events.id, eventId));
 }
@@ -971,6 +1032,18 @@ export async function updatePrayerRequest(
   requestId: string,
   updates: UpdatePrayerRequestInput
 ): Promise<void> {
+  const existing = await getPrayerRequestById(requestId);
+  const isMemberCountOnly =
+    updates.prayerCount !== undefined &&
+    updates.status === undefined &&
+    updates.isAnswered === undefined &&
+    updates.answeredAt === undefined;
+  if (!isMemberCountOnly) {
+    await assertOrganizationContentWritable({
+      churchId: existing?.churchId,
+      contentScope: existing?.contentScope,
+    });
+  }
   const patch: Partial<typeof prayerRequests.$inferInsert> = { updatedAt: new Date() };
   if (updates.status !== undefined) patch.status = updates.status;
   if (updates.prayerCount !== undefined) patch.prayerCount = updates.prayerCount;
@@ -982,6 +1055,11 @@ export async function updatePrayerRequest(
 }
 
 export async function deletePrayerRequest(requestId: string): Promise<void> {
+  const existing = await getPrayerRequestById(requestId);
+  await assertOrganizationContentWritable({
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   await db.delete(prayerRequests).where(eq(prayerRequests.id, requestId));
 }
 
@@ -1126,6 +1204,12 @@ export async function updateDonationCampaign(
   campaignId: string,
   updates: UpdateDonationCampaignInput
 ): Promise<void> {
+  const existing = await getDonationCampaignById(campaignId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   const patch: Partial<typeof donationCampaigns.$inferInsert> = { updatedAt: new Date() };
   if (updates.title !== undefined) patch.title = updates.title.trim();
   if (updates.description !== undefined) patch.description = updates.description;
@@ -1138,6 +1222,11 @@ export async function updateDonationCampaign(
 
 export async function deleteDonationCampaign(campaignId: string): Promise<void> {
   const existing = await getDonationCampaignById(campaignId);
+  await assertOrganizationContentWritable({
+    organizationId: existing?.organizationId,
+    churchId: existing?.churchId,
+    contentScope: existing?.contentScope,
+  });
   await deleteStoredMediaUrls(existing?.bannerImage);
   await db.delete(donationCampaigns).where(eq(donationCampaigns.id, campaignId));
 }
@@ -1320,10 +1409,28 @@ export async function listUserNotifications(
 ): Promise<FirebaseNotification[]> {
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return [];
+  const memberships = await db
+    .select({ organizationId: organizationMemberships.organizationId })
+    .from(organizationMemberships)
+    .where(
+      and(
+        eq(organizationMemberships.userId, appUser.id),
+        eq(organizationMemberships.status, "active")
+      )
+    );
+  const organizationIds = [
+    ...new Set(memberships.map((row) => row.organizationId)),
+  ];
+  if (organizationIds.length === 0) return [];
   const rows = await db
     .select()
     .from(notifications)
-    .where(eq(notifications.userId, appUser.id))
+    .where(
+      and(
+        eq(notifications.userId, appUser.id),
+        inArray(notifications.organizationId, organizationIds)
+      )
+    )
     .orderBy(desc(notifications.createdAt))
     .limit(50);
   const reads = await db
@@ -1770,7 +1877,7 @@ export async function listChurchAdminAppUsers(
 export async function createUserNotifications(input: {
   userIds: string[];
   type: NotificationContentType;
-  churchId: string;
+  churchId?: string | null;
   organizationId: string;
   title: string;
   message: string;
@@ -1779,12 +1886,14 @@ export async function createUserNotifications(input: {
   image?: string;
 }): Promise<void> {
   const userIds = uniqueIds(input.userIds);
-  if (userIds.length === 0 || !input.churchId.trim()) return;
+  const organizationId = input.organizationId.trim();
+  if (userIds.length === 0 || !organizationId) return;
+  const churchId = input.churchId?.trim() || null;
 
   await db.insert(notifications).values(
     userIds.map((userId) => ({
-      organizationId: input.organizationId,
-      churchId: input.churchId,
+      organizationId,
+      churchId,
       userId,
       type: input.type,
       title: input.title,

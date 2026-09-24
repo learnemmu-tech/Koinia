@@ -115,6 +115,11 @@ export async function POST(request: Request) {
       }
       throw error;
     }
+  } else {
+    return NextResponse.json(
+      { error: "Shepherd AI is not available for this workspace." },
+      { status: 403 }
+    );
   }
 
   if (isClearlyOffTopic(lastUser.content)) {

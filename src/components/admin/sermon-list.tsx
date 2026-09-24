@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { deleteSermon } from "@/lib/content-mutations-client";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { getSongCoverUrl } from "@/lib/utils";
 
 type SermonListProps = {
@@ -36,6 +37,7 @@ export function SermonList({
 }: SermonListProps) {
   const t = useTranslations("sermons");
   const tCommon = useTranslations("common");
+  const allowWrite = useAllowTrialWrite();
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selected, setSelected] = useState<FirebaseSermon | null>(null);
@@ -166,6 +168,7 @@ export function SermonList({
                     size="sm"
                     variant="ghost"
                     onClick={() => {
+                      if (!allowWrite({ action: "delete", resource: "sermon" })) return;
                       setSelected(sermon);
                       setDeleteConfirmOpen(true);
                     }}

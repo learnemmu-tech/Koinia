@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -23,6 +22,7 @@ import {
   type BookSortOption,
 } from "@/lib/books/filters";
 import { cn } from "@/lib/utils";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import type { BookRecord } from "@/types/book";
 
 const PAGE_SIZE_OPTIONS = [8, 12, 16, 24] as const;
@@ -35,6 +35,7 @@ export function BooksCatalog({
   canManage?: boolean;
 }) {
   const router = useRouter();
+  const allowWrite = useAllowTrialWrite();
   const t = useTranslations("books");
   const tc = useTranslations("common");
   const [query, setQuery] = useState("");
@@ -98,11 +99,17 @@ export function BooksCatalog({
                 your library.
               </p>
               {canManage ?
-                <Button asChild size="sm" className="mt-4 h-9">
-                  <Link href="/dashboard/books/new">
-                    <Plus className="size-4" aria-hidden />
-                    {t("addBook")}
-                  </Link>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-4 h-9"
+                  onClick={() => {
+                    if (!allowWrite({ action: "create", resource: "book" })) return;
+                    router.push("/dashboard/books/new");
+                  }}
+                >
+                  <Plus className="size-4" aria-hidden />
+                  {t("addBook")}
                 </Button>
               : null}
             </>
@@ -118,7 +125,10 @@ export function BooksCatalog({
                 href={`/books/${book.id}`}
                 onEdit={
                   canManage ?
-                    () => router.push(`/dashboard/books/${book.id}/edit`)
+                    () => {
+                      if (!allowWrite({ action: "edit", resource: "book" })) return;
+                      router.push(`/dashboard/books/${book.id}/edit`);
+                    }
                   : undefined
                 }
               />

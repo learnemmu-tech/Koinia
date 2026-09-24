@@ -42,6 +42,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 import { createArticle, updateArticle } from "@/lib/content-mutations-client";
 import { isValidYouTubeUrl } from "@/lib/media-url-validation";
 import { notifyIfNewlyPublished } from "@/lib/notify-if-published";
@@ -143,6 +144,15 @@ export function AddArticleModal({
   const { user, authUser } = useFirebaseAuth();
   const { invalidateArticles } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
+  useTrialWriteMountGuard(
+    {
+      action: initialArticle ? "edit" : "create",
+      resource: "article",
+      contentScope,
+    },
+    isOpen,
+    onClose
+  );
   const [coverFile, setCoverFile] = useState<File | undefined>();
   const [coverPreview, setCoverPreview] = useState("");
   const [loading, setLoading] = useState(false);

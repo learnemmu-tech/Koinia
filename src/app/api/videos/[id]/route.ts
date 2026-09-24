@@ -6,6 +6,7 @@ import {
   getChurchVideoForViewer,
   updateChurchVideo,
 } from "@/lib/postgres/church-videos";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
 import { SHORT_CATEGORIES, type ShortCategory } from "@/types/video-short";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -70,6 +71,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
     return NextResponse.json(video);
   } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     const raw = error instanceof Error ? error.message : "";
     if (raw === "Forbidden") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -100,6 +104,9 @@ export async function DELETE(request: Request, context: RouteContext) {
     });
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     const raw = error instanceof Error ? error.message : "";
     if (raw === "Forbidden") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

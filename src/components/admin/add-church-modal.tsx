@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { createChurch, updateChurch } from "@/lib/church-mutations";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 import {
   createChurchInOrganizationAction,
   updateChurchInOrganizationAction,
@@ -91,6 +92,14 @@ export function AddChurchModal({
   const tForms = useTranslations("forms");
   const tErrors = useTranslations("errors");
   const { user } = useFirebaseAuth();
+  useTrialWriteMountGuard(
+    {
+      action: initialChurch ? "edit" : "create",
+      resource: "church",
+    },
+    isOpen,
+    onClose
+  );
   const [form, setForm] = useState<ChurchFormState>(EMPTY_FORM);
   const [logoFile, setLogoFile] = useState<File | undefined>();
   const [bannerFile, setBannerFile] = useState<File | undefined>();

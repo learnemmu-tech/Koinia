@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { firebaseAuth } from "@/lib/firebase-auth-service";
@@ -31,28 +30,8 @@ async function fetchSubscription(
   return response.json() as Promise<SubscriptionSnapshot>;
 }
 
-/**
- * Subscription is not required to paint Songs/Sermons/etc.
- * Defer until after first paint so it does not compete with org + RSC for Neon.
- */
-function useAfterFirstPaint() {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let innerId = 0;
-    const outerId = window.requestAnimationFrame(() => {
-      innerId = window.requestAnimationFrame(() => setReady(true));
-    });
-    return () => {
-      window.cancelAnimationFrame(outerId);
-      if (innerId) window.cancelAnimationFrame(innerId);
-    };
-  }, []);
-  return ready;
-}
-
 export function useSubscriptionQuery(organizationId: string | null | undefined) {
-  const afterPaint = useAfterFirstPaint();
-  const enabled = Boolean(organizationId) && afterPaint;
+  const enabled = Boolean(organizationId);
 
   return useQuery({
     queryKey: ["subscription", organizationId],
@@ -60,6 +39,6 @@ export function useSubscriptionQuery(organizationId: string | null | undefined) 
     enabled,
     staleTime: QUERY_STALE_TIME,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,
   });
 }

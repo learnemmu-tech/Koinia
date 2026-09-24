@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { fetchChurchGroups } from "@/lib/groups-client";
 import { cn } from "@/lib/utils";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 
 /** Compact directory tiles — ~220–280px; do not stretch with few groups. */
 const GROUPS_GRID_CLASS =
@@ -41,6 +42,7 @@ export function GroupsPageClient({
 }: GroupsPageClientProps) {
   const router = useRouter();
   const { user } = useFirebaseAuth();
+  const allowWrite = useAllowTrialWrite();
   const [groups, setGroups] = useState(initialGroups);
   const [createOpen, setCreateOpen] = useState(false);
   const [loading, setLoading] = useState(
@@ -101,7 +103,10 @@ export function GroupsPageClient({
             type="button"
             size="sm"
             className="h-9 shrink-0 gap-1.5"
-            onClick={() => setCreateOpen(true)}
+            onClick={() => {
+              if (!allowWrite({ action: "create", resource: "group" })) return;
+              setCreateOpen(true);
+            }}
           >
             <Plus className="size-4" />
             Create Group
@@ -125,7 +130,10 @@ export function GroupsPageClient({
             church community.
           </p>
           {canManage ?
-            <Button size="sm" className="mt-4 gap-1.5" onClick={() => setCreateOpen(true)}>
+            <Button size="sm" className="mt-4 gap-1.5" onClick={() => {
+              if (!allowWrite({ action: "create", resource: "group" })) return;
+              setCreateOpen(true);
+            }}>
               <Plus className="size-4" />
               Create Group
             </Button>

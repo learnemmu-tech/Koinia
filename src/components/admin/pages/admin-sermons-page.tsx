@@ -32,6 +32,7 @@ import {
   type PublishFilter,
 } from "@/lib/admin-list-utils";
 import type { FirebaseSermon } from "@/types/firebase-sermon";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 
 const AddSermonModal = dynamic(
   () =>
@@ -45,6 +46,7 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
   const searchParams = useSearchParams();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
+  const allowWrite = useAllowTrialWrite();
   const { data: sermons, loading, loadMore, hasMore, loadingMore } =
     useAdminSermons();
   const { invalidateSermons } = useInvalidateAdminQueries();
@@ -59,6 +61,7 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
+      if (!allowWrite({ action: "create", resource: "sermon" })) return;
       setSelectedSermon(null);
       setModalOpen(true);
       return;
@@ -69,10 +72,11 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
 
     const sermon = sermons.find((item) => item.id === editId);
     if (sermon) {
+      if (!allowWrite({ action: "edit", resource: "sermon" })) return;
       setSelectedSermon(sermon);
       setModalOpen(true);
     }
-  }, [searchParams, sermons, loading]);
+  }, [searchParams, sermons, loading, allowWrite]);
 
   useEffect(() => {
     setPage(1);
@@ -107,6 +111,7 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
           title={t("title")}
           description={t("adminDescription")}
           actionLabel={t("add")}
+          trialWrite={{ action: "create", resource: "sermon" }}
           onAction={() => {
             setSelectedSermon(null);
             setModalOpen(true);
@@ -122,6 +127,7 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
         onSearchChange={setSearch}
         searchPlaceholder={t("searchPlaceholder")}
         actionLabel={embedded ? t("add") : undefined}
+        trialWrite={{ action: "create", resource: "sermon" }}
         onAction={
           embedded ?
             () => {
@@ -151,6 +157,7 @@ export function AdminSermonsPageClient({ embedded = false }: { embedded?: boolea
         sermons={pageItems}
         loading={loading}
         onEdit={(sermon) => {
+          if (!allowWrite({ action: "edit", resource: "sermon" })) return;
           setSelectedSermon(sermon);
           setModalOpen(true);
         }}

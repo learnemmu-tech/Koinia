@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useIsPlatformSuperAdmin } from "@/hooks/use-admin-church-id";
 import { useWorkspaceTenantScope } from "@/hooks/use-workspace-tenant-scope";
@@ -26,6 +27,7 @@ export function ArticlesAdminBar({
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsPlatformSuperAdmin();
   const workspace = useWorkspaceTenantScope();
+  const allowWrite = useAllowTrialWrite();
   const [open, setOpen] = useState(false);
 
   const effectiveScope =
@@ -44,7 +46,19 @@ export function ArticlesAdminBar({
       <Button
         type="button"
         size="sm"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (
+            effectiveScope !== "platform_public" &&
+            !allowWrite({
+              action: "create",
+              resource: "article",
+              contentScope: effectiveScope,
+            })
+          ) {
+            return;
+          }
+          setOpen(true);
+        }}
         className="shrink-0 gap-1.5 rounded-full"
       >
         <Plus className="size-4" aria-hidden />

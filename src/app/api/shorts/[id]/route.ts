@@ -11,6 +11,7 @@ import {
   updateShortMetadata,
   updateShortThumbnailUrl,
 } from "@/lib/postgres/shorts";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
 import {
   SHORT_CATEGORIES,
   type ShortCategory,
@@ -165,6 +166,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
     return NextResponse.json({ id: updated.id });
   } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("[api/shorts PATCH]", error);
     const raw = error instanceof Error ? error.message : "";
     if (raw === "Unauthorized") {
@@ -192,6 +196,9 @@ export async function DELETE(_request: Request, context: RouteContext) {
     });
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("[api/shorts DELETE]", error);
     const raw = error instanceof Error ? error.message : "";
     if (raw === "Unauthorized") {

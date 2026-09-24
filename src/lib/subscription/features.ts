@@ -6,7 +6,11 @@ import type {
 } from "@/types/subscription";
 
 import { getPlan } from "./plans";
-import { getTrialLifecycle } from "./trial";
+import {
+  EXPIRED_FEATURE_FLAGS,
+  getTrialLifecycle,
+  hasActivePaidEntitlement,
+} from "./trial";
 
 export function resolveFeatureFlags(
   planId: PlanId,
@@ -26,53 +30,23 @@ export function resolveFeatureFlagsFromSubscription(
     | "trialStart"
     | "trialEnd"
     | "currentPeriodEnd"
-  >
+    | "cancelAtPeriodEnd"
+  >,
+  fallbackStart?: number | Date | null
 ): SubscriptionFeatureFlags {
-  const paidPeriodExpired =
-    subscription.planId !== "free" &&
-    subscription.currentPeriodEnd != null &&
-    subscription.currentPeriodEnd <= Date.now();
-  if (
-    subscription.planId !== "free" &&
-    (subscription.status !== "active" || paidPeriodExpired)
-  ) {
-    return resolveFeatureFlags("free");
+  if (hasActivePaidEntitlement(subscription)) {
+    return resolveFeatureFlags(subscription.planId, subscription.featureFlags);
   }
 
-  const trial = getTrialLifecycle(subscription);
-  if (trial.phase === "expired") {
-    return resolveFeatureFlags("free", {
-      canCreateSongs: false,
-      canCreateSermons: false,
-      canCreateArticles: false,
-      canCreateEvents: false,
-      canCreateDonations: false,
-      canUseShepherdAi: false,
-      canCreateChurches: false,
-      canUseEmailNotifications: false,
-      canUseAnalytics: false,
-      canUseAdvancedAnalytics: false,
-      canCustomizeBranding: false,
-      canUseEventRegistration: false,
-      canInviteAdmins: false,
-      canUseWhiteLabel: false,
-      canUseCustomDomain: false,
-      canUseApiAccess: false,
-      hasPrioritySupport: false,
-      hasDedicatedSupport: false,
-      hasSla: false,
-    });
+  const trial = getTrialLifecycle(subscription, Date.now(), fallbackStart);
+  if (trial.access === "expired" || trial.phase === "expired") {
+    return { ...EXPIRED_FEATURE_FLAGS };
   }
 
-  const flags = resolveFeatureFlags(
-    subscription.planId,
-    subscription.featureFlags
-  );
+  const flags = resolveFeatureFlags("free", subscription.featureFlags);
   return {
     ...flags,
-    canUseShepherdAi: trial.isTrial
-      ? trial.shepherdAiAvailable
-      : flags.canUseShepherdAi,
+    canUseShepherdAi: trial.shepherdAiAvailable,
   };
 }
 
@@ -92,8 +66,13 @@ export function canUseFeature(
     | "trialStart"
     | "trialEnd"
     | "currentPeriodEnd"
+    | "cancelAtPeriodEnd"
   >,
-  key: FeatureFlagKey
+  key: FeatureFlagKey,
+  fallbackStart?: number | Date | null
 ): boolean {
-  return hasFeature(resolveFeatureFlagsFromSubscription(subscription), key);
+  return hasFeature(
+    resolveFeatureFlagsFromSubscription(subscription, fallbackStart),
+    key
+  );
 }

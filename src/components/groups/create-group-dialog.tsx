@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createChurchGroup, updateChurchGroup } from "@/lib/groups-client";
 import { responsiveDialogContentClass } from "@/lib/responsive-classes";
+import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 
 type CreateGroupDialogProps = {
   open: boolean;
@@ -48,6 +49,11 @@ export function CreateGroupDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  useTrialWriteMountGuard(
+    { action: "create", resource: "group" },
+    open,
+    () => onOpenChange(false)
+  );
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 

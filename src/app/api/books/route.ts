@@ -16,6 +16,7 @@ import {
   listPublishedCatalogBooks,
 } from "@/lib/postgres/books";
 import { notifyIfBookNewlyPublished } from "@/lib/books/publish-notifications";
+import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -114,6 +115,9 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ book }, { status: 201 });
   } catch (error) {
+    if (isSubscriptionLimitError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     console.error("[api/books]", error);
     return NextResponse.json(
       { error: "Could not create the book." },

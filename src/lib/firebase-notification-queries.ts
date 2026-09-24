@@ -163,6 +163,9 @@ export function getNotificationContentPath(
       ? `/groups/${encodeURIComponent(notification.contentId)}`
       : "/community?tab=groups";
   }
+  if (notification.type === "trial_lifecycle") {
+    return "/dashboard/billing";
+  }
   const preset = NOTIFICATION_PRESETS[notification.type] ?? NOTIFICATION_PRESETS.song;
   return `${preset.pathPrefix}/${encodeURIComponent(notification.contentId)}`;
 }

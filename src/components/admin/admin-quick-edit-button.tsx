@@ -5,7 +5,9 @@ import { useTranslations } from "next-intl";
 import { Pencil } from "lucide-react";
 
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { cn } from "@/lib/utils";
+import type { TrialWriteRequest } from "@/lib/subscription/trial-write";
 
 type AdminQuickEditButtonProps = {
   /** Navigates to a workspace edit route. */
@@ -14,6 +16,7 @@ type AdminQuickEditButtonProps = {
   onSelect?: () => void;
   label?: string;
   className?: string;
+  trialWrite?: TrialWriteRequest;
 };
 
 export function AdminQuickEditButton({
@@ -21,9 +24,11 @@ export function AdminQuickEditButton({
   onSelect,
   label,
   className,
+  trialWrite,
 }: AdminQuickEditButtonProps) {
   const tCommon = useTranslations("common");
   const isAdmin = useIsAdmin();
+  const allowWrite = useAllowTrialWrite();
   const resolvedLabel = label ?? tCommon("edit");
 
   if (!isAdmin) return null;
@@ -47,7 +52,12 @@ export function AdminQuickEditButton({
       <Link
         href={href}
         aria-label={resolvedLabel}
-        onClick={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (trialWrite && !allowWrite(trialWrite)) {
+            event.preventDefault();
+          }
+        }}
         className={buttonClassName}
       >
         {content}
@@ -63,6 +73,7 @@ export function AdminQuickEditButton({
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
+          if (trialWrite && !allowWrite(trialWrite)) return;
           onSelect();
         }}
         className={buttonClassName}

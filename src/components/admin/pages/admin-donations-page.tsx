@@ -13,6 +13,7 @@ import { AdminListPagination } from "@/components/admin/admin-list-pagination";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminToolbar } from "@/components/admin/admin-toolbar";
 import { adminSectionClass } from "@/lib/responsive-classes";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
   const searchParams = useSearchParams();
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
+  const allowWrite = useAllowTrialWrite();
   const { campaigns, donations, loading } = useAdminDonations();
   const { invalidateDonations } = useInvalidateAdminQueries();
 
@@ -59,10 +61,11 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
+      if (!allowWrite({ action: "create", resource: "donation" })) return;
       setSelectedCampaign(null);
       setModalOpen(true);
     }
-  }, [searchParams]);
+  }, [searchParams, allowWrite]);
 
   useEffect(() => {
     setPage(1);
@@ -107,6 +110,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
           title={t("title")}
           description={t("adminDescription")}
           actionLabel={t("create")}
+          trialWrite={{ action: "create", resource: "donation" }}
           onAction={() => {
             setSelectedCampaign(null);
             setModalOpen(true);
@@ -122,6 +126,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         onSearchChange={setSearch}
         searchPlaceholder={t("searchPlaceholder")}
         actionLabel={embedded ? t("create") : undefined}
+        trialWrite={{ action: "create", resource: "donation" }}
         onAction={
           embedded ?
             () => {
@@ -162,6 +167,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         recentDonations={donations.slice(0, 10)}
         loading={loading}
         onEdit={(campaign) => {
+          if (!allowWrite({ action: "edit", resource: "donation" })) return;
           setSelectedCampaign(campaign);
           setModalOpen(true);
         }}

@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 
 import { ShepherdPulseMark } from "@/components/shepherd/shepherd-pulse-mark";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useSubscriptionOptional } from "@/context/subscription-context";
 import { usePlayerVisible } from "@/hooks/use-player-visible";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,8 @@ export function ShepherdLauncher() {
   const { user, loading } = useFirebaseAuth();
   const pathname = usePathname();
   const showPlayer = usePlayerVisible();
+  const subscription = useSubscriptionOptional();
+  const shepherdAllowed = subscription?.canUseFeature("canUseShepherdAi") ?? false;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -26,6 +29,7 @@ export function ShepherdLauncher() {
   }, []);
 
   if (loading || !user) return null;
+  if (!shepherdAllowed) return null;
   if (pathname === "/shepherd" || pathname.startsWith("/shepherd/")) return null;
   if (pathname === "/waiting-approval" || pathname.startsWith("/waiting-approval/")) {
     return null;

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { ChurchVideo } from "@/types/church-video";
 import { getVimeoEmbedUrl, getYouTubeEmbedUrl } from "@/lib/media-url-validation";
 import { deleteChurchVideo, updateChurchVideo } from "@/lib/videos-client";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { Button } from "@/components/ui/button";
@@ -38,10 +39,12 @@ export function ChurchVideoCard({
   onChanged,
 }: ChurchVideoCardProps) {
   const [open, setOpen] = useState(false);
+  const allowWrite = useAllowTrialWrite();
   const src = embedSrc(video);
   const poster = video.thumbnailUrl || DEFAULT_SONG_COVER;
 
   async function handleDelete() {
+    if (!allowWrite({ action: "delete", resource: "video" })) return;
     if (!getToken) return;
     const token = await getToken(true);
     if (!token) return;
@@ -55,6 +58,14 @@ export function ChurchVideoCard({
   }
 
   async function handleUnpublish() {
+    if (
+      !allowWrite({
+        action: video.published ? "publish" : "publish",
+        resource: "video",
+      })
+    ) {
+      return;
+    }
     if (!getToken) return;
     const token = await getToken(true);
     if (!token) return;

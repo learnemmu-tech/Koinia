@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useAllowTrialWrite } from "@/context/subscription-context";
 import { deleteManagedBook, saveBook } from "@/lib/books/books-client";
 import { filterBooks, type BookEditionFilter } from "@/lib/books/filters";
 import type { BookRecord, BookStatus } from "@/types/book";
@@ -68,6 +69,7 @@ export function BooksAdminPageClient({
 }) {
   const router = useRouter();
   const { user } = useFirebaseAuth();
+  const allowWrite = useAllowTrialWrite();
   const t = useTranslations("books");
   const tc = useTranslations("common");
   const [books, setBooks] = useState(initialBooks);
@@ -135,11 +137,17 @@ export function BooksAdminPageClient({
             >
               Orders
             </Link>
-            <Button asChild size="sm" className="h-9">
-              <Link href="/dashboard/books/new">
-                <Plus className="size-4" aria-hidden />
-                {t("create")}
-              </Link>
+            <Button
+              type="button"
+              size="sm"
+              className="h-9"
+              onClick={() => {
+                if (!allowWrite({ action: "create", resource: "book" })) return;
+                router.push("/dashboard/books/new");
+              }}
+            >
+              <Plus className="size-4" aria-hidden />
+              {t("create")}
             </Button>
           </div>
         }
@@ -165,11 +173,17 @@ export function BooksAdminPageClient({
                 Add your first Christian book or ministry resource to begin building
                 your library.
               </p>
-              <Button asChild size="sm" className="mt-4 h-9">
-                <Link href="/dashboard/books/new">
-                  <Plus className="size-4" aria-hidden />
-                  {t("create")}
-                </Link>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-4 h-9"
+                onClick={() => {
+                  if (!allowWrite({ action: "create", resource: "book" })) return;
+                  router.push("/dashboard/books/new");
+                }}
+              >
+                <Plus className="size-4" aria-hidden />
+                {t("create")}
               </Button>
             </>
           : <p className="text-sm text-muted-foreground">
@@ -184,9 +198,18 @@ export function BooksAdminPageClient({
               book={book}
               href={`/books/${book.id}`}
               showStatus
-              onEdit={() => router.push(`/dashboard/books/${book.id}/edit`)}
-              onArchive={() => void archiveBook(book)}
-              onDelete={() => setPendingDelete(book)}
+              onEdit={() => {
+                if (!allowWrite({ action: "edit", resource: "book" })) return;
+                router.push(`/dashboard/books/${book.id}/edit`);
+              }}
+              onArchive={() => {
+                if (!allowWrite({ action: "edit", resource: "book" })) return;
+                void archiveBook(book);
+              }}
+              onDelete={() => {
+                if (!allowWrite({ action: "delete", resource: "book" })) return;
+                setPendingDelete(book);
+              }}
             />
           ))}
         </BookCardGrid>
