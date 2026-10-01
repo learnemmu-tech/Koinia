@@ -17,11 +17,15 @@ import { useRealtimeArticles } from "@/hooks/use-worship-realtime";
 type ArticlesTabContentProps = {
   initialArticles: FirebaseArticle[];
   isPlatformPublic?: boolean;
+  hrefPrefix?: string;
+  showCollectionHeader?: boolean;
 };
 
 export function ArticlesTabContent({
   initialArticles,
   isPlatformPublic = false,
+  hrefPrefix,
+  showCollectionHeader = true,
 }: ArticlesTabContentProps) {
   const t = useTranslations("articles");
   const { data: liveArticles, syncing, loadMore, hasMore, loadingMore } =
@@ -60,17 +64,23 @@ export function ArticlesTabContent({
         searchPlaceholder={t("searchPlaceholder")}
       />
 
-      <CollectionTabHeader
-        title={t("title")}
-        count={filteredArticles.length}
-        countLabel={t("itemCount", { count: filteredArticles.length })}
-      />
+      {showCollectionHeader ?
+        <CollectionTabHeader
+          title={t("title")}
+          count={filteredArticles.length}
+          countLabel={t("itemCount", { count: filteredArticles.length })}
+        />
+      : null}
 
       {filteredArticles.length === 0 ?
         <TabEmptyState message={t("noMatch")} />
       : <div className={worshipContentGridClassName}>
           {filteredArticles.map((article) => (
-            <FirebaseArticleCard key={article.id} article={article} />
+            <FirebaseArticleCard
+              key={article.id}
+              article={article}
+              hrefPrefix={hrefPrefix}
+            />
           ))}
         </div>
       }

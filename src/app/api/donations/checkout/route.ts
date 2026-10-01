@@ -6,17 +6,19 @@ import {
   createPendingDonation,
 } from "@/lib/donation-server";
 import { getDonationCampaignById } from "@/lib/firebase-donation-queries";
+import { resolveAppOrigin } from "@/lib/join-url";
 import { getConfiguredPaymentProvider } from "@/lib/payments";
 import { rateLimitDonationCheckout } from "@/lib/rate-limit";
 
 function getBaseUrl(): string {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
-
-  if (process.env.NODE_ENV === "production") {
+  const origin = resolveAppOrigin();
+  if (
+    process.env.NODE_ENV === "production" &&
+    /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(origin)
+  ) {
     throw new Error("NEXT_PUBLIC_APP_URL is not configured.");
   }
-  return "http://localhost:3000";
+  return origin;
 }
 
 function clientIp(request: Request): string {

@@ -2,38 +2,31 @@ import type { FirestoreUser } from "@/lib/firebase-auth-service";
 import type { FirebaseChurch } from "@/types/firebase-church";
 import type { FirebaseBranch } from "@/types/branch";
 
-import { getLegacyDefaultChurchId } from "@/lib/church-scope";
+import { pickCurrentChurchId } from "@/lib/organization/pick-current-church-id";
 
 export function getActiveOrgChurches(
-  churches: FirebaseChurch[] | undefined
-): FirebaseChurch[] {
+  churches: Pick<FirebaseChurch, "id" | "isActive">[] | undefined
+): Pick<FirebaseChurch, "id" | "isActive">[] {
   return (churches ?? []).filter((church) => church.isActive);
 }
 
 export function resolveEffectiveChurchId(input: {
-  profile?: FirestoreUser | null;
+  profile?: Pick<FirestoreUser, "churchId"> | null;
   activeChurchId?: string | null;
-  orgChurches?: FirebaseChurch[];
+  orgChurches?: Pick<FirebaseChurch, "id" | "isActive">[];
   allowLegacyDefault?: boolean;
 }): string {
-  const profileChurchId = input.profile?.churchId?.trim() || "";
-  const activeChurchId = input.activeChurchId?.trim() || "";
   const orgChurchIds = getActiveOrgChurches(input.orgChurches).map(
     (church) => church.id
   );
 
-  if (profileChurchId && orgChurchIds.includes(profileChurchId)) {
-    return profileChurchId;
-  }
-  if (activeChurchId && orgChurchIds.includes(activeChurchId)) {
-    return activeChurchId;
-  }
-  if (orgChurchIds[0]) return orgChurchIds[0];
-  if (profileChurchId) return profileChurchId;
-  if (activeChurchId) return activeChurchId;
-  if (input.allowLegacyDefault !== false) {
-    return getLegacyDefaultChurchId() || "";
-  }
+  const picked = pickCurrentChurchId({
+    profileChurchId: input.profile?.churchId,
+    cookieChurchId: input.activeChurchId,
+    accessibleChurchIds: orgChurchIds,
+  });
+  if (picked) return picked;
+
   return "";
 }
 

@@ -54,6 +54,7 @@ function normalizeUsage(data: unknown): SubscriptionUsage | undefined {
     admins: Number(raw.admins ?? 0) || 0,
     events: Number(raw.events ?? 0) || 0,
     donationCampaigns: Number(raw.donationCampaigns ?? 0) || 0,
+    books: Number(raw.books ?? 0) || 0,
     shorts: Number(raw.shorts ?? 0) || 0,
     prayerRequests: Number(raw.prayerRequests ?? 0) || 0,
   };

@@ -40,27 +40,30 @@ export function resolvePrimaryBranchMembership(
 ): FirebaseBranchMembership | null {
   if (!branchMemberships.length) return null;
 
+  const pendingId = profile?.pendingBranchId?.trim();
+  if (pendingId) {
+    const pending = branchMemberships.find((m) => m.branchId === pendingId);
+    if (pending) return pending;
+  }
+
   const activeBranchId = profile?.activeBranchId?.trim();
   if (activeBranchId) {
-    const match = branchMemberships.find(
-      (m) => m.branchId === activeBranchId && m.status === "active"
-    );
+    const match = branchMemberships.find((m) => m.branchId === activeBranchId);
     if (match) return match;
   }
 
   const churchId = profile?.churchId?.trim();
   if (churchId) {
     const match = branchMemberships.find(
-      (m) => m.churchId === churchId && m.status === "active"
+      (m) => m.churchId === churchId || m.branchId === churchId
     );
     if (match) return match;
   }
 
-  return (
-    branchMemberships.find((m) => m.status === "active") ??
-    branchMemberships[0] ??
-    null
-  );
+  const active = branchMemberships.filter((m) => m.status === "active");
+  if (active.length === 1) return active[0]!;
+
+  return null;
 }
 
 function hasLegacyAdminProfile(profile: FirestoreUser): boolean {
@@ -258,6 +261,22 @@ export function canAccessChurchManagement(input: WorkspaceAccessInput): boolean 
   if (hasWorkspaceContext(profile)) return true;
 
   return false;
+}
+
+/**
+ * May this user open `/dashboard`? Church/org administrators, and staff roles
+ * that can manage church content (editor and above — the same threshold the
+ * server uses in `userCanManageChurch`). Ordinary `member` / `volunteer`
+ * memberships satisfy `canAccessWorkspace` but have no dashboard.
+ */
+export function canEnterDashboard(input: WorkspaceAccessInput): boolean {
+  const { profile, membership, branchMembership } = input;
+  if (!profile) return false;
+  if (isPlatformSuperAdmin(profile.platformRole)) return true;
+  if (canAccessChurchManagement(input)) return true;
+  const isStaff = (m?: { status: string; role: MembershipRole } | null) =>
+    m?.status === "active" && roleMeetsMinimum(m.role, "editor");
+  return canAccessWorkspace(input) && (isStaff(membership) || isStaff(branchMembership));
 }
 
 /** Cookie hints only — never authoritative. */

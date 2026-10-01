@@ -7,7 +7,7 @@ import {
 } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { getPrayerRequestDisplayName } from "@/lib/prayer-request-firestore";
-import { getPrayerRequestById } from "@/lib/firebase-prayer-request-queries";
+import { getPrayerRequestById } from "@/lib/postgres/features";
 import { getChurchById } from "@/lib/church-queries";
 
 const bodySchema = z.object({

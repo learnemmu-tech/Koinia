@@ -3,18 +3,24 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Mail, MapPin, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Google } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
-  buildJoinAuthHref,
+  joinPathForSlug,
   WAITING_APPROVAL_PATH,
 } from "@/lib/auth/auth-flow";
+import { memberExperiencePath } from "@/lib/auth/membership-routing";
+import { churchWebsitePath } from "@/lib/templates/paths";
+import type { TemplateId } from "@/lib/templates/types";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { setAuthCookie } from "@/context/firebase-auth-context";
+import { useActiveChurch } from "@/context/active-church-context";
+import { persistActiveChurchCookie } from "@/lib/church-cookies";
 import { getJoinFlowMessage } from "@/lib/enrollment";
 import { getFirebaseAuthErrorMessage } from "@/lib/firebase-auth-errors";
 import { firebaseAuth, signInWithGoogle } from "@/lib/firebase-auth-service";
@@ -40,12 +46,13 @@ type JoinChurchClientProps = {
 
 export function JoinChurchClient({ slug }: JoinChurchClientProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { setActiveChurchId } = useActiveChurch();
   const { authUser, loading: authLoading, refreshProfile } = useFirebaseAuth();
   const [church, setChurch] = useState<JoinChurchPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const joinAttemptedRef = useRef(false);
 
   useEffect(() => {
     async function loadChurch() {
@@ -82,11 +89,28 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
       const data = (await res.json()) as {
         churchName: string;
         status: "active" | "pending";
+        churchId?: string;
+        slug?: string;
+        activeTemplate?: TemplateId | null;
       };
+      if (data.churchId) {
+        persistActiveChurchCookie(data.churchId);
+        setActiveChurchId(data.churchId);
+      }
       await refreshProfile();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["organization"] }),
+        queryClient.invalidateQueries({ queryKey: ["membership-routing"] }),
+      ]);
 
       if (data.status === "active") {
-        router.replace("/dashboard");
+        router.replace(
+          memberExperiencePath({
+            slug: data.slug ?? slug,
+            activeTemplate: data.activeTemplate,
+          })
+        );
+        router.refresh();
       } else {
         router.replace(WAITING_APPROVAL_PATH);
       }
@@ -97,33 +121,18 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
     } finally {
       setJoining(false);
     }
-  }, [slug, refreshProfile, router]);
-
-  useEffect(() => {
-    if (
-      loading ||
-      authLoading ||
-      !church ||
-      !church.joinAvailable ||
-      !authUser ||
-      joinAttemptedRef.current
-    ) {
-      return;
-    }
-
-    joinAttemptedRef.current = true;
-    void submitJoinRequest();
-  }, [loading, authLoading, church, authUser, submitJoinRequest]);
+  }, [slug, refreshProfile, router, queryClient, setActiveChurchId]);
 
   async function handleGoogleContinue() {
     setGoogleLoading(true);
     try {
-      const googleResult = await signInWithGoogle();
+      const googleResult = await signInWithGoogle({
+        redirectUrlComplete: joinPathForSlug(slug),
+      });
       if ("redirected" in googleResult) return;
 
       const { profile } = googleResult;
       setAuthCookie(true, { role: profile.role, profile });
-      joinAttemptedRef.current = false;
     } catch (error) {
       toast.error(getFirebaseAuthErrorMessage(error));
     } finally {
@@ -168,6 +177,9 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
     );
   }
 
+  const joinCallback = joinPathForSlug(slug);
+  const emailSignUpHref = `${churchWebsitePath(slug, "/signup")}?callbackUrl=${encodeURIComponent(joinCallback)}`;
+  const emailSignInHref = `${churchWebsitePath(slug, "/login")}?callbackUrl=${encodeURIComponent(joinCallback)}`;
   const logo = church.logoUrl?.trim() || DEFAULT_CHURCH_LOGO;
   const welcome =
     church.welcomeMessage?.trim() ||
@@ -262,13 +274,22 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
                   size="lg"
                   className="w-full"
                 >
-                  <Link href={buildJoinAuthHref(slug, "/signin")}>
+                  <Link href={emailSignUpHref}>
                     <Mail className="mr-2 size-4" />
                     Continue with Email
                   </Link>
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  We&apos;ll sign you in or create an account automatically.
+                  Create an account, then continue joining this church.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Already have an account?{" "}
+                  <Link
+                    href={emailSignInHref}
+                    className="underline underline-offset-2"
+                  >
+                    Sign in
+                  </Link>
                 </p>
               </div>
             }

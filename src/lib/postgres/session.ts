@@ -281,6 +281,22 @@ export const userCanManageChurch = cache(async function userCanManageChurch(
   return roleMeetsMinimum(churchRow.role as MembershipRole, "editor");
 });
 
+/**
+ * Public-website membership: the user must have an active membership row
+ * for this specific church. Org-wide access or a Clerk session alone is
+ * not enough — authentication is not church membership.
+ */
+export const userIsActiveChurchMember = cache(async function userIsActiveChurchMember(
+  clerkId: string,
+  churchId: string
+): Promise<boolean> {
+  if (!clerkId || !isPostgresUuid(churchId)) return false;
+  const appUser = await getAppUserByClerkId(clerkId);
+  if (!appUser) return false;
+  const churchRow = await getChurchMembershipRow(appUser.id, churchId);
+  return churchRow?.status === "active";
+});
+
 export const userCanAccessChurchContent = cache(async function userCanAccessChurchContent(
   clerkId: string,
   _email: string | undefined,

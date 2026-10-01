@@ -24,11 +24,17 @@ import { pageDetailClass, typePageTitleClass } from "@/lib/responsive-classes";
 type PrayerRequestDetailClientProps = {
   requestId: string;
   initialRequest: FirebasePrayerRequest;
+  /** Where "Back to Prayer Requests" points. Defaults to the platform wall. */
+  backHref?: string;
+  /** Path (not absolute URL) used by the share button. Defaults to the platform route. */
+  sharePath?: string;
 };
 
 export function PrayerRequestDetailClient({
   requestId,
   initialRequest,
+  backHref = "/prayer-requests",
+  sharePath,
 }: PrayerRequestDetailClientProps) {
   const { request, loading } = usePrayerRequest(requestId, initialRequest);
 
@@ -47,7 +53,7 @@ export function PrayerRequestDetailClient({
           This prayer request is not available.
         </p>
         <Link
-          href="/prayer-requests"
+          href={backHref}
           className="mt-4 inline-flex text-sm font-medium text-primary hover:underline"
         >
           Back to Prayer Requests
@@ -62,7 +68,7 @@ export function PrayerRequestDetailClient({
   return (
     <article className={`${pageDetailClass} space-y-6 pt-2`}>
       <Link
-        href="/prayer-requests"
+        href={backHref}
         className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" aria-hidden />
@@ -104,6 +110,7 @@ export function PrayerRequestDetailClient({
             <SharePrayerRequestButton
               requestId={request.id}
               title={request.title}
+              path={sharePath}
             />
           </div>
 

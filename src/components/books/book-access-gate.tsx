@@ -11,14 +11,16 @@ export function BookAccessGate({
   book,
   signedIn,
   callbackPath,
+  listHref = "/books",
 }: {
   book: BookRecord;
   signedIn: boolean;
   callbackPath: string;
+  listHref?: string;
 }) {
   return (
     <article className={`${pageDetailClass} space-y-6 pt-2`}>
-      <BooksBackLink />
+      <BooksBackLink href={listHref} />
       <div className="mx-auto max-w-lg space-y-5 text-center">
         <div className="relative mx-auto aspect-[2/3] w-36 overflow-hidden rounded-xl border border-border/50 bg-muted">
           <ImageWithFallback

@@ -61,16 +61,18 @@ export function useActiveDonationCampaigns(
 
 export function useDonationCampaign(
   campaignId: string,
-  initialData?: FirebaseDonationCampaign | null
+  initialData?: FirebaseDonationCampaign | null,
+  options?: { clientSync?: boolean }
 ) {
+  const clientSync = options?.clientSync ?? true;
   const { data: campaign = initialData ?? null, isLoading } = useQuery({
     queryKey: ["donation-campaign", campaignId],
-    enabled: Boolean(campaignId),
+    enabled: clientSync && Boolean(campaignId),
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
     initialData: initialData ?? undefined,
     queryFn: () => getDonationCampaignById(campaignId),
   });
 
-  return { campaign, loading: isLoading };
+  return { campaign, loading: clientSync && isLoading };
 }

@@ -146,6 +146,14 @@ async function dispatchChurchContentPublishInApp(input: {
       image,
       churchId,
     });
+    if (!notificationId) {
+      console.error("[notifications] content publish in-app produced no records", {
+        collection: input.collection,
+        contentId,
+        churchId,
+      });
+      return;
+    }
     console.info("[notifications] content publish in-app", {
       collection: input.collection,
       contentId,

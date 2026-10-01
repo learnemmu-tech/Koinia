@@ -1,24 +1,23 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
+
 import { AuthLoading } from "@/components/auth/auth-loading";
-import { useFirebaseAuth } from "@/context/firebase-auth-context";
 
 /**
- * Signed-in users wait only until the PostgreSQL profile is ready.
- * Anonymous visitors are not blocked on Clerk hydration — public pages
- * must render immediately. After the first successful bootstrap,
- * background auth/org work must not unmount the tree (that remounts open forms).
+ * Wait only for Clerk's authoritative session. Do not block first-time
+ * onboarding on Firebase shim / profile hydration.
  */
 export function WorkspaceBootstrapGate({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { authUser, profileReady } = useFirebaseAuth();
+  const { isLoaded } = useAuth();
 
-  if (!authUser || profileReady) {
-    return <>{children}</>;
+  if (!isLoaded) {
+    return <AuthLoading />;
   }
 
-  return <AuthLoading />;
+  return <>{children}</>;
 }

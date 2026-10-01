@@ -15,6 +15,7 @@ import { TabEmptyState } from "@/components/worship/songs-tab-content";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useAllowTrialWrite } from "@/context/subscription-context";
 import { fetchChurchVideos } from "@/lib/videos-client";
+import { ContentListToolbar } from "@/components/worship/content-list-toolbar";
 import { contentCardGridClassName, typePageTitleClass } from "@/lib/responsive-classes";
 
 type VideosPageClientProps = {
@@ -53,6 +54,7 @@ export function VideosPageClient({
 
   const [videos, setVideos] = React.useState(initialVideos);
   const [addOpen, setAddOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
 
   const getToken = React.useCallback(
     async (forceRefresh = false) => {
@@ -88,6 +90,18 @@ export function VideosPageClient({
   const publishedVideos = canManageVideos
     ? videos
     : videos.filter((video) => video.published);
+
+  const filteredVideos = React.useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return publishedVideos;
+    return publishedVideos.filter((video) => {
+      const haystack = [video.title, video.description]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [publishedVideos, search]);
 
   return (
     <section className="space-y-6">
@@ -169,17 +183,27 @@ export function VideosPageClient({
                 </div>
               : null}
             </div>
-          : <div className={contentCardGridClassName}>
-              {publishedVideos.map((video) => (
-                <ChurchVideoCard
-                  key={video.id}
-                  video={video}
-                  canManage={canManageVideos}
-                  getToken={getToken}
-                  onChanged={() => void reloadVideos()}
-                />
-              ))}
-            </div>
+          : <>
+              <ContentListToolbar
+                search={search}
+                onSearchChange={setSearch}
+                searchPlaceholder="Search videos…"
+              />
+              {filteredVideos.length === 0 ?
+                <TabEmptyState message="No videos match that search." />
+              : <div className={contentCardGridClassName}>
+                  {filteredVideos.map((video) => (
+                    <ChurchVideoCard
+                      key={video.id}
+                      video={video}
+                      canManage={canManageVideos}
+                      getToken={getToken}
+                      onChanged={() => void reloadVideos()}
+                    />
+                  ))}
+                </div>
+              }
+            </>
           }
         </TabsContent>
 

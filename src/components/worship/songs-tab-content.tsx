@@ -30,11 +30,15 @@ import { SONG_CATEGORIES } from "@/types/firebase-song";
 type SongsTabContentProps = {
   initialSongs: FirebaseSong[];
   isPlatformPublic?: boolean;
+  hrefPrefix?: string;
+  showCollectionHeader?: boolean;
 };
 
 export function SongsTabContent({
   initialSongs,
   isPlatformPublic = false,
+  hrefPrefix,
+  showCollectionHeader = true,
 }: SongsTabContentProps) {
   const scope = useContentTenantScope();
   const { data: songs, syncing, loadMore, hasMore, loadingMore } =
@@ -96,13 +100,13 @@ export function SongsTabContent({
         </Select>
       </ContentListToolbar>
 
-      <SongsTabHeader count={filteredSongs.length} />
+      {showCollectionHeader ? <SongsTabHeader count={filteredSongs.length} /> : null}
 
       {filteredSongs.length === 0 ?
         <TabEmptyState message={t("noMatch")} />
       : <div className={songsPageGridClassName}>
           {filteredSongs.map((song) => (
-            <FirebaseSongCard key={song.id} song={song} />
+            <FirebaseSongCard key={song.id} song={song} hrefPrefix={hrefPrefix} />
           ))}
         </div>
       }

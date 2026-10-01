@@ -6,6 +6,7 @@ import { db } from "@/db";
 import {
   churchMemberships,
   churches,
+  churchWebsites,
   organizationMemberships,
   organizations,
   subscriptions,
@@ -195,42 +196,49 @@ export async function provisionWorkspaceInPostgres(
 
       if (!churchId) {
         const base = churchSlugFromName(workspaceName);
-        let allocatedJoinSlug = `${base}-${Date.now().toString(36)}`;
-        for (let attempt = 0; attempt < 25; attempt += 1) {
-          const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
-          const [existing] = await tx
-            .select({ id: churches.id })
-            .from(churches)
-            .where(eq(churches.joinSlug, candidate))
-            .limit(1);
-          if (!existing) {
-            allocatedJoinSlug = candidate;
+        const slug = base;
+        let allocatedJoinSlug = base;
+        let church:
+          | { id: string; joinSlug: string }
+          | undefined;
+
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+          try {
+            const [inserted] = await tx
+              .insert(churches)
+              .values({
+                organizationId,
+                name: workspaceName,
+                slug,
+                joinSlug: allocatedJoinSlug,
+                logoUrl,
+                country: input.country.trim(),
+                city: input.city?.trim() || null,
+                state: input.state?.trim() || null,
+                phone: input.phone?.trim() || null,
+                email: input.email?.trim() || null,
+                website: input.website?.trim() || null,
+                address: input.address?.trim() || null,
+                timezone: "UTC",
+                defaultLanguage: "en",
+                isActive: true,
+                enrollmentMode: "approval_required",
+                joinUrlEnabled: true,
+              })
+              .returning({ id: churches.id, joinSlug: churches.joinSlug });
+            church = inserted;
             break;
+          } catch (error) {
+            const code =
+              error && typeof error === "object" && "code" in error
+                ? String((error as { code?: unknown }).code)
+                : "";
+            if (code !== "23505" || attempt === 3) {
+              throw error;
+            }
+            allocatedJoinSlug = `${base}-${Date.now().toString(36)}${attempt}`;
           }
         }
-        const slug = churchSlugFromName(workspaceName);
-        const [church] = await tx
-          .insert(churches)
-          .values({
-            organizationId,
-            name: workspaceName,
-            slug,
-            joinSlug: allocatedJoinSlug,
-            logoUrl,
-            country: input.country.trim(),
-            city: input.city?.trim() || null,
-            state: input.state?.trim() || null,
-            phone: input.phone?.trim() || null,
-            email: input.email?.trim() || null,
-            website: input.website?.trim() || null,
-            address: input.address?.trim() || null,
-            timezone: "UTC",
-            defaultLanguage: "en",
-            isActive: true,
-            enrollmentMode: "approval_required",
-            joinUrlEnabled: true,
-          })
-          .returning({ id: churches.id, joinSlug: churches.joinSlug });
 
         if (!church) {
           throw new Error("Failed to create church.");
@@ -238,24 +246,45 @@ export async function provisionWorkspaceInPostgres(
         churchId = church.id;
         joinSlug = church.joinSlug;
 
-        await tx.insert(churchMemberships).values({
+        const membershipInsert = tx.insert(churchMemberships).values({
           organizationId,
           churchId,
           userId: latest.id,
           role: "church_admin",
           status: "active",
         });
+        const websiteInsert = tx.insert(churchWebsites).values({
+          churchId,
+          organizationId,
+          activeTemplate: "signature",
+          siteTitle: workspaceName,
+          websiteSetupCompletedAt: null,
+        });
+        const subscriptionInsert = organizationCreated
+          ? tx.insert(subscriptions).values({
+              organizationId,
+              planId: "free",
+              status: "trialing",
+              trialStart: now,
+              trialEnd: getTrialEndDate(now),
+            })
+          : Promise.resolve();
+
+        await Promise.all([
+          membershipInsert,
+          websiteInsert,
+          subscriptionInsert,
+        ]);
       }
     }
 
-    if (organizationCreated) {
-      const trialStart = new Date();
+    if (organizationCreated && !churchId) {
       await tx.insert(subscriptions).values({
         organizationId,
         planId: "free",
         status: "trialing",
-        trialStart,
-        trialEnd: getTrialEndDate(trialStart),
+        trialStart: now,
+        trialEnd: getTrialEndDate(now),
       });
     }
 

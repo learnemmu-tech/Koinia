@@ -9,6 +9,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { toast } from "sonner";
+
 import { useAdminChurchId } from "@/hooks/use-admin-church-id";
 import { useSubscriptionQuery } from "@/hooks/use-subscription-query";
 import { useOrganizationOptional } from "@/context/organization-context";
@@ -22,6 +24,11 @@ import {
   getRecommendedPlanForLimit,
 } from "@/lib/subscription/limits";
 import { getPlan } from "@/lib/subscription/plans";
+import {
+  getTemporaryTrialAllowanceExhaustedMessage,
+  isTemporaryTrialAllowanceLimitKey,
+  TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED,
+} from "@/lib/subscription/trial-allowance";
 import {
   getTrialWriteUnavailableMessage,
   isProtectedTrialWrite,
@@ -120,6 +127,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           : limitKey === "shorts" ? "short"
           : limitKey === "prayerRequests" ? "prayer"
           : limitKey === "donationCampaigns" ? "donation"
+          : limitKey === "books" ? "book"
           : limitKey === "churches" ? "church"
           : "content";
         setExpiredAction({
@@ -133,6 +141,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
       const check = data.usageChecks.find((item) => item.key === limitKey);
       if (!check?.atLimit) return true;
+      if (
+        TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED &&
+        data.trial.access === "trial" &&
+        isTemporaryTrialAllowanceLimitKey(limitKey)
+      ) {
+        toast.error(getTemporaryTrialAllowanceExhaustedMessage(limitKey));
+        return false;
+      }
       openUpgradeModal({ limitKey });
       return false;
     },

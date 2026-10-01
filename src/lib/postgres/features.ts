@@ -6,6 +6,8 @@ import { db } from "@/db";
 import {
   articles,
   churchMemberships,
+  churches,
+  churchWebsites,
   donationCampaigns,
   donations,
   eventRegistrations,
@@ -34,6 +36,10 @@ import {
   mapSong,
 } from "@/lib/postgres/mappers";
 import { getClerkIdByUserId, getClerkIdsByUserIds } from "@/lib/postgres/session";
+import {
+  notificationDestination,
+  sanitizeNotificationDestination,
+} from "@/lib/notifications/notification-destination";
 import { getChurchRowById } from "@/lib/postgres/tenants";
 import { isPostgresUuid, postgresUuidOrEmpty } from "@/lib/postgres/uuid";
 import { deleteStoredMediaUrls } from "@/lib/supabase-storage";
@@ -1409,17 +1415,32 @@ export async function listUserNotifications(
 ): Promise<FirebaseNotification[]> {
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return [];
-  const memberships = await db
-    .select({ organizationId: organizationMemberships.organizationId })
-    .from(organizationMemberships)
-    .where(
-      and(
-        eq(organizationMemberships.userId, appUser.id),
-        eq(organizationMemberships.status, "active")
-      )
-    );
+  const [orgMemberships, churchMembershipRows] = await Promise.all([
+    db
+      .select({ organizationId: organizationMemberships.organizationId })
+      .from(organizationMemberships)
+      .where(
+        and(
+          eq(organizationMemberships.userId, appUser.id),
+          eq(organizationMemberships.status, "active")
+        )
+      ),
+    db
+      .select({ organizationId: churchMemberships.organizationId })
+      .from(churchMemberships)
+      .where(
+        and(
+          eq(churchMemberships.userId, appUser.id),
+          eq(churchMemberships.status, "active")
+        )
+      ),
+  ]);
   const organizationIds = [
-    ...new Set(memberships.map((row) => row.organizationId)),
+    ...new Set(
+      [...orgMemberships, ...churchMembershipRows].map(
+        (row) => row.organizationId
+      )
+    ),
   ];
   if (organizationIds.length === 0) return [];
   const rows = await db
@@ -1438,7 +1459,51 @@ export async function listUserNotifications(
     .from(notificationReads)
     .where(eq(notificationReads.userId, appUser.id));
   const readIds = new Set(reads.map((row) => row.notificationId));
-  return rows.map((row) => mapNotification(row, clerkId, readIds.has(row.id)));
+  const churchIds = [
+    ...new Set(
+      rows
+        .map((row) => row.churchId)
+        .filter((churchId): churchId is string => Boolean(churchId))
+    ),
+  ];
+  const churchMeta = new Map<
+    string,
+    { slug: string; templateId: string | null }
+  >();
+  if (churchIds.length > 0) {
+    const churchRows = await db
+      .select({
+        id: churches.id,
+        slug: churches.slug,
+        activeTemplate: churchWebsites.activeTemplate,
+      })
+      .from(churches)
+      .leftJoin(churchWebsites, eq(churchWebsites.churchId, churches.id))
+      .where(inArray(churches.id, churchIds));
+    for (const church of churchRows) {
+      churchMeta.set(church.id, {
+        slug: church.slug,
+        templateId: church.activeTemplate,
+      });
+    }
+  }
+  return rows.map((row) => {
+    const mapped = mapNotification(row, clerkId, readIds.has(row.id));
+    const meta = row.churchId ? churchMeta.get(row.churchId) : undefined;
+    const href = sanitizeNotificationDestination(
+      notificationDestination({
+        type: mapped.type,
+        contentId: mapped.contentId,
+        churchSlug: meta?.slug,
+        templateId: meta?.templateId,
+      })
+    );
+    return {
+      ...mapped,
+      href,
+      churchSlug: meta?.slug ?? null,
+    };
+  });
 }
 
 export async function markNotificationRead(
@@ -1487,7 +1552,14 @@ export async function createPublishNotifications(input: {
         eq(churchMemberships.status, "active")
       )
     );
-  if (members.length === 0) return null;
+  if (members.length === 0) {
+    console.error("[notifications] in-app skipped — no active church members", {
+      churchId,
+      type: input.type,
+      contentId: input.contentId,
+    });
+    return null;
+  }
 
   const preset = NOTIFICATION_PRESETS[input.type] ?? NOTIFICATION_PRESETS.song;
   const inserted = await db
@@ -1620,6 +1692,7 @@ export async function computeOrganizationUsage(
     church_admins: number;
     events: number;
     donation_campaigns: number;
+    books: number;
     shorts: number;
     prayer_requests: number;
   }>(sql`
@@ -1643,6 +1716,8 @@ export async function computeOrganizationUsage(
         WHERE organization_id = ${organizationId}) AS events,
       (SELECT count(*)::int FROM donation_campaigns
         WHERE organization_id = ${organizationId}) AS donation_campaigns,
+      (SELECT count(*)::int FROM books
+        WHERE organization_id = ${organizationId}) AS books,
       (SELECT count(*)::int FROM video_shorts
         WHERE organization_id = ${organizationId}) AS shorts,
       (SELECT count(*)::int FROM prayer_requests
@@ -1659,6 +1734,7 @@ export async function computeOrganizationUsage(
     admins: Number(row?.org_admins ?? 0) + Number(row?.church_admins ?? 0),
     events: Number(row?.events ?? 0),
     donationCampaigns: Number(row?.donation_campaigns ?? 0),
+    books: Number(row?.books ?? 0),
     shorts: Number(row?.shorts ?? 0),
     prayerRequests: Number(row?.prayer_requests ?? 0),
   };

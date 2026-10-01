@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { contentItemHref } from "@/lib/content/item-href";
 import {
   filterCatalogBooks,
   sortCatalogBooks,
@@ -30,9 +31,11 @@ const PAGE_SIZE_OPTIONS = [8, 12, 16, 24] as const;
 export function BooksCatalog({
   books,
   canManage = false,
+  hrefPrefix = "/books",
 }: {
   books: BookRecord[];
   canManage?: boolean;
+  hrefPrefix?: string;
 }) {
   const router = useRouter();
   const allowWrite = useAllowTrialWrite();
@@ -122,7 +125,7 @@ export function BooksCatalog({
               <BookCard
                 key={book.id}
                 book={book}
-                href={`/books/${book.id}`}
+                href={contentItemHref(hrefPrefix, book.id)}
                 onEdit={
                   canManage ?
                     () => {

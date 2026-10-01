@@ -32,6 +32,12 @@ import {
   TRIAL_DURATION_DAYS,
   TRIAL_EXPIRED_MESSAGE,
 } from "./trial";
+import {
+  applyTemporaryTrialContentAllowance,
+  getTemporaryTrialAllowanceExhaustedMessage,
+  isTemporaryTrialAllowanceLimitKey,
+  TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED,
+} from "./trial-allowance";
 import { computeOrganizationUsage } from "./usage-server";
 
 async function getOrganizationCreatedAt(
@@ -149,8 +155,13 @@ export async function getSubscriptionSnapshot(
   const subscription = applyTrialWindow(loaded, createdAt);
   const trial = getTrialLifecycle(subscription, Date.now(), createdAt);
   const paid = trial.access === "paid";
-  const limits = getPlanLimits(paid ? subscription.planId : "free");
-  const features = resolveFeatureFlagsFromSubscription(subscription, createdAt);
+  const resolved = applyTemporaryTrialContentAllowance(
+    trial.access,
+    getPlanLimits(paid ? subscription.planId : "free"),
+    resolveFeatureFlagsFromSubscription(subscription, createdAt)
+  );
+  const limits = resolved.limits;
+  const features = resolved.features;
   const usage = await computeOrganizationUsage(orgId || subscription.organizationId);
   const usageChecks = buildUsageChecks(usage, limits);
 
@@ -227,6 +238,15 @@ export async function assertUsageAllowed(
   assertTrialWritable(snapshot);
   const check = snapshot.usageChecks.find((item) => item.key === key);
   if (check?.atLimit) {
+    if (
+      TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED &&
+      snapshot.trial.access === "trial" &&
+      isTemporaryTrialAllowanceLimitKey(key)
+    ) {
+      throw new SubscriptionLimitError(
+        getTemporaryTrialAllowanceExhaustedMessage(key)
+      );
+    }
     throw new SubscriptionLimitError(
       getLimitExceededMessage(key, snapshot.plan.name)
     );

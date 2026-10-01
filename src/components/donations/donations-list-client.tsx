@@ -22,6 +22,9 @@ import { contentCardGridClassName } from "@/lib/responsive-classes";
 type DonationsListClientProps = {
   initialCampaigns: FirebaseDonationCampaign[];
   isPlatformPublic?: boolean;
+  /** When false, skip client refetch so church-site listings stay on the server snapshot. */
+  clientSync?: boolean;
+  hrefPrefix?: string;
 };
 
 function matchesSearch(
@@ -29,16 +32,22 @@ function matchesSearch(
   query: string
 ): boolean {
   if (!query) return true;
-  return campaign.title.toLowerCase().includes(query);
+  const haystack = [campaign.title, campaign.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query);
 }
 
 export function DonationsListClient({
   initialCampaigns,
   isPlatformPublic = false,
+  clientSync,
+  hrefPrefix,
 }: DonationsListClientProps) {
   const t = useTranslations("donations");
   const { campaigns, loading } = useActiveDonationCampaigns(initialCampaigns, {
-    clientSync: !isPlatformPublic,
+    clientSync: clientSync ?? !isPlatformPublic,
   });
   const { active, completed } = splitCampaignsByCompletion(campaigns);
 
@@ -108,6 +117,7 @@ export function DonationsListClient({
               title={t("activeTitle")}
               campaigns={filteredActive}
               emptyMessage={t("empty")}
+              hrefPrefix={hrefPrefix}
             />
           : null}
           {showCompleted ?
@@ -115,6 +125,7 @@ export function DonationsListClient({
               title={t("completedTitle")}
               campaigns={filteredCompleted}
               emptyMessage={t("noCompleted")}
+              hrefPrefix={hrefPrefix}
             />
           : null}
         </div>
@@ -127,10 +138,12 @@ function CampaignSection({
   title,
   campaigns,
   emptyMessage,
+  hrefPrefix,
 }: {
   title: string;
   campaigns: FirebaseDonationCampaign[];
   emptyMessage: string;
+  hrefPrefix?: string;
 }) {
   return (
     <section className="space-y-4">
@@ -143,7 +156,11 @@ function CampaignSection({
         </div>
       : <div className={contentCardGridClassName}>
           {campaigns.map((campaign) => (
-            <DonationCampaignCard key={campaign.id} campaign={campaign} />
+            <DonationCampaignCard
+              key={campaign.id}
+              campaign={campaign}
+              hrefPrefix={hrefPrefix}
+            />
           ))}
         </div>
       }

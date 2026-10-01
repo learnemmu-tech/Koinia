@@ -1,19 +1,12 @@
 import "server-only";
 
 import { siteConfig } from "@/config/site";
+import { resolveAppOrigin } from "@/lib/join-url";
 
 import { resolveReplyToAddress, resolveResendFromAddress } from "./from-address";
 
 function getAppUrl(): string {
-  const raw =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ??
-    siteConfig.url.replace(/\/$/, "");
-
-  if (raw.startsWith("http://") || raw.startsWith("https://")) {
-    return raw.replace(/\/$/, "");
-  }
-
-  return `http://${raw.replace(/\/$/, "")}`;
+  return resolveAppOrigin();
 }
 
 export const emailConfig = {

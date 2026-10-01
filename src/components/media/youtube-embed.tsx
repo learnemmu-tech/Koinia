@@ -8,6 +8,7 @@ type YouTubeEmbedProps = {
   youtubeUrl?: string;
   /** When false, render only the iframe (parent supplies frame/aspect). */
   framed?: boolean;
+  autoPlay?: boolean;
   className?: string;
 };
 
@@ -15,9 +16,10 @@ export function YouTubeEmbed({
   title,
   youtubeUrl,
   framed = true,
+  autoPlay = false,
   className,
 }: YouTubeEmbedProps) {
-  const embedSrc = youtubeUrl ? getYouTubeEmbedUrl(youtubeUrl) : null;
+  const embedSrc = youtubeUrl ? getYouTubeEmbedUrl(youtubeUrl, { autoplay: autoPlay }) : null;
   if (!embedSrc) return null;
 
   const iframe = (

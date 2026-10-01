@@ -17,6 +17,7 @@ export const USAGE_LIMIT_LABELS: Record<UsageLimitKey, string> = {
   admins: "Admins",
   events: "Events",
   donationCampaigns: "Donation Campaigns",
+  books: "Books",
   shorts: "Shorts / Videos",
   prayerRequests: "Prayer Requests",
 };
@@ -30,6 +31,8 @@ export const BILLING_USAGE_KEYS: UsageLimitKey[] = [
   "churches",
   "shorts",
   "events",
+  "donationCampaigns",
+  "books",
   "prayerRequests",
 ];
 
@@ -42,6 +45,7 @@ export const EMPTY_USAGE: SubscriptionUsage = {
   admins: 0,
   events: 0,
   donationCampaigns: 0,
+  books: 0,
   shorts: 0,
   prayerRequests: 0,
 };

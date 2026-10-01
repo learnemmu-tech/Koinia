@@ -6,13 +6,15 @@ import { db } from "@/db";
 import { churchMemberships } from "@/db/schema";
 import {
   resolveMembershipRouting,
+  resolvePrimaryBranchMembership,
   type MembershipRoutingResult,
 } from "@/lib/auth/membership-routing";
 import { getWorkspaceType } from "@/lib/organization/workspace-type";
 import {
   getAppUserByClerkId,
-  mapAppUserToProfile,
+  mapAppUserToProfileWithWebsite,
 } from "@/lib/postgres/app-user";
+import { getActiveTemplateForChurch } from "@/lib/postgres/church-websites";
 import {
   mapChurchMembership,
   mapOrgMembership,
@@ -22,6 +24,7 @@ import { listAllBranchMembershipsForUser } from "@/lib/postgres/memberships";
 import { getOrgMembershipRow } from "@/lib/postgres/session";
 import {
   countOrganizationChurches,
+  getChurchById,
   getOrganizationById,
 } from "@/lib/postgres/tenants";
 import type { FirebaseBranchMembership } from "@/types/branch-membership";
@@ -92,7 +95,7 @@ export async function resolveUserMembershipRouting(
   callbackUrl?: string | null
 ): Promise<MembershipRoutingResult> {
   const appUser = await getAppUserByClerkId(userId);
-  const profile = appUser ? mapAppUserToProfile(appUser) : null;
+  const profile = appUser ? await mapAppUserToProfileWithWebsite(appUser) : null;
   const organizationId = profile?.organizationId?.trim() ?? "";
 
   if (!appUser) {
@@ -133,6 +136,17 @@ export async function resolveUserMembershipRouting(
     mapChurchMembership(row, userId)
   );
   const workspaceType = getWorkspaceType(organization);
+  const primaryBranch = resolvePrimaryBranchMembership(
+    profile,
+    branchMemberships
+  );
+  const churchId =
+    primaryBranch?.churchId?.trim() || profile?.churchId?.trim() || "";
+  const church = churchId ? await getChurchById(churchId) : null;
+  const activeTemplate =
+    church?.id && church.organizationId
+      ? await getActiveTemplateForChurch(church.id, church.organizationId)
+      : null;
 
   return resolveMembershipRouting({
     profile,
@@ -143,5 +157,8 @@ export async function resolveUserMembershipRouting(
     workspaceType,
     organizationStatus: organization?.status ?? null,
     callbackUrl,
+    websiteSetupCompleted: profile?.websiteSetupCompleted,
+    churchSlug: church?.slug,
+    activeTemplate,
   });
 }

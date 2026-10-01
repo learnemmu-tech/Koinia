@@ -10,14 +10,31 @@ import { formatDuration } from "@/lib/utils";
 type FirebaseSongPlayerProps = {
   audioUrl: string;
   title: string;
+  autoPlay?: boolean;
 };
 
-export function FirebaseSongPlayer({ audioUrl, title }: FirebaseSongPlayerProps) {
+export function FirebaseSongPlayer({
+  audioUrl,
+  title,
+  autoPlay = false,
+}: FirebaseSongPlayerProps) {
   const audioRef = React.useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = React.useState(false);
   const [duration, setDuration] = React.useState(0);
   const [pos, setPos] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (!autoPlay || !audioUrl) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const start = () => {
+      void audio.play().then(() => setPlaying(true)).catch(() => undefined);
+    };
+    if (audio.readyState >= 2) start();
+    else audio.addEventListener("canplay", start, { once: true });
+    return () => audio.removeEventListener("canplay", start);
+  }, [autoPlay, audioUrl]);
 
   function togglePlayPause() {
     const audio = audioRef.current;
@@ -54,15 +71,19 @@ export function FirebaseSongPlayer({ audioUrl, title }: FirebaseSongPlayerProps)
         ref={audioRef}
         src={audioUrl}
         preload="metadata"
-        onLoadedMetadata={(e) => {          setDuration(e.currentTarget.duration);
+        onLoadedMetadata={(e) => {
+          setDuration(e.currentTarget.duration);
           setIsLoading(false);
         }}
         onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
-        onEnded={() => {          setPlaying(false);
+        onEnded={() => {
+          setPlaying(false);
         }}
-        onWaiting={() => {          setIsLoading(true);
+        onWaiting={() => {
+          setIsLoading(true);
         }}
-        onCanPlay={() => {          setIsLoading(false);
+        onCanPlay={() => {
+          setIsLoading(false);
         }}
         onError={(e) => {
           const error = e.currentTarget.error;

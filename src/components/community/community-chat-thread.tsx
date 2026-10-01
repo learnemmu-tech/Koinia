@@ -67,7 +67,7 @@ export function CommunityChatThreadPanel({
     queryFn: async () => {
       const token = await getToken();
       if (!token) throw new Error("Sign in to view this thread.");
-      return fetchCommunityThread(rootId, token);
+      return fetchCommunityThread(rootId, token, churchId);
     },
   });
 

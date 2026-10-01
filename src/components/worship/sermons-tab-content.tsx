@@ -17,11 +17,15 @@ import { useRealtimeSermons } from "@/hooks/use-worship-realtime";
 type SermonsTabContentProps = {
   initialSermons: FirebaseSermon[];
   isPlatformPublic?: boolean;
+  hrefPrefix?: string;
+  showCollectionHeader?: boolean;
 };
 
 export function SermonsTabContent({
   initialSermons,
   isPlatformPublic = false,
+  hrefPrefix,
+  showCollectionHeader = true,
 }: SermonsTabContentProps) {
   const t = useTranslations("sermons");
   const { data: liveSermons, syncing, loadMore, hasMore, loadingMore } =
@@ -65,17 +69,23 @@ export function SermonsTabContent({
         searchPlaceholder={t("searchPlaceholder")}
       />
 
-      <CollectionTabHeader
-        title={t("title")}
-        count={filteredSermons.length}
-        countLabel={t("itemCount", { count: filteredSermons.length })}
-      />
+      {showCollectionHeader ?
+        <CollectionTabHeader
+          title={t("title")}
+          count={filteredSermons.length}
+          countLabel={t("itemCount", { count: filteredSermons.length })}
+        />
+      : null}
 
       {filteredSermons.length === 0 ?
         <TabEmptyState message={t("noMatch")} />
       : <div className={worshipContentGridClassName}>
           {filteredSermons.map((sermon) => (
-            <FirebaseSermonCard key={sermon.id} sermon={sermon} />
+            <FirebaseSermonCard
+              key={sermon.id}
+              sermon={sermon}
+              hrefPrefix={hrefPrefix}
+            />
           ))}
         </div>
       }

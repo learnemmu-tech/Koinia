@@ -1,4 +1,9 @@
-import { POST_AUTH_CONTINUE_PATH } from "@/lib/auth/auth-paths";
+import {
+  CREATE_WORKSPACE_PATH,
+  isOnboardingPath,
+  isPostAuthContinuePath,
+  postAuthContinueHref,
+} from "@/lib/auth/auth-paths";
 import type { EmailNotificationPreferences } from "@/lib/email/types";
 import { normalizeEmailPreferences } from "@/lib/email/preferences";
 
@@ -16,6 +21,8 @@ export type FirestoreUser = {
   platformRole?: PlatformRole;
   organizationId?: string;
   needsChurchOnboarding?: boolean;
+  /** False only for a newly created church that still needs first-time website setup. */
+  websiteSetupCompleted?: boolean;
   churchId?: string;
   activeBranchId?: string;
   /** Set when a member requests to join via URL and awaits owner approval. */
@@ -212,6 +219,7 @@ export function mapFirestoreUserData(data: Record<string, unknown>): FirestoreUs
         : undefined,
     organizationId: data.organizationId ? String(data.organizationId) : undefined,
     needsChurchOnboarding: data.needsChurchOnboarding === true,
+    websiteSetupCompleted: data.websiteSetupCompleted !== false,
     churchId: data.churchId ? String(data.churchId) : undefined,
     activeBranchId: data.activeBranchId ? String(data.activeBranchId) : undefined,
     pendingBranchId: data.pendingBranchId ? String(data.pendingBranchId) : undefined,
@@ -440,7 +448,17 @@ export async function activateClerkSession(
   if (!sessionId) {
     throw new Error("No Clerk session is available.");
   }
-  await getClerk().setActive({ session: sessionId });
+  const clerk = getClerk();
+  await clerk.setActive({ session: sessionId });
+  try {
+    await clerk.session?.getToken();
+  } catch {
+    // Cookie is set by setActive; token hydration can lag briefly.
+  }
+  const user = sessionUserFromClerk(clerk);
+  if (user) {
+    bindFirebaseAuthCurrentUser(user);
+  }
 }
 
 export async function finishSignUpAndSyncProfile(
@@ -543,38 +561,53 @@ function toAppPath(pathOrUrl: string): string {
 
 function postAuthContinueUrl(intended: string): string {
   const path = toAppPath(intended);
-  if (
-    path === POST_AUTH_CONTINUE_PATH ||
-    path.startsWith(`${POST_AUTH_CONTINUE_PATH}?`)
-  ) {
-    return path;
-  }
-  return `${POST_AUTH_CONTINUE_PATH}?callbackUrl=${encodeURIComponent(path)}`;
+  if (isPostAuthContinuePath(path)) return path;
+  return postAuthContinueHref(path);
+}
+
+export function navigateAfterAuth(destination: string): void {
+  window.location.assign(toAppPath(destination));
 }
 
 function currentAuthCallbackTarget(): string {
-  if (typeof window === "undefined") return "/";
+  if (typeof window === "undefined") return CREATE_WORKSPACE_PATH;
   const params = new URLSearchParams(window.location.search);
   const fromQuery = params.get("callbackUrl")?.trim();
   if (fromQuery) return fromQuery;
-  const path = `${window.location.pathname}${window.location.search}`;
-  return path || "/";
+  const path = window.location.pathname;
+  if (path === "/signup" || path.startsWith("/signup/")) {
+    return CREATE_WORKSPACE_PATH;
+  }
+  if (
+    path === "/signin" ||
+    path.startsWith("/signin/") ||
+    path === "/sso-callback" ||
+    path.startsWith("/sso-callback/") ||
+    path === "/forgot-password"
+  ) {
+    return "/";
+  }
+  return `${window.location.pathname}${window.location.search}` || "/";
 }
 
 function emailVerificationRedirectUrl(): string {
-  const continuePath = postAuthContinueUrl(currentAuthCallbackTarget());
-  return `${window.location.origin}${continuePath}`;
+  const target = toAppPath(currentAuthCallbackTarget());
+  const path = isOnboardingPath(target) ? target : postAuthContinueUrl(target);
+  return `${window.location.origin}${path}`;
 }
 
 export async function signInWithGoogle(options?: {
   redirectUrlComplete?: string;
 }): Promise<GoogleSignInResult> {
   const clerk = getClerk();
-  const redirectUrlComplete = postAuthContinueUrl(
+  const intended = toAppPath(
     options?.redirectUrlComplete ||
       `${window.location.pathname}${window.location.search}` ||
       "/"
   );
+  const redirectUrlComplete = isOnboardingPath(intended)
+    ? intended
+    : postAuthContinueUrl(intended);
 
   const oauthParams = {
     strategy: "oauth_google" as const,

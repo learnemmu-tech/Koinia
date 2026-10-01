@@ -50,7 +50,7 @@ export default async function CommunityPage({
   const [church, canManage, canChat, groups, chat, appUser] = await Promise.all([
     getChurchById(churchId),
     userCanManageChurch(session.userId, email, churchId),
-    userCanUseCommunityChat(session.userId),
+    userCanUseCommunityChat(session.userId, churchId),
     initialTab === "groups"
       ? listChurchGroups({
           clerkId: session.userId,
@@ -59,7 +59,7 @@ export default async function CommunityPage({
         }).catch(() => [])
       : Promise.resolve([]),
     initialTab === "chat"
-      ? listCommunityMessages({ clerkId: session.userId }).catch(() => ({
+      ? listCommunityMessages({ clerkId: session.userId, churchId }).catch(() => ({
           messages: [],
           hasMore: false,
         }))

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useSubscriptionOptional } from "@/context/subscription-context";
 import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 import {
   saveBook,
@@ -87,6 +88,7 @@ export function BookForm({
 }) {
   const router = useRouter();
   const { user } = useFirebaseAuth();
+  const subscription = useSubscriptionOptional();
   useTrialWriteMountGuard(
     { action: book ? "edit" : "create", resource: "book" },
     true,
@@ -169,6 +171,9 @@ export function BookForm({
   async function persist(nextStatus: BookStatus) {
     if (!user) {
       toast.error(t("signInRequired"));
+      return;
+    }
+    if (!book && subscription && !subscription.checkUsageLimit("books")) {
       return;
     }
     const digitalCents =

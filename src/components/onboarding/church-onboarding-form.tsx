@@ -7,13 +7,16 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { toast } from "sonner";
 
 
 
+import { AuthLoading } from "@/components/auth/auth-loading";
 import { OnboardingWizardShell } from "@/components/onboarding/onboarding-wizard-shell";
-import { ONBOARDING_SUCCESS_PATH } from "@/lib/auth/auth-paths";
+import { ONBOARDING_WEBSITE_PATH } from "@/lib/auth/auth-paths";
 
 import { WorkspaceTypeSelector } from "@/components/onboarding/workspace-type-selector";
 
@@ -37,7 +40,12 @@ import { buildCreateWorkspaceAuthHref, WAITING_APPROVAL_PATH } from "@/lib/auth/
 
 import { useWorkspaceAccess } from "@/hooks/use-workspace-access";
 
-import { firebaseAuth } from "@/lib/firebase-auth-service";
+import {
+  bindFirebaseAuthCurrentUser,
+  firebaseAuth,
+  navigateAfterAuth,
+  sessionUserFromClerk,
+} from "@/lib/firebase-auth-service";
 
 import { COUNTRIES } from "@/lib/countries";
 
@@ -52,9 +60,9 @@ import { cn } from "@/lib/utils";
 export function ChurchOnboardingForm() {
 
   const router = useRouter();
-
-  const { authUser, profileReady } = useFirebaseAuth();
-
+  const queryClient = useQueryClient();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { refreshProfile } = useFirebaseAuth();
   const { isMembershipPending } = useWorkspaceAccess();
 
 
@@ -89,17 +97,15 @@ export function ChurchOnboardingForm() {
 
 
   useEffect(() => {
-    if (!profileReady) return;
-
-    if (!authUser) {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
       router.replace(buildCreateWorkspaceAuthHref("/signin"));
       return;
     }
-
     if (isMembershipPending) {
       router.replace(WAITING_APPROVAL_PATH);
     }
-  }, [authUser, profileReady, isMembershipPending, router]);
+  }, [isLoaded, isSignedIn, isMembershipPending, router]);
 
 
 
@@ -179,7 +185,7 @@ export function ChurchOnboardingForm() {
 
 
 
-    const user = firebaseAuth.currentUser;
+    const user = firebaseAuth.currentUser ?? sessionUserFromClerk();
 
     if (!user) {
 
@@ -188,6 +194,8 @@ export function ChurchOnboardingForm() {
       return;
 
     }
+
+    bindFirebaseAuthCurrentUser(user);
 
 
 
@@ -311,7 +319,17 @@ export function ChurchOnboardingForm() {
 
 
 
-      router.replace(ONBOARDING_SUCCESS_PATH);
+      await refreshProfile({
+        needsChurchOnboarding: false,
+        websiteSetupCompleted: false,
+        churchId: result.churchId,
+        organizationId: result.organizationId,
+      });
+
+      void queryClient.invalidateQueries({ queryKey: ["organization"] });
+      void queryClient.invalidateQueries({ queryKey: ["membership-routing"] });
+
+      navigateAfterAuth(ONBOARDING_WEBSITE_PATH);
 
     } catch (error) {
       submittingRef.current = false;
@@ -331,6 +349,10 @@ export function ChurchOnboardingForm() {
   }
 
 
+
+  if (!isLoaded || !isSignedIn) {
+    return <AuthLoading />;
+  }
 
   if (step === 1) {
 

@@ -29,6 +29,11 @@ export {
 } from "./subscription-firestore";
 export { getSubscriptionByChurchId, getSubscriptionSnapshot, ensureSubscriptionDocument } from "./subscription-server";
 export {
+  applyTemporaryTrialContentAllowance,
+  TEMPORARY_TRIAL_CONTENT_ALLOWANCE,
+  TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED,
+} from "./trial-allowance";
+export {
   getTrialEndDate,
   getTrialLifecycle,
   getDueTrialLifecycleEventKeys,

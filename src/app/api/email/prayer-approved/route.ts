@@ -9,7 +9,7 @@ import {
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
-import { getPrayerRequestById } from "@/lib/firebase-prayer-request-queries";
+import { getPrayerRequestById } from "@/lib/postgres/features";
 import { getChurchById } from "@/lib/church-queries";
 
 const bodySchema = z.object({

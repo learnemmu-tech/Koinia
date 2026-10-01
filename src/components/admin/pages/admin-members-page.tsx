@@ -27,7 +27,8 @@ function MembersContent() {
     orgChurches: churches,
   });
   const church =
-    churches.find((item) => item.id === churchId) ?? churches[0] ?? null;
+    churches.find((item) => item.id === churchId) ??
+    (churches.length === 1 ? churches[0] : null);
   const churchName =
     activeBranch?.name ?? church?.name ?? organization?.name ?? t("yourChurch");
   const resolvedChurchId = activeBranch?.id ?? church?.id ?? churchId;

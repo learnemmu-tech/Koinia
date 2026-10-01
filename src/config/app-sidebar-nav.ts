@@ -8,6 +8,7 @@ import {
   Clapperboard,
   CreditCard,
   FileText,
+  Globe,
   HandHelping,
   Heart,
   Home,
@@ -249,6 +250,13 @@ export const SHEPHERD_NAV_ITEM: AppNavItem = {
 
 export const ADMIN_FOOTER_NAV_ITEMS: AppNavItem[] = [
   {
+    label: "Website",
+    href: `${ADMIN_BASE}/website`,
+    icon: Globe,
+    match: startsWith(`${ADMIN_BASE}/website`),
+    searchKeywords: ["website", "template", "heritage", "branding", "seo"],
+  },
+  {
     label: "Church Settings",
     href: `${ADMIN_BASE}/church-settings`,
     icon: Settings2,
@@ -299,6 +307,13 @@ export const MULTI_ORG_MANAGE_NAV_ITEMS: AppNavItem[] = [
 ];
 
 export const MULTI_ORG_SETTINGS_NAV_ITEMS: AppNavItem[] = [
+  {
+    label: "Website",
+    href: `${ADMIN_BASE}/website`,
+    icon: Globe,
+    match: startsWith(`${ADMIN_BASE}/website`),
+    searchKeywords: ["website", "template", "heritage", "branding", "seo"],
+  },
   {
     label: "Billing",
     href: `${ADMIN_BASE}/billing`,

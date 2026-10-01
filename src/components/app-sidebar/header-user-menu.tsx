@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import type { AuthUser } from "@/context/firebase-auth-context";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useMounted } from "@/hooks/use-mounted";
+import { cn } from "@/lib/utils";
 
 import { AccountMenuItems } from "./account-menu-items";
 
@@ -42,17 +44,49 @@ function getDisplayName(
   return authUser.displayName ?? "User";
 }
 
-export function HeaderUserMenu() {
+type HeaderUserMenuProps = {
+  variant?: "default" | "heritage";
+  guestFallback?: "signin" | "skeleton";
+  onNavigate?: () => void;
+};
+
+export function HeaderUserMenu({
+  variant = "default",
+  guestFallback = "signin",
+  onNavigate,
+}: HeaderUserMenuProps) {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("navigation");
   const { authUser, profile, loading } = useFirebaseAuth();
   const mounted = useMounted();
+  const heritage = variant === "heritage";
 
   if (!mounted || loading) {
-    return <div className="size-9 shrink-0 rounded-full bg-muted/60" />;
+    return (
+      <div
+        className={cn(
+          "size-9 shrink-0 rounded-full",
+          heritage
+            ? "bg-[var(--heritage-muted-bg)]"
+            : "bg-muted/60"
+        )}
+      />
+    );
   }
 
   if (!authUser) {
+    if (guestFallback === "skeleton") {
+      return (
+        <div
+          className={cn(
+            "size-9 shrink-0 rounded-full",
+            heritage
+              ? "bg-[var(--heritage-muted-bg)]"
+              : "bg-muted/60"
+          )}
+        />
+      );
+    }
     return (
       <Button asChild size="sm" variant="outline" className="rounded-full">
         <Link href="/signin">{tCommon("signIn")}</Link>
@@ -64,15 +98,24 @@ export function HeaderUserMenu() {
   const initials = getInitials(authUser, profile);
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
-          className="size-9 rounded-full"
+          size={heritage ? "sm" : "icon"}
+          className={
+            heritage
+              ? "heritage-header-user h-9 min-h-0 max-w-[12rem] gap-2 rounded-full px-1.5 text-current hover:bg-transparent hover:text-current focus-visible:ring-0 focus-visible:ring-offset-0"
+              : "size-9 rounded-full"
+          }
           aria-label={tNav("openAccountMenu")}
         >
-          <Avatar className="size-8 border">
+          <Avatar
+            className={cn(
+              "size-8 border",
+              heritage && "border-[var(--heritage-border)]"
+            )}
+          >
             {authUser.photoURL ?
               <AvatarImage
                 src={authUser.photoURL}
@@ -80,13 +123,34 @@ export function HeaderUserMenu() {
                 referrerPolicy="no-referrer"
               />
             : null}
-            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+            <AvatarFallback
+              className={
+                heritage
+                  ? "bg-[var(--heritage-primary)] text-xs font-semibold text-[var(--heritage-primary-foreground)]"
+                  : "bg-primary/10 text-xs font-semibold text-primary"
+              }
+            >
               {initials}
             </AvatarFallback>
           </Avatar>
+          {heritage ? (
+            <>
+              <span className="hidden min-w-0 truncate text-left text-[0.7rem] font-semibold tracking-[0.12em] uppercase xl:inline">
+                {displayName}
+              </span>
+              <ChevronDown
+                className="hidden size-3.5 shrink-0 opacity-70 xl:block"
+                aria-hidden
+              />
+            </>
+          ) : null}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 rounded-xl">
+      <DropdownMenuContent
+        align="end"
+        collisionPadding={8}
+        className="w-56 rounded-xl"
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col gap-0.5">
             <span className="truncate text-sm font-medium">{displayName}</span>
@@ -96,7 +160,7 @@ export function HeaderUserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <AccountMenuItems />
+        <AccountMenuItems onNavigate={onNavigate} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

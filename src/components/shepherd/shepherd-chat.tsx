@@ -66,9 +66,14 @@ const INTERRUPTED_HINT =
 type Props = {
   initialMode: ShepherdAudienceMode;
   displayName: string;
+  churchId?: string | null;
 };
 
-export function ShepherdChat({ initialMode, displayName: _displayName }: Props) {
+export function ShepherdChat({
+  initialMode,
+  displayName: _displayName,
+  churchId,
+}: Props) {
   const { getToken } = useAuth();
   const subscription = useSubscriptionOptional();
   const shepherdAllowed = subscription?.canUseFeature("canUseShepherdAi") ?? false;
@@ -95,9 +100,17 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
       try {
         const token = await getToken();
         if (!token || cancelled) return;
-        const res = await fetch("/api/shepherd/context", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          churchId
+            ? `/api/shepherd/context?churchId=${encodeURIComponent(churchId)}`
+            : "/api/shepherd/context",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              ...(churchId ? { "x-fch-church-id": churchId } : {}),
+            },
+          }
+        );
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as { mode?: ShepherdAudienceMode };
         if (data.mode === "ministry" || data.mode === "member") {
@@ -110,7 +123,7 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
     return () => {
       cancelled = true;
     };
-  }, [getToken]);
+  }, [getToken, churchId]);
 
   useEffect(() => {
     return () => {
@@ -182,9 +195,11 @@ export function ShepherdChat({ initialMode, displayName: _displayName }: Props) 
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          ...(churchId ? { "x-fch-church-id": churchId } : {}),
         },
         body: JSON.stringify({
           messages: history.slice(-20),
+          ...(churchId ? { churchId } : {}),
         }),
         signal: controller.signal,
       });

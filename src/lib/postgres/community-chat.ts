@@ -87,7 +87,8 @@ type ChatContext = {
 };
 
 async function requireActiveChurchChatContext(
-  clerkId: string
+  clerkId: string,
+  preferredChurchId?: string | null
 ): Promise<ChatContext> {
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) {
@@ -95,7 +96,9 @@ async function requireActiveChurchChatContext(
   }
 
   const cookieChurchId = await getActiveChurchIdFromCookies();
+  const preferred = preferredChurchId?.trim() ?? "";
   const churchIdCandidate =
+    (preferred && isPostgresUuid(preferred) ? preferred : "") ||
     (cookieChurchId && isPostgresUuid(cookieChurchId) ? cookieChurchId : "") ||
     (appUser.activeChurchId && isPostgresUuid(appUser.activeChurchId)
       ? appUser.activeChurchId
@@ -386,9 +389,12 @@ async function hydrateInserted(
   return hydrated;
 }
 
-export async function userCanUseCommunityChat(clerkId: string): Promise<boolean> {
+export async function userCanUseCommunityChat(
+  clerkId: string,
+  churchId?: string | null
+): Promise<boolean> {
   try {
-    await requireActiveChurchChatContext(clerkId);
+    await requireActiveChurchChatContext(clerkId, churchId);
     return true;
   } catch {
     return false;
@@ -397,10 +403,14 @@ export async function userCanUseCommunityChat(clerkId: string): Promise<boolean>
 
 export async function listCommunityMessages(input: {
   clerkId: string;
+  churchId?: string | null;
   before?: string;
   limit?: number;
 }): Promise<CommunityChatPage> {
-  const context = await requireActiveChurchChatContext(input.clerkId);
+  const context = await requireActiveChurchChatContext(
+    input.clerkId,
+    input.churchId
+  );
   const limit = Math.min(
     Math.max(input.limit ?? COMMUNITY_MESSAGE_PAGE_SIZE, 1),
     COMMUNITY_MESSAGE_PAGE_SIZE
@@ -437,8 +447,12 @@ export async function listCommunityMessages(input: {
 export async function listCommunityThread(input: {
   clerkId: string;
   messageId: string;
+  churchId?: string | null;
 }): Promise<CommunityChatThread> {
-  const context = await requireActiveChurchChatContext(input.clerkId);
+  const context = await requireActiveChurchChatContext(
+    input.clerkId,
+    input.churchId
+  );
   const scoped = await getScopedMessage(context, input.messageId);
   const rootRow = await resolveThreadRoot(context, scoped);
 
@@ -495,8 +509,12 @@ export async function createCommunityMessage(input: {
   clerkId: string;
   content: string;
   replyToMessageId?: string;
+  churchId?: string | null;
 }): Promise<CommunityChatMessage> {
-  const context = await requireActiveChurchChatContext(input.clerkId);
+  const context = await requireActiveChurchChatContext(
+    input.clerkId,
+    input.churchId
+  );
   const content = sanitizeContent(input.content);
 
   let replyToMessageId: string | null = null;
@@ -531,8 +549,12 @@ export async function editCommunityMessage(input: {
   clerkId: string;
   messageId: string;
   content: string;
+  churchId?: string | null;
 }): Promise<CommunityChatMessage> {
-  const context = await requireActiveChurchChatContext(input.clerkId);
+  const context = await requireActiveChurchChatContext(
+    input.clerkId,
+    input.churchId
+  );
   const existing = await getScopedMessage(context, input.messageId);
   requireOwnMessage(context, existing);
   if (existing.deletedAt) {
@@ -568,8 +590,12 @@ export async function editCommunityMessage(input: {
 export async function deleteCommunityMessage(input: {
   clerkId: string;
   messageId: string;
+  churchId?: string | null;
 }): Promise<CommunityChatMessage> {
-  const context = await requireActiveChurchChatContext(input.clerkId);
+  const context = await requireActiveChurchChatContext(
+    input.clerkId,
+    input.churchId
+  );
   const existing = await getScopedMessage(context, input.messageId);
   requireOwnMessage(context, existing);
   if (existing.deletedAt) {
@@ -604,8 +630,12 @@ export async function toggleCommunityReaction(input: {
   clerkId: string;
   messageId: string;
   reactionType?: string;
+  churchId?: string | null;
 }): Promise<CommunityChatReactionResult> {
-  const context = await requireActiveChurchChatContext(input.clerkId);
+  const context = await requireActiveChurchChatContext(
+    input.clerkId,
+    input.churchId
+  );
   const message = await getScopedMessage(context, input.messageId);
   if (message.deletedAt) {
     throw new CommunityChatError("That message was deleted.", "invalid");
@@ -654,8 +684,12 @@ export async function reportCommunityMessage(input: {
   clerkId: string;
   messageId: string;
   reason: string;
+  churchId?: string | null;
 }): Promise<CommunityChatReportResult> {
-  const context = await requireActiveChurchChatContext(input.clerkId);
+  const context = await requireActiveChurchChatContext(
+    input.clerkId,
+    input.churchId
+  );
   const message = await getScopedMessage(context, input.messageId);
   if (message.userId === context.userId) {
     throw new CommunityChatError("You cannot report your own message.", "invalid");

@@ -3,14 +3,20 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import type { FirebaseArticle } from "@/types/firebase-article";
 
+import { contentItemHref } from "@/lib/content/item-href";
 import { Button } from "@/components/ui/button";
 
 type ArticleNavigationProps = {
   previous: FirebaseArticle | null;
   next: FirebaseArticle | null;
+  hrefPrefix?: string;
 };
 
-export function ArticleNavigation({ previous, next }: ArticleNavigationProps) {
+export function ArticleNavigation({
+  previous,
+  next,
+  hrefPrefix = "/articles",
+}: ArticleNavigationProps) {
   if (!previous && !next) return null;
 
   return (
@@ -22,7 +28,7 @@ export function ArticleNavigation({ previous, next }: ArticleNavigationProps) {
             variant="ghost"
             className="h-auto justify-start rounded-lg px-3 py-3 text-left hover:bg-muted/40"
           >
-            <Link href={`/articles/${encodeURIComponent(previous.id)}`}>
+            <Link href={contentItemHref(hrefPrefix, previous.id)}>
               <span className="flex w-full flex-col gap-1.5">
                 <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                   <ChevronLeft className="size-3.5" />
@@ -44,7 +50,7 @@ export function ArticleNavigation({ previous, next }: ArticleNavigationProps) {
             variant="ghost"
             className="h-auto justify-end rounded-lg px-3 py-3 text-right hover:bg-muted/40 sm:col-start-2"
           >
-            <Link href={`/articles/${encodeURIComponent(next.id)}`}>
+            <Link href={contentItemHref(hrefPrefix, next.id)}>
               <span className="flex w-full flex-col items-end gap-1.5">
                 <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                   Next

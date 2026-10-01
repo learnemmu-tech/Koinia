@@ -22,6 +22,9 @@ type CommunityPageClientProps = {
   initialHasMore: boolean;
   initialTab: "chat" | "groups";
   currentUserId: string;
+  /** Keep tab switches on the current route (Heritage uses /c/[slug]/community). */
+  basePath?: string;
+  embed?: boolean;
 };
 
 export function CommunityPageClient({
@@ -35,6 +38,8 @@ export function CommunityPageClient({
   initialHasMore,
   initialTab,
   currentUserId,
+  basePath = "/community",
+  embed = false,
 }: CommunityPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,7 +54,7 @@ export function CommunityPageClient({
       params.set("tab", value);
     }
     const query = params.toString();
-    router.replace(query ? `/community?${query}` : "/community", {
+    router.replace(query ? `${basePath}?${query}` : basePath, {
       scroll: false,
     });
   }
@@ -63,8 +68,12 @@ export function CommunityPageClient({
 
   return (
     <div
-      data-page-fullbleed
-      className="flex h-full min-h-0 flex-col bg-background dark:bg-background"
+      {...(embed ? {} : { "data-page-fullbleed": true })}
+      className={
+        embed
+          ? "flex min-h-[calc(100svh-4.75rem)] flex-col bg-[var(--heritage-background)] text-[var(--heritage-text)]"
+          : "flex h-full min-h-0 flex-col bg-background dark:bg-background"
+      }
     >
       <header className="shrink-0 border-b border-border bg-background px-4 py-4 sm:px-6">
         <div className="mx-auto flex w-full max-w-[87.5rem] flex-col gap-4">

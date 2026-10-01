@@ -7,12 +7,14 @@ type SermonMediaSectionProps = {
   title: string;
   youtubeUrl?: string;
   audioUrl?: string;
+  autoPlay?: boolean;
 };
 
 export function SermonMediaSection({
   title,
   youtubeUrl,
   audioUrl,
+  autoPlay = false,
 }: SermonMediaSectionProps) {
   const audio = audioUrl?.trim() ?? "";
   const hasVideo = Boolean(youtubeUrl && youtubeUrl.trim());
@@ -24,14 +26,19 @@ export function SermonMediaSection({
       {hasVideo ?
         <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
           <div className="aspect-video w-full">
-            <YouTubeEmbed title={title} youtubeUrl={youtubeUrl} framed={false} />
+            <YouTubeEmbed
+              title={title}
+              youtubeUrl={youtubeUrl}
+              framed={false}
+              autoPlay={autoPlay}
+            />
           </div>
         </div>
       : null}
 
       {audio ?
         <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
-          <FirebaseSongPlayer audioUrl={audio} title={title} />
+          <FirebaseSongPlayer audioUrl={audio} title={title} autoPlay={autoPlay && !hasVideo} />
         </div>
       : null}
     </div>

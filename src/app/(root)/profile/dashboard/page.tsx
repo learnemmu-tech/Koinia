@@ -3,6 +3,8 @@ import { DashboardPageClient } from "@/components/profile/dashboard/dashboard-pa
 import { getPageTenantContext } from "@/lib/church-page-data";
 import { getUpcomingEventsCached } from "@/lib/cached-event-data";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Dashboard",
   description: "Your personalized activity overview",

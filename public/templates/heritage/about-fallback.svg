@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500" role="img" aria-label="Heritage about placeholder">
+  <rect width="1200" height="1500" fill="#ECE5D9"/>
+  <rect x="80" y="120" width="1040" height="1260" fill="#24352F"/>
+  <polygon points="80,120 600,20 1120,120" fill="#3A1820"/>
+  <rect x="540" y="1100" width="120" height="280" fill="#F5F1E8"/>
+  <rect x="220" y="360" width="180" height="260" fill="#A27A3A" opacity="0.35"/>
+  <rect x="800" y="360" width="180" height="260" fill="#A27A3A" opacity="0.35"/>
+</svg>

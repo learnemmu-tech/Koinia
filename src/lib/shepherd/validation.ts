@@ -16,6 +16,7 @@ export const shepherdChatRequestSchema = z.object({
     .array(shepherdChatMessageSchema)
     .min(1, "At least one message is required.")
     .max(24, "Conversation is too long for this request."),
+  churchId: z.string().uuid().optional(),
 });
 
 export type ShepherdChatMessage = z.infer<typeof shepherdChatMessageSchema>;

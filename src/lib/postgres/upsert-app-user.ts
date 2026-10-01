@@ -9,6 +9,10 @@ import {
   mapAppUserToProfile,
   type AppUserRow,
 } from "@/lib/postgres/app-user";
+import {
+  isUniqueViolation,
+  withConnectionRetry,
+} from "@/lib/postgres/with-connection-retry";
 
 export type AppUserIdentityInput = {
   clerkId: string;
@@ -24,41 +28,6 @@ export type AppUserSyncResult = {
   created: boolean;
   profile: ReturnType<typeof mapAppUserToProfile>;
 };
-
-function collectErrorCodes(error: unknown): Set<string> {
-  const codes = new Set<string>();
-  let current: unknown = error;
-  for (let i = 0; i < 4 && current && typeof current === "object"; i += 1) {
-    const record = current as { code?: unknown; cause?: unknown };
-    if (typeof record.code === "string") codes.add(record.code);
-    current = record.cause;
-  }
-  return codes;
-}
-
-function isRetryableConnectionError(error: unknown): boolean {
-  const codes = collectErrorCodes(error);
-  return (
-    codes.has("ECONNRESET") ||
-    codes.has("ETIMEDOUT") ||
-    codes.has("ECONNREFUSED") ||
-    codes.has("57P01") ||
-    codes.has("57P03")
-  );
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return collectErrorCodes(error).has("23505");
-}
-
-async function withConnectionRetry<T>(operation: () => Promise<T>): Promise<T> {
-  try {
-    return await operation();
-  } catch (error) {
-    if (!isRetryableConnectionError(error)) throw error;
-    return operation();
-  }
-}
 
 async function loadByClerkId(clerkId: string): Promise<AppUserRow | undefined> {
   const [row] = await db

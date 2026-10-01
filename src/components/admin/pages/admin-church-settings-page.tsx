@@ -32,6 +32,7 @@ function ChurchSettingsContent() {
     if (tab === "members" && isIndependent) return tab;
     if (tab === "join-url" && isIndependent) return tab;
     if (tab === "donations") return tab;
+    if (tab === "website") return tab;
     return "general";
   }, [searchParams, isIndependent]);
 
@@ -58,6 +59,7 @@ function ChurchSettingsContent() {
             <TabsTrigger value="join-url">{t("joinUrl")}</TabsTrigger>
           : null}
           <TabsTrigger value="donations">{t("donationSettings")}</TabsTrigger>
+          <TabsTrigger value="website">Website</TabsTrigger>
           {isIndependent ?
             <TabsTrigger value="members">{tNav("members")}</TabsTrigger>
           : null}
@@ -114,6 +116,19 @@ function ChurchSettingsContent() {
 
         <TabsContent value="donations">
           <DonationSettingsPanel />
+        </TabsContent>
+
+        <TabsContent value="website">
+          <p className="text-sm text-muted-foreground">
+            Choose the public website template, branding, social links, and SEO for
+            this church. Presentation changes only — content records stay the same.
+          </p>
+          <a
+            href="/dashboard/website"
+            className="mt-4 inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+          >
+            Open website settings
+          </a>
         </TabsContent>
 
         {isIndependent && activeBranch ?

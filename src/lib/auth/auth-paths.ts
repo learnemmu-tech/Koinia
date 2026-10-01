@@ -1,6 +1,7 @@
 /** Auth and membership flow paths — no imports to avoid circular deps. */
 
 export const CREATE_WORKSPACE_PATH = "/onboarding";
+export const ONBOARDING_WEBSITE_PATH = "/onboarding/website";
 export const ONBOARDING_SUCCESS_PATH = "/onboarding/success";
 export const POST_AUTH_CONTINUE_PATH = "/auth/continue";
 /** Safe SSO/Clerk fallback when redirectUrlComplete is dropped — preserves callbackUrl. */
@@ -24,6 +25,32 @@ export function parseJoinSlugFromPath(
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
+function pathnameOnly(path: string): string {
+  const trimmed = path.trim();
+  const withoutQuery = trimmed.split("?")[0] ?? trimmed;
+  return withoutQuery.replace(/\/+$/, "") || "/";
+}
+
+export function parseChurchWebsiteSlugFromPath(
+  path: string | null | undefined
+): string | null {
+  if (!path?.trim()) return null;
+  const match = pathnameOnly(path).match(/^\/c\/([^/]+)/);
+  if (!match?.[1]) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+export function isChurchWebsiteAuthPath(
+  path: string | null | undefined
+): boolean {
+  if (!path?.trim()) return false;
+  return /\/c\/[^/]+\/(login|signup|forgot-password)$/.test(pathnameOnly(path));
+}
+
 export function isJoinPath(path: string | null | undefined): boolean {
   return parseJoinSlugFromPath(path) !== null;
 }
@@ -42,6 +69,23 @@ export function parseInviteTokenFromPath(
 
 export function isInvitePath(path: string | null | undefined): boolean {
   return parseInviteTokenFromPath(path) !== null;
+}
+
+export function isPostAuthContinuePath(path: string | null | undefined): boolean {
+  if (!path?.trim()) return false;
+  const trimmed = path.trim();
+  return (
+    trimmed === POST_AUTH_CONTINUE_PATH ||
+    trimmed.startsWith(`${POST_AUTH_CONTINUE_PATH}/`) ||
+    trimmed.startsWith(`${POST_AUTH_CONTINUE_PATH}?`)
+  );
+}
+
+export function postAuthContinueHref(callbackUrl: string): string {
+  const path = callbackUrl.trim() || "/";
+  if (isPostAuthContinuePath(path)) return path;
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${POST_AUTH_CONTINUE_PATH}?callbackUrl=${encodeURIComponent(normalized)}`;
 }
 
 export function invitePathForToken(token: string): string {
@@ -84,6 +128,17 @@ export function isOnboardingPath(pathname: string): boolean {
   return (
     pathname === CREATE_WORKSPACE_PATH ||
     pathname.startsWith(`${CREATE_WORKSPACE_PATH}/`)
+  );
+}
+
+export function isOnboardingFormPath(pathname: string): boolean {
+  return pathname === CREATE_WORKSPACE_PATH;
+}
+
+export function isOnboardingWebsitePath(pathname: string): boolean {
+  return (
+    pathname === ONBOARDING_WEBSITE_PATH ||
+    pathname.startsWith(`${ONBOARDING_WEBSITE_PATH}/`)
   );
 }
 

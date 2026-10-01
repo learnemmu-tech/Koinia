@@ -36,6 +36,8 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 
 import { buildInviteAuthHref } from "@/lib/auth/auth-flow";
 
+import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination";
+
 import { setAuthSession } from "@/lib/auth/set-auth-session";
 
 import { getFirebaseAuthErrorMessage } from "@/lib/firebase-auth-errors";
@@ -152,7 +154,9 @@ export function InviteAcceptClient({ token }: { token: string }) {
 
       }
 
-      router.replace("/dashboard");
+      // Invited members must not be sent to the admin-only dashboard; the
+      // shared routing helper sends admins to /dashboard and members home.
+      router.replace(await fetchPostAuthDestination("/"));
 
       return true;
 

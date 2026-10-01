@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useActiveBranchOptional } from "@/context/active-branch-context";
 import { useOrganizationOptional } from "@/context/organization-context";
+import { resolveEffectiveChurchId } from "@/lib/organization/resolve-effective-church";
 import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
 import { isMultiChurchOrgWorkspace } from "@/lib/organization/workspace-type";
 import { cn } from "@/lib/utils";
@@ -120,17 +121,20 @@ export function SidebarWorkspaceHeader() {
   const activeBranch =
     branchContext?.activeBranch ??
     branches.find((b) => b.isDefault) ??
-    branches[0] ??
-    null;
-  const preferredChurchId =
-    profile?.churchId?.trim() ||
-    profile?.activeBranchId?.trim() ||
-    profile?.pendingBranchId?.trim() ||
-    "";
+    (branches.length === 1 ? branches[0] : null);
+  const preferredChurchId = resolveEffectiveChurchId({
+    profile,
+    activeChurchId:
+      profile?.churchId?.trim() ||
+      profile?.activeBranchId?.trim() ||
+      profile?.pendingBranchId?.trim() ||
+      "",
+    orgChurches: churches,
+  });
   const church =
     churches.find((item) => item.id === preferredChurchId) ??
     churches.find((item) => item.id === activeBranch?.id) ??
-    churches[0];
+    (churches.length === 1 ? churches[0] : undefined);
   const churchName =
     isMultiOrg
       ? organization.name?.trim() ||

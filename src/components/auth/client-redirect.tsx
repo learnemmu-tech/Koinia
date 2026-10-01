@@ -1,22 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 import { AuthLoading } from "@/components/auth/auth-loading";
+import { navigateAfterAuth } from "@/lib/firebase-auth-service";
 
 /**
- * Navigates away from a Server Component without throwing NEXT_REDIRECT during
- * render. An in-render `redirect()` from a layout answers soft navigations with
- * 200 instead of 307 and trips a hook-count mismatch inside Next's AppRouter
- * (vercel/next.js#78396), which surfaces as a client-side exception.
+ * Leaves the current App Router tree with a same-origin document navigation.
+ * Soft `router.replace()` uses fetchServerResponse; Clerk handshake or a long
+ * first compile then surfaces as `TypeError: Failed to fetch`.
  */
 export function ClientRedirect({ to }: { to: string }) {
-  const router = useRouter();
-
   useEffect(() => {
-    router.replace(to);
-  }, [router, to]);
+    navigateAfterAuth(to);
+  }, [to]);
 
   return <AuthLoading />;
 }

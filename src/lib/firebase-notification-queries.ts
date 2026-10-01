@@ -5,6 +5,10 @@ import type {
 
 import { firebaseAuth } from "@/lib/firebase-auth-service";
 import {
+  notificationDestination,
+  sanitizeNotificationDestination,
+} from "@/lib/notifications/notification-destination";
+import {
   fetchUserNotifications,
   markAllNotificationsReadAction,
   markNotificationReadAction,
@@ -139,35 +143,21 @@ export async function createPublishNotification(input: {
 }
 
 export function getNotificationContentPath(
-  notification: Pick<FirebaseNotification, "type" | "contentId">
+  notification: Pick<FirebaseNotification, "type" | "contentId"> & {
+    href?: string | null;
+    churchSlug?: string | null;
+  }
 ): string {
-  if (notification.type === "prayer_request_submitted") {
-    return "/dashboard/content?tab=prayers";
+  if (notification.href?.trim()) {
+    return sanitizeNotificationDestination(notification.href);
   }
-  if (notification.type === "membership_approved") {
-    return "/dashboard";
-  }
-  if (notification.type === "membership_request") {
-    return "/dashboard/members";
-  }
-  if (notification.type === "short_pending_review") {
-    return "/videos?tab=shorts";
-  }
-  if (notification.type === "short_review_result") {
-    return notification.contentId
-      ? `/videos?tab=shorts&short=${encodeURIComponent(notification.contentId)}`
-      : "/videos?tab=shorts";
-  }
-  if (notification.type === "group_invitation") {
-    return notification.contentId
-      ? `/groups/${encodeURIComponent(notification.contentId)}`
-      : "/community?tab=groups";
-  }
-  if (notification.type === "trial_lifecycle") {
-    return "/dashboard/billing";
-  }
-  const preset = NOTIFICATION_PRESETS[notification.type] ?? NOTIFICATION_PRESETS.song;
-  return `${preset.pathPrefix}/${encodeURIComponent(notification.contentId)}`;
+  return sanitizeNotificationDestination(
+    notificationDestination({
+      type: notification.type,
+      contentId: notification.contentId,
+      churchSlug: notification.churchSlug,
+    })
+  );
 }
 
 export function getNotificationTypeLabel(type: NotificationContentType): string {

@@ -16,6 +16,8 @@ type PrayerWallCardProps = {
   request: FirebasePrayerRequest;
   className?: string;
   linkToDetail?: boolean;
+  /** Overrides the detail link (church websites keep members inside `/c/{slug}`). */
+  detailHref?: string;
 };
 
 function AuthorAvatar({ initials }: { initials: string }) {
@@ -33,9 +35,11 @@ export function PrayerWallCard({
   request,
   className,
   linkToDetail = true,
+  detailHref: detailHrefOverride,
 }: PrayerWallCardProps) {
   const displayName = getPrayerRequestDisplayName(request);
-  const detailHref = `/prayer-requests/${encodeURIComponent(request.id)}`;
+  const detailHref =
+    detailHrefOverride ?? `/prayer-requests/${encodeURIComponent(request.id)}`;
   const categoryLabel = getPrayerCategoryLabel(request.category);
   const dateLabel = formatPrayerDate(request.createdAt);
 

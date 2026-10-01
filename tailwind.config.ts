@@ -9,6 +9,8 @@ const config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/templates/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/lib/templates/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     container: {
@@ -152,6 +154,18 @@ const config = {
           "var(--font-heading)",
           "var(--font-telugu)",
           ...fontFamily.sans,
+        ],
+        heritageDisplay: [
+          "var(--font-heritage-display)",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
+        heritageSans: [
+          "var(--font-heritage-sans)",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
         ],
         script: ["var(--font-script)", "cursive"],
       },

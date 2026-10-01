@@ -28,6 +28,12 @@ export const env = createEnv({
     RAZORPAY_STARTER_PLAN_ID: z.string().optional(),
     RAZORPAY_PROFESSIONAL_PLAN_ID: z.string().optional(),
     RAZORPAY_SUBSCRIPTION_TOTAL_COUNT: z.string().optional(),
+    PAYMENT_PROVIDER: z.enum(["razorpay", "stripe"]).optional(),
+
+    /** Required in production / Vercel. Rate limiting fails closed without these. */
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+    CRON_SECRET: z.string().min(1).optional(),
 
     /** Shepherd AI — server-only. Never expose via NEXT_PUBLIC_. */
     GEMINI_API_KEY: z.string().min(1).optional(),
@@ -41,6 +47,8 @@ export const env = createEnv({
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: z.string().optional(),
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().optional(),
+    /** Public origin for payment returns, invites, and emails. Required in production. */
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
   },
 
   experimental__runtimeEnv: {
@@ -48,6 +56,7 @@ export const env = createEnv({
       process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL,
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
 
   emptyStringAsUndefined: true,

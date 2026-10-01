@@ -18,6 +18,7 @@ import {
   ORGANIZATION_SUSPENDED_PATH,
   WAITING_APPROVAL_PATH,
 } from "@/lib/auth/auth-paths";
+import { isChurchWebsitePath, isWebsitePreviewPath } from "@/lib/templates/paths";
 
 const AUTH_PATHS = new Set([
   "/signin",
@@ -31,6 +32,8 @@ function isExemptMembershipPath(pathname: string): boolean {
   if (isJoinPath(pathname)) return true;
   if (isInvitePath(pathname)) return true;
   if (isSuperAdminPath(pathname)) return true;
+  if (isChurchWebsitePath(pathname)) return true;
+  if (isWebsitePreviewPath(pathname)) return true;
   if (pathname === ACCESS_DENIED_PATH) return true;
   if (pathname === MEMBERSHIP_REMOVED_PATH) return true;
   if (pathname === ACCOUNT_SUSPENDED_PATH) return true;

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" role="img" aria-label="Heritage template preview">
+  <rect width="960" height="640" fill="#F5F1E8"/>
+  <rect width="960" height="64" fill="#FBF9F4" stroke="#D9D0C2"/>
+  <rect y="64" width="960" height="280" fill="#24352F"/>
+  <rect x="64" y="150" width="420" height="28" fill="#A27A3A"/>
+  <rect x="64" y="200" width="520" height="72" fill="#F5F1E8"/>
+  <rect x="64" y="380" width="380" height="200" fill="#3A1820"/>
+  <rect x="468" y="380" width="428" height="92" fill="#FBF9F4" stroke="#D9D0C2"/>
+  <rect x="468" y="488" width="428" height="92" fill="#FBF9F4" stroke="#D9D0C2"/>
+</svg>

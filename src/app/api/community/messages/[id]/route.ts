@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { communityChatErrorResponse } from "@/app/api/community/messages/chat-http";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { churchIdFromRequest } from "@/lib/tenant-request-church";
 import {
   deleteCommunityMessage,
   editCommunityMessage,
@@ -27,6 +28,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const message = await editCommunityMessage({
       clerkId: verified.uid,
       messageId: id,
+      churchId: churchIdFromRequest(request, body),
       content: typeof body.content === "string" ? body.content : "",
     });
     return NextResponse.json(message);
@@ -46,6 +48,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     const message = await deleteCommunityMessage({
       clerkId: verified.uid,
       messageId: id,
+      churchId: churchIdFromRequest(request),
     });
     return NextResponse.json(message);
   } catch (error) {

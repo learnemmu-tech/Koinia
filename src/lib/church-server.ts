@@ -1,18 +1,19 @@
 import { cookies } from "next/headers";
 
+import type { NextResponse } from "next/server";
+
 import type { FirebaseChurch } from "@/types/firebase-church";
 
 import {
   ACTIVE_CHURCH_COOKIE_NAME,
+  persistActiveChurchCookieOptions,
   readActiveChurchIdFromCookieValue,
 } from "./church-cookies";
 import {
   ACTIVE_BRANCH_COOKIE_NAME,
   readActiveBranchIdFromCookieValue,
 } from "./branch-cookies";
-import { getLegacyDefaultChurchId } from "./church-scope";
-import { getActiveChurches, getChurchById } from "./church-queries";
-import { isPostgresUuid } from "@/lib/postgres/uuid";
+import { resolveCurrentMemberChurchContext } from "@/lib/organization/resolve-current-church-server";
 
 export async function getActiveChurchIdFromCookies(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -28,36 +29,30 @@ export async function getActiveBranchIdFromCookies(): Promise<string | null> {
   );
 }
 
+/**
+ * Current church for the authenticated member. Never falls back to the first
+ * church in the database or a global default tenant.
+ */
 export async function resolveActiveChurchId(): Promise<string> {
-  const fromCookie = await getActiveChurchIdFromCookies();
-  if (fromCookie && isPostgresUuid(fromCookie)) {
-    try {
-      const church = await getChurchById(fromCookie);
-      if (church?.isActive) return church.id;
-    } catch {
-      // Stale cookie or inactive church — fall through to defaults.
-    }
-  }
-
-  try {
-    const activeChurches = await getActiveChurches();
-    if (activeChurches[0]) return activeChurches[0].id;
-  } catch {
-    // Fall through when the church list cannot be loaded.
-  }
-
-  const legacyId = getLegacyDefaultChurchId();
-  if (legacyId && isPostgresUuid(legacyId)) return legacyId;
-
-  return "";
+  const { scope } = await resolveCurrentMemberChurchContext();
+  return scope.churchId || "";
 }
 
 export async function resolveActiveChurch(): Promise<FirebaseChurch | null> {
-  try {
-    const churchId = await resolveActiveChurchId();
-    if (!churchId) return null;
-    return getChurchById(churchId);
-  } catch {
-    return null;
-  }
+  const { church } = await resolveCurrentMemberChurchContext();
+  return church;
+}
+
+export function setActiveChurchCookieOnResponse<T>(
+  response: NextResponse<T>,
+  churchId: string
+): NextResponse<T> {
+  const id = churchId.trim();
+  if (!id) return response;
+  response.cookies.set(
+    ACTIVE_CHURCH_COOKIE_NAME,
+    id,
+    persistActiveChurchCookieOptions()
+  );
+  return response;
 }

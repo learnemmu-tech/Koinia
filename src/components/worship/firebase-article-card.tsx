@@ -9,11 +9,13 @@ import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { formatContentDate } from "@/lib/content-date";
+import { contentItemHref } from "@/lib/content/item-href";
 import { cn, getSongCoverUrl } from "@/lib/utils";
 
 type FirebaseArticleCardProps = {
   article: FirebaseArticle;
   className?: string;
+  hrefPrefix?: string;
 };
 
 function getAuthorInitial(author: string): string {
@@ -25,10 +27,11 @@ function getAuthorInitial(author: string): string {
 export const FirebaseArticleCard = React.memo(function FirebaseArticleCard({
   article,
   className,
+  hrefPrefix = "/articles",
 }: FirebaseArticleCardProps) {
   if (!article.id?.trim()) return null;
 
-  const href = `/articles/${encodeURIComponent(article.id)}`;
+  const href = contentItemHref(hrefPrefix, article.id);
   const coverUrl = getSongCoverUrl(article.coverImage);
   const category = article.category.trim();
 

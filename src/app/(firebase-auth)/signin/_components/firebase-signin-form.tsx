@@ -3,7 +3,6 @@
 import { useSignIn } from "@clerk/nextjs";
 import React, { useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
@@ -18,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { setAuthCookie } from "@/context/firebase-auth-context";
+import { postAuthContinueHref } from "@/lib/auth/auth-paths";
 import {
   completePostAuthSession,
   fetchPostAuthDestination,
@@ -28,24 +28,20 @@ import {
   signInWithGoogle,
   activateClerkSession,
   rememberSyncedProfile,
+  sessionUserFromClerk,
+  bindFirebaseAuthCurrentUser,
+  navigateAfterAuth,
 } from "@/lib/firebase-auth-service";
 import { cn } from "@/lib/utils";
 
 import {
-  AUTH_DIVIDER_LABEL_CLASS,
   AUTH_FIELD_GROUP_CLASS,
-  AUTH_FIELD_ICON_CLASS,
   AUTH_FORM_FIELDS_CLASS,
   AUTH_FORM_STACK_CLASS,
-  AUTH_GOOGLE_BUTTON_CLASS,
-  AUTH_HEADING_CLASS,
-  AUTH_INPUT_WITH_ICON_CLASS,
-  AUTH_LABEL_CLASS,
-  AUTH_LINK_CLASS,
-  AUTH_MUTED_TEXT_CLASS,
   AUTH_PRIMARY_ARROW_CLASS,
-  AUTH_PRIMARY_BUTTON_CLASS,
   AUTH_PRIMARY_LABEL_CLASS,
+  authFormStyles,
+  type AuthFormAppearance,
 } from "../../_components/auth-form-styles";
 
 const signInSchema = (tValidation: ReturnType<typeof useTranslations<"validation">>) =>
@@ -64,16 +60,27 @@ type SignInValues = {
 
 type FirebaseSignInFormProps = React.HTMLAttributes<HTMLDivElement> & {
   callbackUrl?: string;
+  hideIntro?: boolean;
+  appearance?: AuthFormAppearance;
+  inlineErrors?: boolean;
+  signUpHref?: string;
+  forgotPasswordHref?: string;
 };
 
 export function FirebaseSignInForm({
   className,
   callbackUrl = "/",
+  hideIntro = false,
+  appearance = "default",
+  inlineErrors = false,
+  signUpHref,
+  forgotPasswordHref = "/forgot-password",
   ...props
 }: FirebaseSignInFormProps) {
   const tAuth = useTranslations("auth");
   const tValidation = useTranslations("validation");
   const tCommon = useTranslations("common");
+  const styles = authFormStyles(appearance);
   const signInSchemaMemo = useMemo(
     () => signInSchema(tValidation),
     [tValidation]
@@ -82,14 +89,14 @@ export function FirebaseSignInForm({
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [isResending, setIsResending] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
   const [verificationCode, setVerificationCode] = React.useState("");
   const [verificationEmail, setVerificationEmail] = React.useState("");
   const [verificationError, setVerificationError] = React.useState<string | null>(
     null
   );
-  const router = useRouter();
-  const redirectTo = sanitizeCallbackUrl(callbackUrl);
   const { signIn, fetchStatus } = useSignIn();
+  const redirectTo = sanitizeCallbackUrl(callbackUrl);
   const [isCompletingAuth, setIsCompletingAuth] = React.useState(false);
 
   const {
@@ -119,13 +126,23 @@ export function FirebaseSignInForm({
       }
     }
 
-    const { profile, destination } = await completePostAuthSession({
-      callbackUrl: redirectTo,
-    });
-    rememberSyncedProfile(profile);
-    setAuthCookie(true, { role: profile.role, profile });
+    const sessionUser = sessionUserFromClerk();
+    if (sessionUser) {
+      bindFirebaseAuthCurrentUser(sessionUser);
+    }
+
     toast.success(tAuth("signedInSuccess"));
-    router.replace(destination);
+
+    try {
+      const { profile, destination } = await completePostAuthSession({
+        callbackUrl: redirectTo,
+      });
+      rememberSyncedProfile(profile);
+      setAuthCookie(true, { role: profile.role, profile });
+      navigateAfterAuth(destination);
+    } catch {
+      navigateAfterAuth(postAuthContinueHref(redirectTo));
+    }
   }
 
   async function sendSignInVerificationCode() {
@@ -152,6 +169,7 @@ export function FirebaseSignInForm({
   async function onSubmit(data: SignInValues) {
     setIsLoading(true);
     setVerificationError(null);
+    setFormError(null);
 
     try {
       const { error } = await signIn.password({
@@ -179,7 +197,9 @@ export function FirebaseSignInForm({
 
       throw new Error("Additional verification is required to sign in.");
     } catch (error) {
-      toast.error(getFirebaseAuthErrorMessage(error));
+      const message = getFirebaseAuthErrorMessage(error);
+      setFormError(message);
+      if (!inlineErrors) toast.error(message);
       setIsCompletingAuth(false);
     } finally {
       setIsLoading(false);
@@ -238,6 +258,7 @@ export function FirebaseSignInForm({
 
   async function handleGoogleSignIn() {
     setIsGoogleLoading(true);
+    setFormError(null);
     try {
       const googleResult = await signInWithGoogle({
         redirectUrlComplete: redirectTo,
@@ -247,9 +268,11 @@ export function FirebaseSignInForm({
       const { profile } = googleResult;
       setAuthCookie(true, { role: profile.role, profile });
       toast.success(tAuth("signedInGoogle"));
-      router.push(await fetchPostAuthDestination(redirectTo));
+      navigateAfterAuth(await fetchPostAuthDestination(redirectTo));
     } catch (error) {
-      toast.error(getFirebaseAuthErrorMessage(error));
+      const message = getFirebaseAuthErrorMessage(error);
+      setFormError(message);
+      if (!inlineErrors) toast.error(message);
     } finally {
       setIsGoogleLoading(false);
     }
@@ -281,25 +304,33 @@ export function FirebaseSignInForm({
 
   return (
     <div className={cn(AUTH_FORM_STACK_CLASS, className)} {...props}>
+      {hideIntro ? null : (
       <div className="flex flex-col gap-2.5 text-left">
-        <h1 className={AUTH_HEADING_CLASS}>{tAuth("loginTitle")}</h1>
-        <p className={AUTH_MUTED_TEXT_CLASS}>{tAuth("loginSubtitle")}</p>
+        <h1 className={styles.heading}>{tAuth("loginTitle")}</h1>
+        <p className={styles.muted}>{tAuth("loginSubtitle")}</p>
       </div>
+      )}
+
+      {formError ? (
+        <div role="alert" className={styles.error}>
+          {formError}
+        </div>
+      ) : null}
 
       <form onSubmit={handleSubmit(onSubmit)} className={AUTH_FORM_FIELDS_CLASS}>
         <div className={AUTH_FIELD_GROUP_CLASS}>
-          <Label htmlFor="email" className={AUTH_LABEL_CLASS}>
-            {tAuth("email")}
+          <Label htmlFor="email" className={styles.label}>
+            {tAuth("emailAddress")}
           </Label>
           <div className="relative">
-            <Mail className={AUTH_FIELD_ICON_CLASS} aria-hidden />
+            <Mail className={styles.fieldIcon} aria-hidden />
             <Input
               id="email"
               type="email"
               placeholder="you@example.com"
               autoComplete="email"
               disabled={isDisabled}
-              className={AUTH_INPUT_WITH_ICON_CLASS}
+              className={styles.inputWithIcon}
               {...register("email")}
             />
           </div>
@@ -310,28 +341,28 @@ export function FirebaseSignInForm({
 
         <div className={AUTH_FIELD_GROUP_CLASS}>
           <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="password" className={AUTH_LABEL_CLASS}>
+            <Label htmlFor="password" className={styles.label}>
               {tAuth("password")}
             </Label>
-            <Link href="/forgot-password" className={AUTH_LINK_CLASS}>
+            <Link href={forgotPasswordHref} className={styles.link}>
               {tAuth("forgotPassword")}
             </Link>
           </div>
           <div className="relative">
-            <Lock className={AUTH_FIELD_ICON_CLASS} aria-hidden />
+            <Lock className={styles.fieldIcon} aria-hidden />
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
               placeholder={tAuth("enterPassword")}
               autoComplete="current-password"
               disabled={isDisabled}
-              className={cn(AUTH_INPUT_WITH_ICON_CLASS, "pr-11")}
+              className={cn(styles.inputWithIcon, "pr-11")}
               {...register("password")}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-1 my-auto flex size-9 items-center justify-center rounded-md text-[#6B7280] transition-colors hover:text-[#1C2B3A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0623A]/35"
+              className={styles.passwordToggle}
               aria-label={showPassword ? tAuth("hidePassword") : tAuth("showPassword")}
             >
               {showPassword ?
@@ -346,29 +377,31 @@ export function FirebaseSignInForm({
 
         <Button
           type="submit"
-          className={AUTH_PRIMARY_BUTTON_CLASS}
+          className={styles.primaryButton}
           disabled={isDisabled}
         >
           <span className={AUTH_PRIMARY_LABEL_CLASS}>
             {isLoading ?
               <Loader2 className="size-4 animate-spin" aria-hidden />
             : null}
-            {tAuth("login")}
+            {isLoading ? tAuth("signingIn") : tAuth("login")}
           </span>
-          <ArrowRight className={AUTH_PRIMARY_ARROW_CLASS} aria-hidden />
+          {isLoading ? null : (
+            <ArrowRight className={AUTH_PRIMARY_ARROW_CLASS} aria-hidden />
+          )}
         </Button>
       </form>
 
       <div className="relative text-center text-sm">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-[#E2D9CC]" />
+          <span className={styles.dividerLine} />
         </div>
-        <span className={AUTH_DIVIDER_LABEL_CLASS}>{tAuth("orContinueWith")}</span>
+        <span className={styles.divider}>{tAuth("orContinueWith")}</span>
       </div>
 
       <Button
         variant="outline"
-        className={AUTH_GOOGLE_BUTTON_CLASS}
+        className={styles.googleButton}
         onClick={handleGoogleSignIn}
         disabled={isDisabled}
         type="button"
@@ -376,16 +409,18 @@ export function FirebaseSignInForm({
         {isGoogleLoading ?
           <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
         : <Google className="mr-2 size-4" aria-hidden />}
-        {tAuth("signInWithGoogle")}
+        {appearance === "heritage"
+          ? tAuth("continueWithGoogle")
+          : tAuth("signInWithGoogle")}
       </Button>
 
-      <p className={cn("text-center text-sm leading-snug", AUTH_MUTED_TEXT_CLASS)}>
+      <p className={cn("text-center text-sm leading-snug", styles.muted)}>
         {tAuth("noAccount")}{" "}
         <Link
-          href={buildAuthHref("/signup", redirectTo)}
-          className={AUTH_LINK_CLASS}
+          href={signUpHref ?? buildAuthHref("/signup", redirectTo)}
+          className={styles.link}
         >
-          {tCommon("signUp")}
+          {appearance === "heritage" ? tAuth("createOne") : tCommon("signUp")}
         </Link>
       </p>
     </div>

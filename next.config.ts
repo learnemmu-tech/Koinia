@@ -63,7 +63,9 @@ const config: NextConfig = {
           ]
         : []),
     ],
-    unoptimized: !isDocker,
+    // Optimize on Vercel production and Docker. Keep originals in local `next dev`
+    // so admin-managed media is not double-compressed during development.
+    unoptimized: !isProd && !isDocker,
   },
   experimental: {
     ppr: false,
@@ -148,6 +150,16 @@ const config: NextConfig = {
       {
         source: "/onboarding/invite-team",
         destination: "/dashboard/organization?tab=invitations",
+        permanent: false,
+      },
+      {
+        source: "/c/:slug/groups",
+        destination: "/c/:slug/ministries",
+        permanent: false,
+      },
+      {
+        source: "/c/:slug/groups/",
+        destination: "/c/:slug/ministries",
         permanent: false,
       },
     ];

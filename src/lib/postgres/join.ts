@@ -13,8 +13,10 @@ import {
 } from "@/lib/enrollment";
 import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { getActiveTemplateForChurch } from "@/lib/postgres/church-websites";
 import { virtualBranchFromChurch } from "@/lib/postgres/mappers";
 import { requireAppUserByClerkId } from "@/lib/postgres/session";
+import type { TemplateId } from "@/lib/templates/types";
 import type { EnrollmentMode } from "@/types/enrollment";
 
 export type PublicChurchJoinInfo = {
@@ -36,13 +38,20 @@ export type PublicChurchJoinInfo = {
 export type PendingJoinRequest = {
   churchName: string;
   slug: string;
+  churchId: string;
   branchId: string;
+  organizationId: string;
+  activeTemplate: TemplateId | null;
   status: "pending" | "active";
 };
 
 export type JoinChurchResult = {
   churchName: string;
   status: "active" | "pending";
+  churchId: string;
+  organizationId: string;
+  slug: string;
+  activeTemplate: TemplateId | null;
 };
 
 async function loadChurchByJoinSlug(slug: string) {
@@ -106,6 +115,30 @@ export async function getChurchByJoinSlug(
         ? "This invitation link is no longer valid."
         : blockedReason ?? undefined,
     slugStatus,
+  };
+}
+
+async function toJoinResult(
+  church: {
+    id: string;
+    organizationId: string;
+    name: string;
+    joinSlug: string;
+    slug: string;
+  },
+  status: "active" | "pending"
+): Promise<JoinChurchResult> {
+  const activeTemplate = await getActiveTemplateForChurch(
+    church.id,
+    church.organizationId
+  );
+  return {
+    churchName: church.name,
+    status,
+    churchId: church.id,
+    organizationId: church.organizationId,
+    slug: church.joinSlug || church.slug,
+    activeTemplate,
   };
 }
 
@@ -175,19 +208,20 @@ export async function joinUserToChurchBySlug(
           updatedAt: now,
         })
         .where(eq(users.id, appUser.id));
-      return { churchName: church.name, status: "active" };
+      return toJoinResult(church, "active");
     }
 
     if (existing.status === "pending") {
       await db
         .update(users)
         .set({
+          organizationId: church.organizationId,
           pendingChurchId: church.id,
           needsChurchOnboarding: false,
           updatedAt: now,
         })
         .where(eq(users.id, appUser.id));
-      return { churchName: church.name, status: "pending" };
+      return toJoinResult(church, "pending");
     }
 
     if (existing.status !== "rejected" && existing.status !== "removed") {
@@ -224,12 +258,13 @@ export async function joinUserToChurchBySlug(
         updatedAt: now,
       })
       .where(eq(users.id, appUser.id));
-    return { churchName: church.name, status: "active" };
+      return toJoinResult(church, "active");
   }
 
   await db
     .update(users)
     .set({
+      organizationId: church.organizationId,
       pendingChurchId: church.id,
       needsChurchOnboarding: false,
       updatedAt: now,
@@ -253,7 +288,7 @@ export async function joinUserToChurchBySlug(
     userId: clerkId,
   });
 
-  return { churchName: church.name, status: "pending" };
+  return toJoinResult(church, "pending");
 }
 
 export async function getPendingJoinRequestForUser(
@@ -289,8 +324,14 @@ export async function getPendingJoinRequestForUser(
 
   return {
     churchName: church.name,
-    slug: church.joinSlug,
+    slug: church.joinSlug || church.slug,
+    churchId: church.id,
     branchId: church.id,
+    organizationId: church.organizationId,
+    activeTemplate: await getActiveTemplateForChurch(
+      church.id,
+      church.organizationId
+    ),
     status: membership.status === "active" ? "active" : "pending",
   };
 }

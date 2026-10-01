@@ -5,10 +5,9 @@ import React from "react";
 import type { FirebaseChurch } from "@/types/firebase-church";
 
 import {
-  ACTIVE_CHURCH_COOKIE_NAME,
+  persistActiveChurchCookie,
   readActiveChurchIdFromCookieValue,
 } from "@/lib/church-cookies";
-import { getLegacyDefaultChurchId } from "@/lib/church-scope";
 import { MULTI_CHURCH_ENABLED } from "@/lib/feature-flags";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 
@@ -24,10 +23,6 @@ type ActiveChurchContextValue = {
 const ActiveChurchContext =
   React.createContext<ActiveChurchContextValue | null>(null);
 
-function persistActiveChurchCookie(churchId: string) {
-  document.cookie = `${ACTIVE_CHURCH_COOKIE_NAME}=${encodeURIComponent(churchId)}; path=/; max-age=31536000; samesite=lax`;
-}
-
 type ActiveChurchProviderProps = React.PropsWithChildren<{
   initialChurches: FirebaseChurch[];
   initialActiveChurchId?: string | null;
@@ -40,24 +35,11 @@ export function ActiveChurchProvider({
 }: ActiveChurchProviderProps) {
   const [churches, setChurches] = React.useState(initialChurches);
   const [activeChurchId, setActiveChurchIdState] = React.useState<string | null>(
-    () => {
-      const cookieId = readActiveChurchIdFromCookieValue(initialActiveChurchId);
-      if (cookieId) return cookieId;
-
-      const firstActive = initialChurches.find((church) => church.isActive);
-      if (firstActive) return firstActive.id;
-
-      return getLegacyDefaultChurchId() || null;
-    }
+    () => readActiveChurchIdFromCookieValue(initialActiveChurchId)
   );
   const [isLoading, setIsLoading] = React.useState(() => {
     if (!MULTI_CHURCH_ENABLED) return false;
-
-    const cookieId = readActiveChurchIdFromCookieValue(initialActiveChurchId);
-    if (cookieId) return false;
-    if (initialChurches.some((church) => church.isActive)) return false;
-    if (getLegacyDefaultChurchId()) return false;
-    return true;
+    return !readActiveChurchIdFromCookieValue(initialActiveChurchId);
   });
 
   const activeChurch = React.useMemo(
@@ -105,18 +87,11 @@ export function ActiveChurchProvider({
 
   React.useEffect(() => {
     if (!MULTI_CHURCH_ENABLED) return;
-
     if (activeChurchId) return;
 
-    const legacyId = getLegacyDefaultChurchId();
-    if (legacyId) {
-      setActiveChurchIdState(legacyId);
-      return;
-    }
-
-    const firstActive = churches.find((church) => church.isActive);
-    if (firstActive) {
-      setActiveChurchIdState(firstActive.id);
+    const accessible = churches.filter((church) => church.isActive);
+    if (accessible.length === 1) {
+      setActiveChurchIdState(accessible[0]!.id);
     }
   }, [churches, activeChurchId]);
 
@@ -160,12 +135,10 @@ export function useActiveChurchScope(): {
 } {
   const { activeChurchId, isLoading } = useActiveChurch();
   const { profile, loading: authLoading } = useFirebaseAuth();
-  const legacyId = getLegacyDefaultChurchId();
 
   return React.useMemo(() => {
     const profileChurchId = profile?.churchId?.trim() || "";
-    const resolved =
-      profileChurchId || activeChurchId?.trim() || legacyId || "";
+    const resolved = profileChurchId || activeChurchId?.trim() || "";
 
     if (!MULTI_CHURCH_ENABLED) {
       return {
@@ -175,13 +148,12 @@ export function useActiveChurchScope(): {
     }
 
     return {
-      churchId: activeChurchId || legacyId || "",
-      isLoading: isLoading && !(activeChurchId || legacyId),
+      churchId: resolved,
+      isLoading: isLoading && !resolved,
     };
   }, [
     activeChurchId,
     isLoading,
-    legacyId,
     profile?.churchId,
     authLoading,
   ]);

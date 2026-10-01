@@ -1,128 +1,188 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, CheckCircle2, Copy } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Globe,
+  Users,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useFirebaseAuth } from "@/context/firebase-auth-context";
-import { useOrganization } from "@/context/organization-context";
-import { setAuthSession } from "@/lib/auth/set-auth-session";
 import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
-import { cn } from "@/lib/utils";
 
 type OnboardingSuccessScreenProps = {
   churchName: string;
+  publicPath: string;
+  publicUrl: string;
   joinUrl: string;
+  selectedTemplateName: string;
 };
 
 export function OnboardingSuccessScreen({
   churchName,
+  publicPath,
+  publicUrl,
   joinUrl,
+  selectedTemplateName,
 }: OnboardingSuccessScreenProps) {
-  const queryClient = useQueryClient();
-  const { refreshProfile } = useFirebaseAuth();
-  const { refetch, membership, churches } = useOrganization();
-  const [copied, setCopied] = useState(false);
-  const syncedRef = useRef(false);
+  const [copiedPublic, setCopiedPublic] = useState(false);
+  const [copiedJoin, setCopiedJoin] = useState(false);
 
-  useEffect(() => {
-    if (syncedRef.current) return;
-    syncedRef.current = true;
-
-    void (async () => {
-      const resolvedProfile = await refreshProfile();
-      await refetch();
-      await queryClient.refetchQueries({ queryKey: ["membership-routing"] });
-      await queryClient.refetchQueries({ queryKey: ["organization"] });
-      if (resolvedProfile) {
-        setAuthSession(true, {
-          role: resolvedProfile.role,
-          profile: resolvedProfile,
-          membership,
-          churchesCount: Math.max(churches.length, 1),
-          workspaceType: "independent_church",
-        });
-      }
-    })();
-  }, [refreshProfile, refetch, queryClient, membership, churches.length]);
-
-  async function handleCopy() {
+  async function copyValue(value: string, which: "public" | "join") {
     try {
-      await navigator.clipboard.writeText(joinUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(value);
+      if (which === "public") {
+        setCopiedPublic(true);
+        setCopiedJoin(false);
+        window.setTimeout(() => setCopiedPublic(false), 2000);
+      } else {
+        setCopiedJoin(true);
+        setCopiedPublic(false);
+        window.setTimeout(() => setCopiedJoin(false), 2000);
+      }
     } catch {
-      setCopied(false);
+      setCopiedPublic(false);
+      setCopiedJoin(false);
     }
   }
 
   return (
-    <div className="w-full max-w-lg animate-in fade-in zoom-in-95 duration-500">
-      <div className="rounded-2xl border bg-card/90 p-6 text-center shadow-sm backdrop-blur-sm sm:p-8">
-        <div
-          className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600"
-          aria-hidden
-        >
-          <CheckCircle2 className="size-7" />
-        </div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight sm:text-[1.75rem]">
-          Your church workspace is ready
+    <div className="w-full max-w-3xl animate-in fade-in duration-500">
+      <section className="rounded-3xl border bg-card/95 p-5 shadow-sm sm:p-8">
+        <p className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700">
+          <CheckCircle2 className="size-5" aria-hidden />
+          Website ready
+        </p>
+        <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+          Your church is ready
         </h1>
-        <p className="mt-3 text-base text-muted-foreground">
-          <span className="break-words font-medium text-foreground">{churchName}</span>{" "}
-          has been created successfully.
+        <p className="mt-3 text-lg font-medium text-foreground">{churchName}</p>
+        <p className="mt-2 text-base leading-relaxed text-muted-foreground">
+          Your website is ready to share
+          {selectedTemplateName ? ` with the ${selectedTemplateName} design` : ""}.
         </p>
 
-        <div className="mt-7 space-y-2 text-left">
-          <p id="church-join-url-label" className="text-sm font-medium">
-            Your church URL
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <p
-              id="church-join-url"
-              tabIndex={0}
-              className="min-w-0 flex-1 break-all rounded-md border bg-muted/40 px-3 py-2.5 font-mono text-xs leading-relaxed text-foreground sm:text-sm"
-            >
-              {joinUrl}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 shrink-0 sm:h-auto sm:min-w-[7.5rem]"
-              onClick={() => void handleCopy()}
-              aria-describedby="church-join-url-label"
-              aria-label="Copy church URL"
-            >
-              {copied ? (
-                <Check className="mr-2 size-4 text-emerald-600" />
-              ) : (
-                <Copy className="mr-2 size-4" />
-              )}
-              {copied ? "Copied" : "Copy URL"}
+        <div className="mt-8 space-y-6">
+          <PublicWebsiteRow
+            publicPath={publicPath}
+            publicUrl={publicUrl}
+            copied={copiedPublic}
+            onCopy={() => void copyValue(publicUrl, "public")}
+          />
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button asChild size="lg" className="h-11">
+              <Link href={publicPath} target="_blank" rel="noopener noreferrer">
+                View Website
+                <ExternalLink className="size-4" aria-hidden />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-11">
+              <Link href={WORKSPACE_BASE}>
+                Continue to Dashboard
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
             </Button>
           </div>
-          <p
-            className={cn(
-              "text-sm text-muted-foreground",
-              copied && "text-emerald-700"
-            )}
-            aria-live="polite"
-          >
-            {copied
-              ? "Church URL copied to clipboard."
-              : "Share this link with your church members so they can join your church community."}
-          </p>
-        </div>
 
-        <Button asChild size="lg" className="mt-8 h-11 w-full sm:w-auto">
-          <Link href={WORKSPACE_BASE}>
-            Go to Dashboard
-            <ArrowRight className="ml-2 size-4" />
-          </Link>
-        </Button>
+          <div className="rounded-2xl border bg-muted/30 p-4">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Users className="size-4" aria-hidden />
+              Member join link
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Share this only when you want people to request membership. It is
+              not your public website.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <p className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
+                {joinUrl}
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                onClick={() => void copyValue(joinUrl, "join")}
+                aria-label="Copy member join link"
+              >
+                {copiedJoin ? (
+                  <Check className="size-4 text-emerald-600" aria-hidden />
+                ) : (
+                  <Copy className="size-4" aria-hidden />
+                )}
+                {copiedJoin ? "Copied" : "Copy"}
+              </Button>
+            </div>
+            <p className="sr-only" aria-live="polite">
+              {copiedJoin ? "Member join link copied." : ""}
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function PublicWebsiteRow({
+  publicPath,
+  publicUrl,
+  copied,
+  onCopy,
+}: {
+  publicPath: string;
+  publicUrl: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border bg-background/80 p-4">
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <Globe className="size-4" aria-hidden />
+        Public website
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Visitors can open your church website here. This is not the membership
+        join link.
+      </p>
+      <div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+        <p
+          className="min-w-0 flex-1 truncate font-mono text-sm text-foreground"
+          title={publicUrl}
+        >
+          {publicUrl}
+        </p>
+        <div className="flex shrink-0 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onCopy}
+            aria-label="Copy public website URL"
+          >
+            {copied ? (
+              <Check className="size-4 text-emerald-600" aria-hidden />
+            ) : (
+              <Copy className="size-4" aria-hidden />
+            )}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={publicPath} target="_blank" rel="noopener noreferrer">
+              Open
+              <ExternalLink className="size-4" aria-hidden />
+            </Link>
+          </Button>
+        </div>
       </div>
+      <p className="sr-only" aria-live="polite">
+        {copied ? "Copied." : ""}
+      </p>
     </div>
   );
 }

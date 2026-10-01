@@ -15,6 +15,7 @@ import {
   isClearlyOffTopic,
   shepherdRefusalMessage,
 } from "@/lib/shepherd/prompts";
+import { churchIdFromRequest } from "@/lib/tenant-request-church";
 import { resolveShepherdUserContext } from "@/lib/shepherd/resolve-context";
 import { shepherdChatRequestSchema } from "@/lib/shepherd/validation";
 import { rateLimitShepherdRequest } from "@/lib/rate-limit";
@@ -84,7 +85,8 @@ export async function POST(request: Request) {
 
   const context = await resolveShepherdUserContext(
     authUser.uid,
-    authUser.email
+    authUser.email,
+    parsed.data.churchId ?? churchIdFromRequest(request)
   );
   if (!context) {
     return NextResponse.json(

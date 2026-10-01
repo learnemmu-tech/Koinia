@@ -20,6 +20,8 @@ import { cn, getSongCoverUrl } from "@/lib/utils";
 type DonationCampaignDetailClientProps = {
   campaignId: string;
   initialCampaign: FirebaseDonationCampaign | null;
+  listHref?: string;
+  clientSync?: boolean;
 };
 
 function splitCampaignDescription(description: string): string[] {
@@ -67,8 +69,12 @@ export function DonationCampaignDetailSkeleton() {
 export function DonationCampaignDetailClient({
   campaignId,
   initialCampaign,
+  listHref = "/donations",
+  clientSync = true,
 }: DonationCampaignDetailClientProps) {
-  const { campaign, loading } = useDonationCampaign(campaignId, initialCampaign);
+  const { campaign, loading } = useDonationCampaign(campaignId, initialCampaign, {
+    clientSync,
+  });
 
   if (loading && !campaign) {
     return <DonationCampaignDetailSkeleton />;
@@ -84,7 +90,7 @@ export function DonationCampaignDetailClient({
           This campaign is not available for donations.
         </p>
         <Button asChild className="mt-6 h-11 rounded-xl px-6">
-          <Link href="/donations">← All Campaigns</Link>
+          <Link href={listHref}>← All Campaigns</Link>
         </Button>
       </div>
     );
@@ -105,7 +111,7 @@ export function DonationCampaignDetailClient({
   return (
     <article className="mx-auto w-full max-w-6xl space-y-7 px-4 pb-10 pt-4 sm:px-6 lg:pt-6">
       <Link
-        href="/donations"
+        href={listHref}
         className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         ← All Campaigns

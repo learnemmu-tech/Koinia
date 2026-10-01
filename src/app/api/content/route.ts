@@ -35,6 +35,7 @@ import {
 } from "@/lib/subscription/subscription-server";
 import { TRIAL_EXPIRED_MESSAGE } from "@/lib/subscription/trial";
 import { timed } from "@/lib/perf";
+import { revalidateChurchPublicSite } from "@/lib/templates/revalidate-church-website";
 import type { CreateArticleInput, UpdateArticleInput } from "@/types/firebase-article";
 import type { CreateEventInput, UpdateEventInput } from "@/types/firebase-event";
 import type { CreateSermonInput, UpdateSermonInput } from "@/types/firebase-sermon";
@@ -243,6 +244,7 @@ export async function POST(request: Request) {
           !isPlatformCreate &&
           isStoredContentPublished(collection, createdRecord),
       });
+      await revalidateChurchPublicSite(churchId || createdRecord?.churchId);
       if (process.env.NODE_ENV !== "production") {
         console.info(
           `[PERF] POST /api/content create/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
@@ -272,6 +274,7 @@ export async function POST(request: Request) {
           break;
       }
       marks.mutate = Date.now() - mutateStarted;
+      await revalidateChurchPublicSite(existingRecord?.churchId);
       if (process.env.NODE_ENV !== "production") {
         console.info(
           `[PERF] POST /api/content delete/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
@@ -303,6 +306,7 @@ export async function POST(request: Request) {
         existingRecord?.contentScope !== "platform_public" &&
         willUpdatePublishContent(collection, data, existingRecord),
     });
+    await revalidateChurchPublicSite(existingRecord?.churchId);
     if (process.env.NODE_ENV !== "production") {
       console.info(
         `[PERF] POST /api/content update/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`

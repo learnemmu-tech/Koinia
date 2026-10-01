@@ -11,11 +11,13 @@ import {
   formatDonationAmount,
   getCampaignProgressPercent,
 } from "@/lib/donation-firestore";
+import { contentItemHref } from "@/lib/content/item-href";
 import { cn, getSongCoverUrl } from "@/lib/utils";
 
 type DonationCampaignCardProps = {
   campaign: FirebaseDonationCampaign;
   className?: string;
+  hrefPrefix?: string;
 };
 
 function campaignListingStatus(
@@ -30,8 +32,9 @@ function campaignListingStatus(
 export function DonationCampaignCard({
   campaign,
   className,
+  hrefPrefix = "/donations",
 }: DonationCampaignCardProps) {
-  const href = `/donations/${encodeURIComponent(campaign.id)}`;
+  const href = contentItemHref(hrefPrefix, campaign.id);
   const coverUrl = getSongCoverUrl(campaign.bannerImage);
   const progress = getCampaignProgressPercent(campaign);
   const status = campaignListingStatus(campaign);

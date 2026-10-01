@@ -5,22 +5,27 @@ import { auth } from "@clerk/nextjs/server";
 import { OnboardingSuccessScreen } from "@/components/onboarding/onboarding-success-screen";
 import {
   CREATE_WORKSPACE_PATH,
+  ONBOARDING_WEBSITE_PATH,
   ORGANIZATION_SUSPENDED_PATH,
   SUPER_ADMIN_BASE,
 } from "@/lib/auth/auth-paths";
+import { resolveFirstTimeStage } from "@/lib/auth/first-time-destination";
 import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
-import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
 import { buildJoinChurchUrl } from "@/lib/join-url";
-import {
-  getAppUserByClerkId,
-  isOnboardingCompleted,
-} from "@/lib/postgres/app-user";
+import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { getChurchWebsiteConfig } from "@/lib/postgres/church-websites";
+import { mapChurch } from "@/lib/postgres/mappers";
 import { getChurchRowById } from "@/lib/postgres/tenants";
+import { getTemplateManifest } from "@/lib/templates/registry";
+import {
+  buildChurchWebsiteUrl,
+  churchWebsitePath,
+} from "@/lib/templates/paths";
 
 export const metadata = {
-  title: "Your church workspace is ready",
-  description: "Share your FaithConnectHub church join link with members.",
+  title: "Your church is ready",
+  description: "Your church website is ready to share.",
 };
 
 function originFromRequestHeaders(
@@ -42,12 +47,20 @@ export default async function OnboardingSuccessPage() {
     redirect(`/signin?callbackUrl=${encodeURIComponent("/onboarding/success")}`);
   }
 
-  const clerkId = userId;
-  const appUser = await getAppUserByClerkId(clerkId);
+  const appUser = await getAppUserByClerkId(userId);
   if (appUser && isPlatformSuperAdmin(appUser.platformRole)) {
     redirect(SUPER_ADMIN_BASE);
   }
-  if (!appUser || !isOnboardingCompleted(appUser) || !appUser.organizationId) {
+
+  const stage = await resolveFirstTimeStage(appUser);
+  if (stage === "onboarding") {
+    redirect(CREATE_WORKSPACE_PATH);
+  }
+  if (stage === "website") {
+    redirect(ONBOARDING_WEBSITE_PATH);
+  }
+
+  if (!appUser?.organizationId) {
     redirect(CREATE_WORKSPACE_PATH);
   }
 
@@ -59,29 +72,32 @@ export default async function OnboardingSuccessPage() {
     redirect(ORGANIZATION_SUSPENDED_PATH);
   }
 
-  const church = appUser.activeChurchId
+  const churchRow = appUser.activeChurchId
     ? await getChurchRowById(appUser.activeChurchId)
     : null;
 
-  if (!church || church.organizationId !== appUser.organizationId) {
-    redirect(WORKSPACE_BASE);
+  if (!churchRow || churchRow.organizationId !== appUser.organizationId) {
+    redirect(CREATE_WORKSPACE_PATH);
   }
 
-  const joinSlug = church.joinSlug.trim();
-  if (!joinSlug) {
-    redirect(WORKSPACE_BASE);
+  const publicSlug = churchRow.joinSlug.trim() || churchRow.slug.trim();
+  if (!publicSlug) {
+    redirect(CREATE_WORKSPACE_PATH);
   }
 
+  const church = mapChurch(churchRow);
+  const website = await getChurchWebsiteConfig(church);
   const headerStore = await headers();
-  const joinUrl = buildJoinChurchUrl(
-    joinSlug,
-    originFromRequestHeaders(headerStore)
-  );
+  const origin = originFromRequestHeaders(headerStore);
+  const selectedTemplateName = getTemplateManifest(website.activeTemplate).name;
 
   return (
     <OnboardingSuccessScreen
       churchName={church.name.trim() || "Your church"}
-      joinUrl={joinUrl}
+      publicPath={churchWebsitePath(publicSlug)}
+      publicUrl={buildChurchWebsiteUrl(publicSlug, origin)}
+      joinUrl={buildJoinChurchUrl(publicSlug, origin)}
+      selectedTemplateName={selectedTemplateName}
     />
   );
 }

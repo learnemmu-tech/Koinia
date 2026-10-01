@@ -1,3 +1,5 @@
+import type { TemplateId } from "@/lib/templates/types";
+
 export type ChurchSettings = {
   defaultLanguage?: string;
   showDonations?: boolean;
@@ -11,6 +13,8 @@ export type FirebaseChurch = {
   organizationId?: string;
   name: string;
   slug: string;
+  /** From `church_websites.active_template` when loaded with website context. */
+  activeTemplate?: TemplateId;
   description?: string;
   logoUrl?: string;
   /** Alias: coverImage in product spec */

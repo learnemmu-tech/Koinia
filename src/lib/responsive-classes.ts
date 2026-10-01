@@ -29,7 +29,7 @@ export const responsiveFilterSelectWideClass =
 
 /** Admin modal / dialog content — mobile-safe */
 export const responsiveDialogContentClass =
-  "max-h-[min(90dvh,calc(100vh-2rem))] w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] overflow-y-auto p-4 sm:w-full sm:max-w-lg sm:p-6";
+  "max-h-[min(90dvh,calc(100%-2rem))] w-[calc(100%-1.5rem)] max-w-[calc(100%-1.5rem)] overflow-y-auto p-4 sm:w-full sm:max-w-lg sm:p-6";
 
 export const responsiveDialogContentLgClass = cn(
   responsiveDialogContentClass,

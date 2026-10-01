@@ -1,35 +1,32 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ContentAuthRequired } from "@/components/auth/content-auth-required";
 import { PrayerRequestDetailClient } from "@/components/prayer/prayer-request-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { isAuthenticatedServer } from "@/lib/auth-server";
-import { getPrayerRequestById } from "@/lib/firebase-prayer-request-queries";
+import { getActiveTemplateForChurch } from "@/lib/postgres/church-websites";
+import { getChurchById } from "@/lib/postgres/tenants";
+import { loadReadablePrayerRequest } from "@/lib/prayer/prayer-authorization";
 import { isPublicPrayerRequest } from "@/lib/prayer-request-firestore";
 import { buildBreadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
+import { heritagePrayerDetailPath } from "@/templates/heritage/prayer";
 
-export const revalidate = 60;
+// Per-viewer authorization: never cache this page across users.
+export const dynamic = "force-dynamic";
 
 type PrayerRequestDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export async function generateMetadata({
-  params,
-}: PrayerRequestDetailPageProps): Promise<Metadata> {
-  const { id } = await params;
-  const request = await getPrayerRequestById(id);
-
-  if (!request || !isPublicPrayerRequest(request)) {
-    return { title: "Prayer Request Not Found" };
-  }
-
+// Metadata is generated before the auth gate and must not reveal request
+// contents (titles) to anonymous or unauthorized callers.
+export async function generateMetadata(): Promise<Metadata> {
   return buildPageMetadata({
-    title: request.title,
-    description: `Join the FaithConnectHub community in prayer for: ${request.title}`,
-    path: `/prayer-requests/${encodeURIComponent(id)}`,
-    keywords: ["prayer request", "Christian prayer", "intercession", request.title],
+    title: "Prayer Request",
+    description: "Join your church community in prayer.",
+    path: "/prayer-requests",
+    keywords: ["prayer request", "Christian prayer", "intercession"],
     noIndex: true,
   });
 }
@@ -45,13 +42,31 @@ export default async function PrayerRequestDetailPage({
     return <ContentAuthRequired callbackPath={callbackPath} />;
   }
 
-  const request = await getPrayerRequestById(id);
-
-  if (!request || !isPublicPrayerRequest(request)) {
+  // Server-side gate: church membership / admin scope for the church that owns
+  // the request. Unknown, other-church and private requests all yield 404.
+  const request = await loadReadablePrayerRequest(id);
+  if (!request) {
     notFound();
   }
 
-  const path = `/prayer-requests/${encodeURIComponent(id)}`;
+  const church = request.churchId
+    ? await getChurchById(request.churchId)
+    : null;
+  if (church?.organizationId) {
+    const template = await getActiveTemplateForChurch(
+      church.id,
+      church.organizationId
+    );
+    if (template === "heritage" && church.slug) {
+      redirect(heritagePrayerDetailPath(church.slug, request.id));
+    }
+  }
+
+  if (!isPublicPrayerRequest(request)) {
+    notFound();
+  }
+
+  const path = callbackPath;
 
   return (
     <article aria-label={request.title}>

@@ -3,9 +3,9 @@ import { unstable_cache } from "next/cache";
 import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 
 import {
-  getApprovedPrayerRequests,
-  getLatestApprovedPrayerRequests,
-} from "./firebase-prayer-request-queries";
+  listApprovedPrayerRequests as getApprovedPrayerRequests,
+  listLatestApprovedPrayerRequests as getLatestApprovedPrayerRequests,
+} from "./prayer-request-queries.server";
 import type { ContentQueryInput } from "@/lib/content/content-scope";
 import { contentCacheKey } from "@/lib/content/content-scope";
 

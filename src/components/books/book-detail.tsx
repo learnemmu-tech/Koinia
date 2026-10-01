@@ -56,11 +56,15 @@ export function BookDetail({
   hasDigitalEntitlement,
   isMemberOfTenant,
   canManage = false,
+  listHref = "/books",
+  homeHref = "/",
 }: {
   book: BookRecord;
   hasDigitalEntitlement: boolean;
   isMemberOfTenant: boolean;
   canManage?: boolean;
+  listHref?: string;
+  homeHref?: string;
 }) {
   const { user } = useFirebaseAuth();
   const router = useRouter();
@@ -241,7 +245,7 @@ export function BookDetail({
     <article className="mx-auto w-full min-w-0 max-w-6xl space-y-6 pb-8 pt-1">
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         <Link
-          href="/"
+          href={homeHref}
           className="inline-flex items-center gap-1 rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Home className="size-3.5" aria-hidden />
@@ -251,7 +255,7 @@ export function BookDetail({
           /
         </span>
         <Link
-          href="/books"
+          href={listHref}
           className="rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {t("title")}

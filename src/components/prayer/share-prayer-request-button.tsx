@@ -11,20 +11,24 @@ type SharePrayerRequestButtonProps = {
   requestId: string;
   title: string;
   className?: string;
+  /** Site-relative path to share. Defaults to the platform prayer route. */
+  path?: string;
 };
 
 export function SharePrayerRequestButton({
   requestId,
   title,
   className,
+  path,
 }: SharePrayerRequestButtonProps) {
   const [copied, setCopied] = useState(false);
   const [hasNativeShare, setHasNativeShare] = useState(false);
 
+  const sharePath = path ?? `/prayer-requests/${encodeURIComponent(requestId)}`;
   const requestUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/prayer-requests/${encodeURIComponent(requestId)}`
-      : `/prayer-requests/${encodeURIComponent(requestId)}`;
+      ? `${window.location.origin}${sharePath}`
+      : sharePath;
 
   useEffect(() => {
     setHasNativeShare(typeof navigator.share === "function");

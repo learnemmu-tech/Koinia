@@ -19,7 +19,7 @@ const providers: Record<PaymentProviderId, PaymentProvider> = {
 
 export function getConfiguredPaymentProvider(): PaymentProvider {
   const preferred = (process.env.PAYMENT_PROVIDER?.trim().toLowerCase() ||
-    "stripe") as PaymentProviderId;
+    "razorpay") as PaymentProviderId;
 
   const preferredProvider = providers[preferred];
   if (preferredProvider?.isConfigured()) {

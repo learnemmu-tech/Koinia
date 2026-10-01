@@ -121,7 +121,12 @@ export function ArticleList({
                     alt={article.title}
                     className="h-full w-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = DEFAULT_SONG_COVER;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const image = e.currentTarget;
+                      if (image.dataset.fallbackApplied === "true") return;
+                      image.dataset.fallbackApplied = "true";
+                      image.src = DEFAULT_SONG_COVER;
                     }}
                   />
                 </div>

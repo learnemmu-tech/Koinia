@@ -19,13 +19,15 @@ function getPool(): Pool {
 
   const pool = new Pool({
     connectionString: normalizeDatabaseUrl(env.DATABASE_URL),
-    // Keep serverless pools tiny. Locally allow more concurrency so bootstrap
-    // API fan-out (org + routing + subscription + badges) does not queue for
-    // tens of seconds behind a 5-connection stampede.
-    max: process.env.VERCEL ? 1 : 10,
+    // Keep serverless pools tiny. Locally allow more concurrency so Next.js
+    // compile + RSC fan-out does not exhaust the pool.
+    max: process.env.VERCEL ? 1 : 20,
     idleTimeoutMillis: 20_000,
-    connectionTimeoutMillis: 8_000,
+    // Wait for a free pooled client instead of failing while a sibling
+    // request (pricing, dashboard compile) still holds connections.
+    connectionTimeoutMillis: 30_000,
     keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
   });
 
   pool.on("error", (error) => {

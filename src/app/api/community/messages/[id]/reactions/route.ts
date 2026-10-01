@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { communityChatErrorResponse } from "@/app/api/community/messages/chat-http";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { churchIdFromRequest } from "@/lib/tenant-request-church";
 import { toggleCommunityReaction } from "@/lib/postgres/community-chat";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -24,6 +25,7 @@ export async function POST(request: Request, context: RouteContext) {
     const result = await toggleCommunityReaction({
       clerkId: verified.uid,
       messageId: id,
+      churchId: churchIdFromRequest(request, body),
       reactionType:
         typeof body.reactionType === "string" ? body.reactionType : undefined,
     });

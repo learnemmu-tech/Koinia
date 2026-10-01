@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { churchIdFromRequest } from "@/lib/tenant-request-church";
 import {
   createCommunityMessage,
   listCommunityMessages,
@@ -21,6 +22,7 @@ export async function GET(request: Request) {
   try {
     const page = await listCommunityMessages({
       clerkId: verified.uid,
+      churchId: churchIdFromRequest(request),
       before,
       limit: Number.isFinite(limit) ? limit : undefined,
     });
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
   try {
     const message = await createCommunityMessage({
       clerkId: verified.uid,
+      churchId: churchIdFromRequest(request, body),
       content: typeof body.content === "string" ? body.content : "",
       replyToMessageId:
         typeof body.replyToMessageId === "string"

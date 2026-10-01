@@ -78,7 +78,7 @@ export function UserDropdown() {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem disabled={!authUser} asChild>
-          <Link href="/me">
+          <Link href="/profile">
             <User2 size={16} className="mr-2" />
             My Profile
           </Link>

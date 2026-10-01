@@ -12,6 +12,7 @@ import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { YouTubeEmbed } from "@/components/media/youtube-embed";
 import { ShareContentButton } from "@/components/share-content-button";
 import { DEFAULT_SONG_COVER } from "@/config/site";
+import { contentItemHref } from "@/lib/content/item-href";
 import { getSongCoverUrl } from "@/lib/utils";
 
 type ArticleDetailViewProps = {
@@ -19,6 +20,7 @@ type ArticleDetailViewProps = {
   relatedArticles: FirebaseArticle[];
   previousArticle: FirebaseArticle | null;
   nextArticle: FirebaseArticle | null;
+  hrefPrefix?: string;
 };
 
 export function ArticleDetailView({
@@ -26,6 +28,7 @@ export function ArticleDetailView({
   relatedArticles,
   previousArticle,
   nextArticle,
+  hrefPrefix = "/articles",
 }: ArticleDetailViewProps) {
   const coverUrl = getSongCoverUrl(article.coverImage) || DEFAULT_SONG_COVER;
   const dateLabel = formatDetailDate(article.dateCreated);
@@ -72,7 +75,7 @@ export function ArticleDetailView({
       kind="article"
       kindLabel="Article"
       backLabel="Back to Articles"
-      backHref="/articles"
+      backHref={hrefPrefix}
       coverUrl={coverUrl}
       coverAlt={article.title}
       title={article.title}
@@ -90,7 +93,7 @@ export function ArticleDetailView({
         <ShareContentButton
           title={article.title}
           description={excerpt || undefined}
-          path={`/articles/${encodeURIComponent(article.id)}`}
+          path={contentItemHref(hrefPrefix, article.id)}
           className="h-9 rounded-xl px-4"
           label="Share"
         />
@@ -117,8 +120,12 @@ export function ArticleDetailView({
       }
       footer={
         <>
-          <ArticleNavigation previous={previousArticle} next={nextArticle} />
-          <RelatedArticles articles={relatedArticles} />
+          <ArticleNavigation
+            previous={previousArticle}
+            next={nextArticle}
+            hrefPrefix={hrefPrefix}
+          />
+          <RelatedArticles articles={relatedArticles} hrefPrefix={hrefPrefix} />
         </>
       }
     />

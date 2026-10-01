@@ -19,9 +19,14 @@ export function getYouTubeVideoId(url: string): string | null {
   return match?.[1] ?? null;
 }
 
-export function getYouTubeEmbedUrl(url: string): string | null {
+export function getYouTubeEmbedUrl(
+  url: string,
+  options?: { autoplay?: boolean }
+): string | null {
   const id = getYouTubeVideoId(url);
-  return id ? `https://www.youtube.com/embed/${id}` : null;
+  if (!id) return null;
+  const query = options?.autoplay ? "?autoplay=1&rel=0" : "";
+  return `https://www.youtube.com/embed/${id}${query}`;
 }
 
 export function getYouTubeThumbnailUrl(url: string): string | null {

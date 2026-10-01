@@ -7,7 +7,7 @@ import { resolveUserMembershipRouting } from "@/lib/auth/membership-routing-serv
 import { getSuperAdminBootstrapEmail } from "@/lib/auth/platform-role";
 import { triggerWelcomeEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
-import { getAppUserByClerkId, mapAppUserToProfile } from "@/lib/postgres/app-user";
+import { getAppUserByClerkId, mapAppUserToProfileWithWebsite } from "@/lib/postgres/app-user";
 import { upsertAppUserFromClerk } from "@/lib/postgres/upsert-app-user";
 import { timed } from "@/lib/perf";
 
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     timings.clerkMs = 0;
   }
 
-  let profile = existing ? mapAppUserToProfile(existing) : null;
+  let profile = existing ? await mapAppUserToProfileWithWebsite(existing) : null;
 
   if (!existing || mayNeedBootstrap || needsClerkRefresh) {
     const email =
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
     if (!email) {
       if (existing) {
-        profile = mapAppUserToProfile(existing);
+        profile = await mapAppUserToProfileWithWebsite(existing);
       } else {
         return NextResponse.json(
           { error: "Unable to sync profile because no email was available." },
@@ -127,6 +127,10 @@ export async function POST(request: Request) {
           })
         );
         profile = syncResult.profile;
+        const latest = await getAppUserByClerkId(uid);
+        if (latest) {
+          profile = await mapAppUserToProfileWithWebsite(latest);
+        }
         if (syncResult.created && email.trim()) {
           triggerWelcomeEmails({
             email: email.trim(),

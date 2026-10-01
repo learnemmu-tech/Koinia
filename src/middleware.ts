@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isOnboardingPath, isSuperAdminPath } from "@/lib/auth/auth-paths";
 import { isWorkspaceRoute } from "@/lib/dashboard-routes";
+import { churchGroupsRedirectPath } from "@/lib/templates/paths";
 
 const AUTH_ONLY_PATHS = ["/signin", "/signup", "/forgot-password", "/sso-callback"];
 const POST_AUTH_CONTINUE_PATH = "/auth/continue";
@@ -32,6 +33,7 @@ const PROTECTED_PREFIXES = [
   "/settings",
   "/recently-viewed",
   "/shepherd",
+  "/preview/website",
 ];
 
 function isProtectedPath(pathname: string) {
@@ -50,6 +52,10 @@ function buildSignInUrl(req: NextRequest, callbackPath: string) {
   return signInUrl;
 }
 
+function requestCallbackPath(req: NextRequest) {
+  return `${req.nextUrl.pathname}${req.nextUrl.search}` || "/";
+}
+
 /**
  * Middleware performs auth-only checks. Onboarding completion is enforced from
  * PostgreSQL (`users.needs_church_onboarding`) via /auth/continue, OnboardingGuard,
@@ -57,6 +63,15 @@ function buildSignInUrl(req: NextRequest, callbackPath: string) {
  */
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
+
+  // Church `/groups` is an alias of Ministries. Redirect before layouts render
+  // so the document is a real HTTP 307 instead of a streamed blank shell.
+  const groupsDestination = churchGroupsRedirectPath(pathname);
+  if (groupsDestination) {
+    const url = req.nextUrl.clone();
+    url.pathname = groupsDestination;
+    return NextResponse.redirect(url);
+  }
 
   // API handlers authenticate with the Clerk Bearer token. Calling auth() here
   // can handshake-redirect the request to Clerk's origin, which makes browser
@@ -70,14 +85,14 @@ export default clerkMiddleware(async (auth, req) => {
 
   if (isOnboardingPath(pathname)) {
     if (!isAuthenticated) {
-      return NextResponse.redirect(buildSignInUrl(req, pathname));
+      return NextResponse.redirect(buildSignInUrl(req, requestCallbackPath(req)));
     }
     return NextResponse.next();
   }
 
   if (pathname === POST_AUTH_CONTINUE_PATH || pathname.startsWith(`${POST_AUTH_CONTINUE_PATH}/`)) {
     if (!isAuthenticated) {
-      return NextResponse.redirect(buildSignInUrl(req, pathname));
+      return NextResponse.redirect(buildSignInUrl(req, requestCallbackPath(req)));
     }
     return NextResponse.next();
   }

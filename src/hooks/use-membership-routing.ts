@@ -8,6 +8,7 @@ import { useOrganizationOptional } from "@/context/organization-context";
 import { firebaseAuth } from "@/lib/firebase-auth-service";
 import {
   resolveMembershipRouting,
+  resolvePrimaryBranchMembership,
   type MembershipRoutingResult,
 } from "@/lib/auth/membership-routing";
 import { getWorkspaceType } from "@/lib/organization/workspace-type";
@@ -50,6 +51,14 @@ export function useMembershipRouting(_callbackUrl?: string) {
     // and derive locally instead of hitting /api/auth/routing.
     if (organization) {
       if (organization.loading) return null;
+      const primary = resolvePrimaryBranchMembership(
+        profile,
+        organization.branchMemberships
+      );
+      const churchId = primary?.churchId?.trim() || profile.churchId?.trim();
+      const church = churchId
+        ? organization.churches.find((item) => item.id === churchId)
+        : undefined;
       return resolveMembershipRouting({
         profile,
         membership: organization.membership,
@@ -57,6 +66,9 @@ export function useMembershipRouting(_callbackUrl?: string) {
         churchesCount: organization.churches.length,
         workspaceType: getWorkspaceType(organization.organization),
         organizationStatus: organization.organization?.status ?? null,
+        websiteSetupCompleted: profile.websiteSetupCompleted,
+        churchSlug: church?.slug,
+        activeTemplate: church?.activeTemplate,
       });
     }
     return null;

@@ -22,12 +22,15 @@ import {
   togglePlayback,
 } from "@/lib/playback-bridge";
 import { getSongArtistLine, getSongDisplayTitle } from "@/lib/song-firestore";
+import { contentItemHref } from "@/lib/content/item-href";
 import { contentCardGridClassName } from "@/lib/responsive-classes";
 import { cn, getSongCoverUrl } from "@/lib/utils";
 
 type FirebaseSongCardProps = {
   song: FirebaseSong;
   className?: string;
+  /** Collection base, e.g. `/songs` or `/c/{slug}/songs`. */
+  hrefPrefix?: string;
 };
 
 function SongCoverPlayControl({
@@ -96,13 +99,14 @@ function SongCoverPlayControl({
 export const FirebaseSongCard = React.memo(function FirebaseSongCard({
   song,
   className,
+  hrefPrefix = "/songs",
 }: FirebaseSongCardProps) {
   const [queue] = useQueue();
   const [currentIndex] = useCurrentSongIndex();
 
   if (!song.id?.trim()) return null;
 
-  const songHref = `/songs/${encodeURIComponent(song.id)}`;
+  const songHref = contentItemHref(hrefPrefix, song.id);
   const coverUrl = getSongCoverUrl(song.imageUrl);
   const displayTitle = getSongDisplayTitle(song);
   const artistLine = getSongArtistLine(song)?.trim() || song.category?.trim() || null;

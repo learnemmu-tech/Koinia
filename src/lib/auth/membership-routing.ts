@@ -1,5 +1,5 @@
 import type { FirestoreUser } from "@/lib/firebase-auth-service";
-import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
+import { isWorkspaceRoute, WORKSPACE_BASE } from "@/lib/dashboard-routes";
 import type { FirebaseBranchMembership } from "@/types/branch-membership";
 import type { MembershipStatus } from "@/types/membership";
 import { roleMeetsMinimum } from "@/types/membership";
@@ -8,19 +8,24 @@ import { isOrganizationAccessSuspended } from "@/lib/auth/organization-workspace
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { resolveSuperAdminPostAuthDestination } from "@/lib/auth/super-admin-routing";
 import { sanitizeCallbackUrl } from "@/lib/callback-url";
+import { churchWebsitePath } from "@/lib/templates/paths";
+import { resolvePublicTemplateId } from "@/lib/templates/resolver";
 
 import {
   ACCESS_DENIED_PATH,
   ACCOUNT_SUSPENDED_PATH,
   CREATE_WORKSPACE_PATH,
+  ONBOARDING_WEBSITE_PATH,
+  isChurchWebsiteAuthPath,
   isCreateWorkspacePath as isCreateWorkspacePathInternal,
   isInvitePath,
   isJoinPath,
   joinPathForSlug,
   MEMBERSHIP_REMOVED_PATH,
   ORGANIZATION_SUSPENDED_PATH,
+  parseChurchWebsiteSlugFromPath,
   parseJoinSlugFromPath,
-  POST_AUTH_CONTINUE_PATH,
+  isPostAuthContinuePath,
   WAITING_APPROVAL_PATH,
 } from "./auth-paths";
 import {
@@ -51,14 +56,25 @@ export type MembershipRoutingResult = {
   destination: string;
 };
 
-/** Regular approved members land on the public/member home, not the admin workspace. */
+/** Fallback app home for Signature members and unknown church context. */
 export const MEMBER_HOME_PATH = "/";
 
-const TERMINAL_BRANCH_STATUSES = new Set<MembershipStatus>([
-  "rejected",
-  "removed",
-  "suspended",
-]);
+/**
+ * Authenticated member landing path for the church they belong to.
+ * Heritage members stay on the church site (`/c/{slug}`). Signature members
+ * keep the existing FaithConnectHub app home. Admins are handled separately.
+ */
+export function memberExperiencePath(input: {
+  slug?: string | null;
+  activeTemplate?: string | null;
+}): string {
+  const slug = input.slug?.trim();
+  if (!slug) return MEMBER_HOME_PATH;
+  if (resolvePublicTemplateId(input.activeTemplate) === "heritage") {
+    return churchWebsitePath(slug);
+  }
+  return MEMBER_HOME_PATH;
+}
 
 export function routeForBranchMembershipStatus(
   status: MembershipStatus
@@ -99,10 +115,18 @@ export function resolvePrimaryBranchMembership(
     if (active) return active;
   }
 
-  const nonTerminal = branchMemberships.find(
-    (m) => !TERMINAL_BRANCH_STATUSES.has(m.status)
-  );
-  return nonTerminal ?? branchMemberships[0] ?? null;
+  const churchId = profile?.churchId?.trim();
+  if (churchId) {
+    const match = branchMemberships.find(
+      (m) => m.churchId === churchId || m.branchId === churchId
+    );
+    if (match) return match;
+  }
+
+  const active = branchMemberships.filter((m) => m.status === "active");
+  if (active.length === 1) return active[0]!;
+
+  return null;
 }
 
 /**
@@ -111,7 +135,8 @@ export function resolvePrimaryBranchMembership(
  */
 function resolveActiveWorkspaceDestination(
   accessInput: WorkspaceAccessInput,
-  branchMemberships: FirebaseBranchMembership[]
+  branchMemberships: FirebaseBranchMembership[],
+  churchSite?: { slug?: string | null; activeTemplate?: string | null }
 ): string {
   if (canAccessChurchManagement(accessInput)) {
     return WORKSPACE_BASE;
@@ -125,12 +150,15 @@ function resolveActiveWorkspaceDestination(
     return WORKSPACE_BASE;
   }
 
-  return MEMBER_HOME_PATH;
+  return memberExperiencePath(churchSite ?? {});
 }
 
 export type ResolveMembershipRoutingInput = WorkspaceAccessInput & {
   callbackUrl?: string | null;
   branchMemberships?: FirebaseBranchMembership[];
+  websiteSetupCompleted?: boolean;
+  churchSlug?: string | null;
+  activeTemplate?: string | null;
 };
 
 /**
@@ -145,6 +173,9 @@ export function resolveMembershipRouting({
   organizationStatus,
   callbackUrl,
   branchMemberships = [],
+  websiteSetupCompleted,
+  churchSlug,
+  activeTemplate,
 }: ResolveMembershipRoutingInput): MembershipRoutingResult {
   let sanitized = callbackUrl ? sanitizeCallbackUrl(callbackUrl, "") : "";
   if (
@@ -156,14 +187,19 @@ export function resolveMembershipRouting({
     sanitized.startsWith("/sso-callback/") ||
     sanitized === "/forgot-password" ||
     sanitized.startsWith("/forgot-password/") ||
-    sanitized === POST_AUTH_CONTINUE_PATH ||
-    sanitized.startsWith(`${POST_AUTH_CONTINUE_PATH}/`)
+    isChurchWebsiteAuthPath(sanitized) ||
+    isPostAuthContinuePath(sanitized)
   ) {
     sanitized = "";
   }
 
   if (isInvitePath(sanitized)) {
     return { status: "none", destination: sanitized };
+  }
+
+  const joinSlug = parseJoinSlugFromPath(sanitized);
+  if (joinSlug) {
+    return { status: "none", destination: joinPathForSlug(joinSlug) };
   }
 
   if (isPlatformSuperAdmin(profile?.platformRole)) {
@@ -216,21 +252,49 @@ export function resolveMembershipRouting({
     organizationStatus,
   };
 
-  const joinSlug = parseJoinSlugFromPath(sanitized);
-  if (joinSlug) {
-    return { status: "none", destination: joinPathForSlug(joinSlug) };
-  }
-
   const pgOnboardingDone = profile?.needsChurchOnboarding === false;
+  const callbackChurchSlug = parseChurchWebsiteSlugFromPath(sanitized);
 
   if (!pgOnboardingDone) {
+    if (callbackChurchSlug && !isChurchWebsiteAuthPath(sanitized)) {
+      return { status: "none", destination: joinPathForSlug(callbackChurchSlug) };
+    }
     return { status: "none", destination: CREATE_WORKSPACE_PATH };
+  }
+
+  const setupComplete =
+    websiteSetupCompleted ?? profile?.websiteSetupCompleted !== false;
+  if (!setupComplete) {
+    return { status: "none", destination: ONBOARDING_WEBSITE_PATH };
   }
 
   const roleAwareDefault = resolveActiveWorkspaceDestination(
     accessInput,
-    branchMemberships
+    branchMemberships,
+    { slug: churchSlug, activeTemplate }
   );
+
+  // The dashboard is for administrators only. A stored/forged `/dashboard`
+  // callback must never carry an ordinary member there.
+  if (
+    sanitized &&
+    roleAwareDefault !== WORKSPACE_BASE &&
+    isWorkspaceRoute(sanitized.split(/[?#]/)[0] ?? sanitized)
+  ) {
+    sanitized = "";
+  }
+
+  // A feature callback for a church the user does not belong to goes through
+  // that church's existing join flow — sign-in must never bypass approval.
+  if (
+    callbackChurchSlug &&
+    callbackChurchSlug.toLowerCase() !== (churchSlug?.trim().toLowerCase() ?? "")
+  ) {
+    return {
+      status: "active",
+      destination: joinPathForSlug(callbackChurchSlug),
+    };
+  }
 
   // Completed users who landed with an onboarding callback (e.g. Sign Up Google)
   // must not be forced into workspace creation — use role-aware home/dashboard.

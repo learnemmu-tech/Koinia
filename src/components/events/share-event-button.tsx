@@ -6,6 +6,7 @@ type ShareEventButtonProps = {
   description?: string;
   className?: string;
   label?: string;
+  path?: string;
 };
 
 export function ShareEventButton({
@@ -14,12 +15,13 @@ export function ShareEventButton({
   description,
   className,
   label,
+  path,
 }: ShareEventButtonProps) {
   return (
     <ShareContentButton
       title={title}
       description={description}
-      path={`/events/${encodeURIComponent(eventId)}`}
+      path={path ?? `/events/${encodeURIComponent(eventId)}`}
       className={className}
       label={label}
     />

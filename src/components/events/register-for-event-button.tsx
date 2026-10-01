@@ -16,6 +16,7 @@ type RegisterForEventButtonProps = {
   className?: string;
   /** Prefer primary CTA styling on Event Detail. */
   priority?: boolean;
+  signInCallbackPath?: string;
 };
 
 export function RegisterForEventButton({
@@ -23,6 +24,7 @@ export function RegisterForEventButton({
   eventTitle,
   className,
   priority = false,
+  signInCallbackPath,
 }: RegisterForEventButtonProps) {
   const { authUser, profile, loading, user } = useFirebaseAuth();
   const [registering, setRegistering] = useState(false);
@@ -126,7 +128,11 @@ export function RegisterForEventButton({
         size="sm"
         className={cn("rounded-full", className)}
       >
-        <Link href={`/signin?callbackUrl=/events/${eventId}`}>
+        <Link
+          href={`/signin?callbackUrl=${encodeURIComponent(
+            signInCallbackPath ?? `/events/${eventId}`
+          )}`}
+        >
           <Ticket className="mr-2 size-4" />
           Sign in to Register
         </Link>

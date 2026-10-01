@@ -3,56 +3,32 @@ import { cache } from "react";
 import type { FirebaseChurch } from "@/types/firebase-church";
 
 import type { TenantScope } from "@/lib/organization/tenant-scope";
+import type { TemplateId } from "@/lib/templates/types";
 
-import { getChurchByIdCached } from "./cached-church-data";
-import {
-  getActiveBranchIdFromCookies,
-  resolveActiveChurchId,
-} from "./church-server";
-import { postgresUuidOrEmpty } from "@/lib/postgres/uuid";
+import { resolveCurrentMemberChurchContext } from "@/lib/organization/resolve-current-church-server";
 
 export const getPageTenantContext = cache(async (): Promise<{
   scope: TenantScope;
   church: FirebaseChurch | null;
   defaultBranchId: string | null;
+  activeTemplate: TemplateId | null;
 }> => {
-  const churchId = await resolveActiveChurchId();
-  const church = churchId ? await getChurchByIdCached(churchId) : null;
-  const branchFromCookie = await getActiveBranchIdFromCookies();
-
-  const organizationId = church?.organizationId?.trim() || "";
-  const defaultBranchId = church?.defaultBranchId?.trim() || null;
-  const branchId =
-    postgresUuidOrEmpty(branchFromCookie) ||
-    postgresUuidOrEmpty(defaultBranchId);
+  const { scope, church, activeTemplate } =
+    await resolveCurrentMemberChurchContext();
 
   return {
-    scope: {
-      organizationId,
-      churchId: churchId || "",
-      branchId: branchId || undefined,
-    },
+    scope,
     church,
-    defaultBranchId,
+    defaultBranchId: church?.defaultBranchId?.trim() || null,
+    activeTemplate,
   };
 });
 
-
-
 /** @deprecated Use getPageTenantContext */
-
 export async function getPageChurchContext(): Promise<{
-
   churchId: string;
-
   church: FirebaseChurch | null;
-
 }> {
-
   const { scope, church } = await getPageTenantContext();
-
   return { churchId: scope.churchId ?? "", church };
-
 }
-
-

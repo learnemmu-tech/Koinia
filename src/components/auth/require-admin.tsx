@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
+import { useAuth } from "@clerk/nextjs";
 
 import { AuthLoading } from "@/components/auth/auth-loading";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useMembershipRouting } from "@/hooks/use-membership-routing";
 import { useWorkspaceAccess } from "@/hooks/use-workspace-access";
 import type { MembershipRoutingResult } from "@/lib/auth/membership-routing";
+import { canEnterDashboard } from "@/lib/auth/workspace-access";
 import { isWorkspaceRoute, WORKSPACE_BASE } from "@/lib/dashboard-routes";
 
 type RequireWorkspaceAccessProps = {
@@ -24,9 +26,6 @@ function shouldBlockForRouting(
   const { destination, status } = routing;
   if (destination === pathname) return false;
 
-  // Active workspace operators may freely navigate all /dashboard/* routes.
-  // Destination is a post-auth default landing, not a "must stay here" lock —
-  // otherwise a stale destination of "/" silently undoes every sidebar click.
   if (status === "active" && isWorkspaceRoute(pathname)) {
     if (
       canAccessWorkspace ||
@@ -40,11 +39,13 @@ function shouldBlockForRouting(
   return true;
 }
 
-/** Client-side guard — Firestore profile + membership are authoritative. */
 export function RequireWorkspaceAccess({ children }: RequireWorkspaceAccessProps) {
   const pathname = usePathname();
+  const { isLoaded, isSignedIn } = useAuth();
   const { user, loading: authLoading, profileReady } = useFirebaseAuth();
-  const { loading: workspaceLoading, canAccessWorkspace } = useWorkspaceAccess();
+  const { loading: workspaceLoading, input: workspaceInput } = useWorkspaceAccess();
+  // Dashboard access is administrative, not "any active member".
+  const canAccessWorkspace = canEnterDashboard(workspaceInput);
   const { routing, loading: routingLoading } = useMembershipRouting();
   const router = useRouter();
 
@@ -52,10 +53,12 @@ export function RequireWorkspaceAccess({ children }: RequireWorkspaceAccessProps
     Boolean(user) && !canAccessWorkspace && routingLoading;
 
   React.useEffect(() => {
-    if (authLoading || !profileReady || workspaceLoading || needsRoutingCheck) return;
-
-    if (!user) {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
       router.replace(`/signin?callbackUrl=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    if (authLoading || !profileReady || workspaceLoading || needsRoutingCheck) {
       return;
     }
 
@@ -63,6 +66,8 @@ export function RequireWorkspaceAccess({ children }: RequireWorkspaceAccessProps
       router.replace(routing.destination);
     }
   }, [
+    isLoaded,
+    isSignedIn,
     user,
     authLoading,
     workspaceLoading,
@@ -74,6 +79,8 @@ export function RequireWorkspaceAccess({ children }: RequireWorkspaceAccessProps
     canAccessWorkspace,
   ]);
 
+  if (!isLoaded) return <AuthLoading />;
+  if (!isSignedIn) return <AuthLoading />;
   if (authLoading || !profileReady) return <AuthLoading />;
   if (!user) return <AuthLoading />;
 

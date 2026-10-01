@@ -43,6 +43,7 @@ const UPLOAD_KINDS: StorageUploadKind[] = [
   "donation",
   "book",
   "group",
+  "church-website",
 ];
 
 function isUploadKind(value: string | null): value is StorageUploadKind {
@@ -206,6 +207,7 @@ function isAuthorizedReplaceUrl(
     donation: `donations/${entityId}/`,
     book: `books/${entityId}/`,
     group: `groups/${entityId}/`,
+    "church-website": `churches/${entityId}/`,
   };
 
   const prefix = prefixes[kind];
@@ -247,7 +249,7 @@ async function authorizeUpload(
 
   let churchId: string | null = null;
 
-  if (kind === "church-logo" || kind === "church-cover") {
+  if (kind === "church-logo" || kind === "church-cover" || kind === "church-website") {
     const church = await getChurchById(entityId);
     churchId = church?.id ?? null;
   } else if (kind === "song") {
@@ -333,7 +335,7 @@ export async function POST(request: NextRequest) {
     try {
       if (kind === "organization-logo") {
         await assertSubscriptionWritable(entityId);
-      } else if (kind === "church-logo" || kind === "church-cover") {
+      } else if (kind === "church-logo" || kind === "church-cover" || kind === "church-website") {
         await assertChurchContentWritable(entityId);
       } else if (kind === "group") {
         const { getChurchGroupDetail } = await import("@/lib/postgres/groups");

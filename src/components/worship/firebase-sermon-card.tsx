@@ -8,20 +8,23 @@ import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { formatContentDate } from "@/lib/content-date";
+import { contentItemHref } from "@/lib/content/item-href";
 import { cn, getSongCoverUrl } from "@/lib/utils";
 
 type FirebaseSermonCardProps = {
   sermon: FirebaseSermon;
   className?: string;
+  hrefPrefix?: string;
 };
 
 export const FirebaseSermonCard = React.memo(function FirebaseSermonCard({
   sermon,
   className,
+  hrefPrefix = "/sermons",
 }: FirebaseSermonCardProps) {
   if (!sermon.id?.trim()) return null;
 
-  const href = `/sermons/${encodeURIComponent(sermon.id)}`;
+  const href = contentItemHref(hrefPrefix, sermon.id);
   const coverUrl = getSongCoverUrl(sermon.coverImage);
   const scripture = sermon.scriptureReference.trim();
   const excerpt = sermon.shortDescription || sermon.subtitle;

@@ -4,19 +4,21 @@ import type { FirebaseArticle } from "@/types/firebase-article";
 
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
-import {
-  formatArticleDate,
-  getReadingTimeMinutes,
-} from "@/lib/article-utils";
+import { formatArticleDate, getReadingTimeMinutes } from "@/lib/article-utils";
+import { contentItemHref } from "@/lib/content/item-href";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { contentCardGridClassName } from "@/lib/responsive-classes";
 import { getSongCoverUrl } from "@/lib/utils";
 
 type RelatedArticlesProps = {
   articles: FirebaseArticle[];
+  hrefPrefix?: string;
 };
 
-export function RelatedArticles({ articles }: RelatedArticlesProps) {
+export function RelatedArticles({
+  articles,
+  hrefPrefix = "/articles",
+}: RelatedArticlesProps) {
   if (articles.length === 0) return null;
 
   return (
@@ -35,7 +37,7 @@ export function RelatedArticles({ articles }: RelatedArticlesProps) {
           return (
             <Link
               key={article.id}
-              href={`/articles/${encodeURIComponent(article.id)}`}
+              href={contentItemHref(hrefPrefix, article.id)}
               className="group flex flex-col gap-3"
             >
               <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-muted">

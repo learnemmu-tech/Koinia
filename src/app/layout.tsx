@@ -13,10 +13,10 @@ import { Analytics } from "@vercel/analytics/react";
 import { RootClientShell } from "@/components/root-client-shell";
 import { siteConfig } from "@/config/site";
 import { LOCALE_COOKIE, parseLocale } from "@/i18n/config";
-import { POST_AUTH_CONTINUE_HOME } from "@/lib/auth/auth-paths";
+import { POST_AUTH_CONTINUE_HOME, CREATE_WORKSPACE_PATH } from "@/lib/auth/auth-paths";
 import { env } from "@/lib/env";
 import { SEO_KEYWORDS } from "@/lib/seo";
-import { getActiveChurchIdFromCookies } from "@/lib/church-server";
+import { getActiveChurchIdFromCookies, resolveActiveChurchId } from "@/lib/church-server";
 import * as fonts from "@/lib/fonts";
 import { absoluteUrl, cn } from "@/lib/utils";
 import { Noto_Sans, Noto_Sans_Telugu } from "next/font/google";
@@ -45,7 +45,9 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
     themeConfig?.value ?? '{"theme":"default","radius":"default"}'
   ) as ThemeConfig;
 
-  const initialActiveChurchId = await getActiveChurchIdFromCookies();
+  const resolvedChurchId = await resolveActiveChurchId();
+  const cookieChurchId = await getActiveChurchIdFromCookies();
+  const initialActiveChurchId = resolvedChurchId || cookieChurchId;
   const locale = parseLocale(cookieStore.get(LOCALE_COOKIE)?.value);
 
   return (
@@ -68,7 +70,7 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
             signUpUrl="/signup"
             afterSignOutUrl="/signin"
             signInFallbackRedirectUrl={POST_AUTH_CONTINUE_HOME}
-            signUpFallbackRedirectUrl={POST_AUTH_CONTINUE_HOME}
+            signUpFallbackRedirectUrl={CREATE_WORKSPACE_PATH}
           >
             <RootClientShell
               initialActiveChurchId={initialActiveChurchId}

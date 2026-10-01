@@ -30,6 +30,7 @@ export default async function ShepherdPage() {
       <ShepherdChat
         initialMode={context.mode}
         displayName={context.displayName}
+        churchId={context.churchId}
       />
     </div>
   );

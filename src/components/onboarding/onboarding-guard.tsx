@@ -2,8 +2,17 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 
-import { isOnboardingPath, isOnboardingSuccessPath, SUPER_ADMIN_BASE, WAITING_APPROVAL_PATH } from "@/lib/auth/auth-paths";
+import {
+  CREATE_WORKSPACE_PATH,
+  isOnboardingFormPath,
+  isOnboardingSuccessPath,
+  isOnboardingWebsitePath,
+  ONBOARDING_WEBSITE_PATH,
+  SUPER_ADMIN_BASE,
+  WAITING_APPROVAL_PATH,
+} from "@/lib/auth/auth-paths";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { shouldRedirectAuthenticatedSuperAdminFromPath } from "@/lib/auth/super-admin-routing";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
@@ -18,6 +27,8 @@ const EXEMPT_PATH_PREFIXES = [
   "/auth/continue",
   "/join/",
   "/invite/",
+  "/c/",
+  "/preview/website",
   "/access-denied",
   "/membership-removed",
   "/account-suspended",
@@ -32,16 +43,16 @@ function isExemptPath(pathname: string): boolean {
 }
 
 /**
- * Single routing decision for workspace onboarding state.
- * Runs only after auth + profile are ready (see WorkspaceBootstrapGate).
+ * First-time flow:
+ * onboarding form → website templates → success → dashboard.
+ * Never sends a brand-new church to Dashboard while website setup is open.
  */
 export function OnboardingGuard() {
   const router = useRouter();
   const pathname = usePathname();
+  const { isLoaded, isSignedIn } = useAuth();
   const { authUser, profile, profileReady } = useFirebaseAuth();
-  const {
-    isMembershipPending,
-  } = useWorkspaceAccess();
+  const { isMembershipPending } = useWorkspaceAccess();
   const routedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -49,6 +60,8 @@ export function OnboardingGuard() {
   }, [pathname]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) return;
     if (!authUser || !profileReady) return;
     if (routedRef.current === pathname) return;
 
@@ -68,27 +81,54 @@ export function OnboardingGuard() {
       return;
     }
 
-    if (isOnboardingPath(pathname)) {
-      if (
-        profile?.needsChurchOnboarding === false &&
-        !isOnboardingSuccessPath(pathname)
-      ) {
+    const onboardingDone = profile?.needsChurchOnboarding === false;
+    const websiteSetupDone = profile?.websiteSetupCompleted !== false;
+
+    if (isOnboardingFormPath(pathname)) {
+      if (!onboardingDone) return;
+      routedRef.current = pathname;
+      router.replace(
+        websiteSetupDone ? WORKSPACE_BASE : ONBOARDING_WEBSITE_PATH
+      );
+      return;
+    }
+
+    if (isOnboardingWebsitePath(pathname)) {
+      if (!onboardingDone) {
         routedRef.current = pathname;
-        router.replace(WORKSPACE_BASE);
+        router.replace(CREATE_WORKSPACE_PATH);
+      }
+      return;
+    }
+
+    if (isOnboardingSuccessPath(pathname)) {
+      if (!onboardingDone) {
+        routedRef.current = pathname;
+        router.replace(CREATE_WORKSPACE_PATH);
+        return;
+      }
+      if (!websiteSetupDone) {
+        routedRef.current = pathname;
+        router.replace(ONBOARDING_WEBSITE_PATH);
       }
       return;
     }
 
     if (isExemptPath(pathname)) return;
 
-    const onboardingIncomplete =
-      !profile || profile.needsChurchOnboarding === true;
-
-    if (onboardingIncomplete) {
+    if (!onboardingDone) {
       routedRef.current = pathname;
-      router.replace("/onboarding");
+      router.replace(CREATE_WORKSPACE_PATH);
+      return;
+    }
+
+    if (!websiteSetupDone) {
+      routedRef.current = pathname;
+      router.replace(ONBOARDING_WEBSITE_PATH);
     }
   }, [
+    isLoaded,
+    isSignedIn,
     authUser,
     profileReady,
     pathname,

@@ -18,13 +18,16 @@ async function parseJson<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function authHeaders(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}` };
+function authHeaders(token: string, churchId?: string): HeadersInit {
+  return {
+    Authorization: `Bearer ${token}`,
+    ...(churchId ? { "x-fch-church-id": churchId } : {}),
+  };
 }
 
 export async function fetchCommunityMessages(
   token: string,
-  options?: { before?: string; limit?: number }
+  options?: { before?: string; limit?: number; churchId?: string }
 ): Promise<CommunityChatPage> {
   const params = new URLSearchParams();
   if (options?.before) params.set("before", options.before);
@@ -32,17 +35,18 @@ export async function fetchCommunityMessages(
   const query = params.toString();
   const response = await fetch(
     query ? `/api/community/messages?${query}` : "/api/community/messages",
-    { headers: authHeaders(token), cache: "no-store" }
+    { headers: authHeaders(token, options?.churchId), cache: "no-store" }
   );
   return parseJson<CommunityChatPage>(response);
 }
 
 export async function fetchCommunityThread(
   messageId: string,
-  token: string
+  token: string,
+  churchId?: string
 ): Promise<CommunityChatThread> {
   const response = await fetch(`/api/community/messages/${messageId}/replies`, {
-    headers: authHeaders(token),
+    headers: authHeaders(token, churchId),
     cache: "no-store",
   });
   return parseJson<CommunityChatThread>(response);
@@ -51,17 +55,19 @@ export async function fetchCommunityThread(
 export async function sendCommunityMessage(
   content: string,
   token: string,
-  replyToMessageId?: string
+  replyToMessageId?: string,
+  churchId?: string
 ): Promise<CommunityChatMessage> {
   const response = await fetch("/api/community/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...authHeaders(token),
+      ...authHeaders(token, churchId),
     },
     body: JSON.stringify({
       content,
       ...(replyToMessageId ? { replyToMessageId } : {}),
+      ...(churchId ? { churchId } : {}),
     }),
   });
   return parseJson<CommunityChatMessage>(response);
@@ -70,26 +76,28 @@ export async function sendCommunityMessage(
 export async function editCommunityMessage(
   messageId: string,
   content: string,
-  token: string
+  token: string,
+  churchId?: string
 ): Promise<CommunityChatMessage> {
   const response = await fetch(`/api/community/messages/${messageId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      ...authHeaders(token),
+      ...authHeaders(token, churchId),
     },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, ...(churchId ? { churchId } : {}) }),
   });
   return parseJson<CommunityChatMessage>(response);
 }
 
 export async function deleteCommunityMessage(
   messageId: string,
-  token: string
+  token: string,
+  churchId?: string
 ): Promise<CommunityChatMessage> {
   const response = await fetch(`/api/community/messages/${messageId}`, {
     method: "DELETE",
-    headers: authHeaders(token),
+    headers: authHeaders(token, churchId),
   });
   return parseJson<CommunityChatMessage>(response);
 }
@@ -97,7 +105,8 @@ export async function deleteCommunityMessage(
 export async function toggleCommunityReaction(
   messageId: string,
   reactionType: string,
-  token: string
+  token: string,
+  churchId?: string
 ): Promise<CommunityChatReactionResult> {
   const response = await fetch(
     `/api/community/messages/${messageId}/reactions`,
@@ -105,9 +114,12 @@ export async function toggleCommunityReaction(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...authHeaders(token),
+        ...authHeaders(token, churchId),
       },
-      body: JSON.stringify({ reactionType }),
+      body: JSON.stringify({
+        reactionType,
+        ...(churchId ? { churchId } : {}),
+      }),
     }
   );
   return parseJson<CommunityChatReactionResult>(response);
@@ -116,15 +128,16 @@ export async function toggleCommunityReaction(
 export async function reportCommunityMessage(
   messageId: string,
   reason: string,
-  token: string
+  token: string,
+  churchId?: string
 ): Promise<CommunityChatReportResult> {
   const response = await fetch(`/api/community/messages/${messageId}/reports`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...authHeaders(token),
+      ...authHeaders(token, churchId),
     },
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify({ reason, ...(churchId ? { churchId } : {}) }),
   });
   return parseJson<CommunityChatReportResult>(response);
 }

@@ -122,7 +122,7 @@ export function CommunityChatPanel({
     queryFn: async () => {
       const token = await getToken();
       if (!token) throw new Error("Sign in to view this conversation.");
-      return fetchCommunityMessages(token);
+      return fetchCommunityMessages(token, { churchId });
     },
   });
 
@@ -232,7 +232,7 @@ export function CommunityChatPanel({
     }) => {
       const token = await getToken();
       if (!token) throw new Error("Sign in to send a message.");
-      return sendCommunityMessage(content, token, replyToId);
+      return sendCommunityMessage(content, token, replyToId, churchId);
     },
     onSuccess: (message, variables) => {
       if (variables.replyToId) {
@@ -253,7 +253,7 @@ export function CommunityChatPanel({
     mutationFn: async ({ id, content }: { id: string; content: string }) => {
       const token = await getToken();
       if (!token) throw new Error("Sign in to edit a message.");
-      return editCommunityMessage(id, content, token);
+      return editCommunityMessage(id, content, token, churchId);
     },
     onSuccess: (message) => {
       patchMessage(message);
@@ -268,7 +268,7 @@ export function CommunityChatPanel({
     mutationFn: async (id: string) => {
       const token = await getToken();
       if (!token) throw new Error("Sign in to delete a message.");
-      return deleteCommunityMessage(id, token);
+      return deleteCommunityMessage(id, token, churchId);
     },
     onSuccess: (message) => {
       patchMessage(message);
@@ -290,7 +290,7 @@ export function CommunityChatPanel({
     }) => {
       const token = await getToken();
       if (!token) throw new Error("Sign in to react.");
-      return toggleCommunityReaction(id, type, token);
+      return toggleCommunityReaction(id, type, token, churchId);
     },
     onSuccess: (result) => {
       applyReactions(result.messageId, result.reactions);
@@ -304,7 +304,7 @@ export function CommunityChatPanel({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const token = await getToken();
       if (!token) throw new Error("Sign in to report a message.");
-      return reportCommunityMessage(id, reason, token);
+      return reportCommunityMessage(id, reason, token, churchId);
     },
     onSuccess: (result) => {
       setReportTarget(null);
@@ -340,6 +340,7 @@ export function CommunityChatPanel({
     try {
       const page = await fetchCommunityMessages(token, {
         before: messages[0].createdAt,
+        churchId,
       });
       setHasMore(page.hasMore);
       queryClient.setQueryData<ChatCache>(queryKey, (current) => {

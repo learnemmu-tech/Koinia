@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="Heritage architectural placeholder">
+  <rect width="1600" height="900" fill="#24352F"/>
+  <rect y="540" width="1600" height="360" fill="#1A2723"/>
+  <rect x="430" y="210" width="740" height="560" fill="#3A1820"/>
+  <polygon points="430,210 800,70 1170,210" fill="#2B1016"/>
+  <rect x="760" y="620" width="80" height="150" fill="#F5F1E8"/>
+  <rect x="520" y="320" width="90" height="140" fill="#A27A3A" opacity="0.45"/>
+  <rect x="990" y="320" width="90" height="140" fill="#A27A3A" opacity="0.45"/>
+  <rect x="760" y="300" width="80" height="180" fill="#ECE5D9" opacity="0.25"/>
+</svg>

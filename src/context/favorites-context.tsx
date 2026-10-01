@@ -38,7 +38,7 @@ export function FavoritesProvider({ children }: React.PropsWithChildren) {
   const { data: favorites = [], isLoading } = useQuery({
     queryKey: ["user-favorites", user?.uid],
     enabled: Boolean(user?.uid),
-    queryFn: () => fetchUserFavorites(user!.uid),
+    queryFn: () => fetchUserFavorites(),
     staleTime: QUERY_STALE_TIME,
     gcTime: QUERY_GC_TIME,
   });
@@ -67,14 +67,14 @@ export function FavoritesProvider({ children }: React.PropsWithChildren) {
       if (!trimmedId) return;
 
       if (isFavorited(itemType, trimmedId)) {
-        await removeFavorite(user.uid, itemType, trimmedId);
+        await removeFavorite(itemType, trimmedId);
         await queryClient.invalidateQueries({
           queryKey: ["user-favorites", user.uid],
         });
         return;
       }
 
-      await addFavorite(user.uid, itemType, trimmedId);
+      await addFavorite(itemType, trimmedId);
       await queryClient.invalidateQueries({
         queryKey: ["user-favorites", user.uid],
       });

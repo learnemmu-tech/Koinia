@@ -48,6 +48,7 @@ import { useTenantNotifyFields } from "@/hooks/use-tenant-notify-fields";
 import { uploadSongFileLocal } from "@/lib/local-upload";
 import { MAX_IMAGE_SIZE_LABEL, validateImageFile } from "@/lib/upload-limits";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useSubscriptionOptional } from "@/context/subscription-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
 import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 
@@ -73,6 +74,7 @@ export function AddEventModal({
   const tForms = useTranslations("forms");
   const tErrors = useTranslations("errors");
   const { user } = useFirebaseAuth();
+  const subscription = useSubscriptionOptional();
   const { invalidateEvents } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
   useTrialWriteMountGuard(
@@ -156,6 +158,9 @@ export function AddEventModal({
   }
 
   async function onSubmit(values: EventFormValues) {
+    if (!initialEvent && subscription && !subscription.checkUsageLimit("events")) {
+      return;
+    }
     setLoading(true);
     try {
       const idToken = user ? await user.getIdToken() : undefined;

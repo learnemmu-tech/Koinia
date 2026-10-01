@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import type { FirestoreUser } from "@/lib/firebase-auth-service";
+import { isWebsiteSetupCompleted } from "@/lib/postgres/church-websites";
 
 export type AppUserRow = typeof users.$inferSelect;
 
@@ -27,6 +28,7 @@ export function mapAppUserToProfile(row: AppUserRow): FirestoreUser {
     platformRole: row.platformRole,
     organizationId: row.organizationId ?? undefined,
     needsChurchOnboarding: row.needsChurchOnboarding,
+    websiteSetupCompleted: true,
     churchId,
     activeBranchId: churchId,
     pendingBranchId: row.pendingChurchId ?? undefined,
@@ -80,4 +82,18 @@ export async function markAppUserOnboardingComplete(
       updatedAt: now,
     })
     .where(eq(users.clerkId, id));
+}
+
+export async function mapAppUserToProfileWithWebsite(
+  row: AppUserRow
+): Promise<FirestoreUser> {
+  const profile = mapAppUserToProfile(row);
+  if (row.needsChurchOnboarding) {
+    return profile;
+  }
+  profile.websiteSetupCompleted = await isWebsiteSetupCompleted(
+    row.activeChurchId,
+    row.organizationId
+  );
+  return profile;
 }

@@ -18,15 +18,16 @@ export function GlobalAudioPlayerShell({
   return (
     <>
       <div
+        key="global-audio-player-page"
         className={cn(
           "min-h-0 has-[[data-page-fullbleed]]:h-svh has-[[data-page-fullbleed]]:max-h-svh has-[[data-page-fullbleed]]:overflow-hidden",
           showPlayer &&
             "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pb-[calc(5.625rem+env(safe-area-inset-bottom,0px))]"
         )}
       >
-        {children}
+        {React.Children.toArray(children)}
       </div>
-      <Player />
+      <Player key="global-audio-player" />
     </>
   );
 }

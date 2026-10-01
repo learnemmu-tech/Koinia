@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 import { completeDonationPayment } from "@/lib/donation-server";
 import { getDonationById } from "@/lib/postgres/features";
+import { rateLimitDonationCheckout } from "@/lib/rate-limit";
 
 function verifyRazorpaySignature(
   orderId: string,
@@ -29,8 +30,24 @@ function verifyRazorpaySignature(
   }
 }
 
+function clientIp(request: Request): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown"
+  );
+}
+
 export async function POST(request: Request) {
   try {
+    const rate = await rateLimitDonationCheckout(clientIp(request));
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many donation attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = (await request.json()) as {
       donationId?: string;
       campaignId?: string;
@@ -72,6 +89,14 @@ export async function POST(request: Request) {
 
     if (donation.paymentProvider !== "razorpay") {
       return NextResponse.json({ error: "Invalid payment provider." }, { status: 400 });
+    }
+
+    if (donation.paymentStatus === "completed") {
+      return NextResponse.json({ success: true });
+    }
+
+    if (donation.paymentStatus !== "pending") {
+      return NextResponse.json({ error: "Donation is not pending." }, { status: 400 });
     }
 
     await completeDonationPayment({

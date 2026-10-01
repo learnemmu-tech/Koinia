@@ -4,6 +4,7 @@ import {
   clearJoinIntentCookieOnResponse,
   setJoinIntentCookieOnResponse,
 } from "@/lib/auth/join-intent-cookie";
+import { setActiveChurchCookieOnResponse } from "@/lib/church-server";
 import { getClerkIdentity, verifyBearerToken } from "@/lib/email/verify-auth";
 import {
   getChurchByJoinSlug,
@@ -62,12 +63,18 @@ export async function POST(request: Request, context: RouteContext) {
     const result = await joinUserToChurchBySlug(verified.uid, slug, {
       emailVerified: identity?.emailVerified ?? false,
     });
-    return clearJoinIntentCookieOnResponse(
-      NextResponse.json({
-        churchName: result.churchName,
-        status: result.status,
-      })
-    );
+    let response = NextResponse.json({
+      churchName: result.churchName,
+      status: result.status,
+      churchId: result.churchId,
+      organizationId: result.organizationId,
+      slug: result.slug,
+      activeTemplate: result.activeTemplate,
+    });
+    // Join intent survives waiting-approval: this church is the destination
+    // after the membership becomes active.
+    response = setActiveChurchCookieOnResponse(response, result.churchId);
+    return clearJoinIntentCookieOnResponse(response);
   } catch (error) {
     console.error("[api/join]", error);
     return NextResponse.json(

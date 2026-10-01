@@ -5,7 +5,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { triggerWelcomeEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { getSuperAdminBootstrapEmail } from "@/lib/auth/platform-role";
-import { getAppUserByClerkId, mapAppUserToProfile } from "@/lib/postgres/app-user";
+import { getAppUserByClerkId, mapAppUserToProfileWithWebsite } from "@/lib/postgres/app-user";
 import { upsertAppUserFromClerk } from "@/lib/postgres/upsert-app-user";
 import { timed } from "@/lib/perf";
 
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(mapAppUserToProfile(appUser));
+  return NextResponse.json(await mapAppUserToProfileWithWebsite(appUser));
 }
 
 export async function POST(request: Request) {
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   }
 
   if (existing && !mayNeedBootstrap && !needsClerkRefresh) {
-    return NextResponse.json(mapAppUserToProfile(existing));
+    return NextResponse.json(await mapAppUserToProfileWithWebsite(existing));
   }
 
   const email =
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
 
   if (!email) {
     if (existing) {
-      return NextResponse.json(mapAppUserToProfile(existing));
+      return NextResponse.json(await mapAppUserToProfileWithWebsite(existing));
     }
     return NextResponse.json(
       { error: "Unable to sync profile because no email was available." },
@@ -142,5 +142,10 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json(syncResult.profile);
+  const latest = await getAppUserByClerkId(uid);
+  return NextResponse.json(
+    latest
+      ? await mapAppUserToProfileWithWebsite(latest)
+      : syncResult.profile
+  );
 }

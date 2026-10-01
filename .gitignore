@@ -75,6 +75,11 @@ web_modules/
 .env.*
 !.env.example
 
+# Local audit / CDP artifacts (never deploy)
+tmp-heritage-shots/
+cdp.mjs
+eslint-report.json
+
 # Legacy local upload leftovers (production uses Supabase Storage)
 public/uploads/
 

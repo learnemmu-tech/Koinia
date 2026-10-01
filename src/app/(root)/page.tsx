@@ -10,7 +10,7 @@ import { getPageTenantContext } from "@/lib/church-page-data";
 import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { buildPageMetadata } from "@/lib/seo";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 const title = "Christian Worship & Ministry Platform";
 const description =

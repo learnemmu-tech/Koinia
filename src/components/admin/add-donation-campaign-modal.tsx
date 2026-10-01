@@ -45,6 +45,7 @@ import {
   type DonationCampaignFormValues,
 } from "@/lib/donation-form-validation";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import { useSubscriptionOptional } from "@/context/subscription-context";
 import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries";
 import { useTrialWriteMountGuard } from "@/components/subscription/trial-write-guard";
 import { notifyIfDonationCampaignPublished } from "@/lib/notify-if-published";
@@ -74,6 +75,7 @@ export function AddDonationCampaignModal({
   const tForms = useTranslations("forms");
   const tErrors = useTranslations("errors");
   const { user } = useFirebaseAuth();
+  const subscription = useSubscriptionOptional();
   const { invalidateDonations } = useInvalidateAdminQueries();
   const tenantFields = useTenantNotifyFields();
   useTrialWriteMountGuard(
@@ -143,6 +145,13 @@ export function AddDonationCampaignModal({
   }
 
   async function onSubmit(values: DonationCampaignFormValues) {
+    if (
+      !initialCampaign &&
+      subscription &&
+      !subscription.checkUsageLimit("donationCampaigns")
+    ) {
+      return;
+    }
     setLoading(true);
     try {
       const idToken = user ? await user.getIdToken() : undefined;

@@ -23,6 +23,7 @@ type EventsListClientProps = {
   initialUpcoming: FirebaseEvent[];
   initialPast: FirebaseEvent[];
   isPlatformPublic?: boolean;
+  hrefPrefix?: string;
 };
 
 function matchesSearch(event: FirebaseEvent, query: string): boolean {
@@ -34,6 +35,7 @@ export function EventsListClient({
   initialUpcoming,
   initialPast,
   isPlatformPublic = false,
+  hrefPrefix,
 }: EventsListClientProps) {
   const t = useTranslations("events");
   const initialCombined = useMemo(
@@ -105,6 +107,7 @@ export function EventsListClient({
               title={t("upcomingTitle")}
               events={filteredUpcoming}
               emptyMessage={t("noUpcoming")}
+              hrefPrefix={hrefPrefix}
             />
           : null}
           {showPast ?
@@ -112,6 +115,7 @@ export function EventsListClient({
               title={t("pastTitle")}
               events={filteredPast}
               emptyMessage={t("noPast")}
+              hrefPrefix={hrefPrefix}
             />
           : null}
         </div>
@@ -130,10 +134,12 @@ function EventsSection({
   title,
   events,
   emptyMessage,
+  hrefPrefix,
 }: {
   title: string;
   events: FirebaseEvent[];
   emptyMessage: string;
+  hrefPrefix?: string;
 }) {
   return (
     <section className="space-y-4">
@@ -144,7 +150,7 @@ function EventsSection({
         </div>
       : <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {events.map((event) => (
-            <EventCard key={event.id} event={event} />
+            <EventCard key={event.id} event={event} hrefPrefix={hrefPrefix} />
           ))}
         </div>
       }

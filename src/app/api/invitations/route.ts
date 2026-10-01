@@ -111,17 +111,12 @@ export async function POST(request: Request) {
       invitedBy: decoded.uid,
     });
 
-    const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-    const vercelUrl = process.env.VERCEL_URL?.trim();
-    const baseUrl = configuredAppUrl
-      ? configuredAppUrl.replace(/\/$/, "")
-      : vercelUrl
-        ? `https://${vercelUrl.replace(/^https?:\/\//, "")}`
-        : process.env.NODE_ENV === "production"
-          ? null
-          : "http://localhost:3000";
-
-    if (!baseUrl) {
+    const { resolveAppOrigin } = await import("@/lib/join-url");
+    const baseUrl = resolveAppOrigin();
+    if (
+      process.env.NODE_ENV === "production" &&
+      /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(baseUrl)
+    ) {
       return NextResponse.json(
         { error: "NEXT_PUBLIC_APP_URL is not configured." },
         { status: 500 }

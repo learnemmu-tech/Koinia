@@ -20,6 +20,7 @@ export type SubscriptionUsage = {
   admins: number;
   events: number;
   donationCampaigns: number;
+  books: number;
   shorts: number;
   prayerRequests: number;
 };

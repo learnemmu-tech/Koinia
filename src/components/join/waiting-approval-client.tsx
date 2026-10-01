@@ -10,23 +10,68 @@ import { AuthLoading } from "@/components/auth/auth-loading";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
-import { ACCESS_DENIED_PATH } from "@/lib/auth/auth-paths";
+import { useActiveChurch } from "@/context/active-church-context";
+import { ACCESS_DENIED_PATH, WAITING_APPROVAL_PATH } from "@/lib/auth/auth-paths";
+import {
+  MEMBER_HOME_PATH,
+  memberExperiencePath,
+} from "@/lib/auth/membership-routing";
+import { persistActiveChurchCookie } from "@/lib/church-cookies";
 import { firebaseAuth } from "@/lib/firebase-auth-service";
+import type { TemplateId } from "@/lib/templates/types";
 
 type PendingJoinStatus = {
   churchName: string;
   slug: string;
+  churchId?: string;
   branchId: string;
+  organizationId?: string;
+  activeTemplate?: TemplateId | null;
   status: "pending" | "active";
 };
 
 const REDIRECT_SECONDS = 3;
 const WELCOME_SESSION_KEY = "fc_pending_welcome";
-const MEMBER_HOME = "/";
+
+function destinationFromPending(pending: PendingJoinStatus | null): string {
+  return memberExperiencePath({
+    slug: pending?.slug,
+    activeTemplate: pending?.activeTemplate,
+  });
+}
+
+async function fetchSessionMemberDestination(): Promise<string> {
+  const user = firebaseAuth.currentUser;
+  if (!user) return MEMBER_HOME_PATH;
+  try {
+    const token = await user.getIdToken();
+    const res = await fetch("/api/auth/routing", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return MEMBER_HOME_PATH;
+    const data = (await res.json()) as { destination?: string };
+    const destination = data.destination?.trim();
+    if (
+      destination &&
+      destination !== WAITING_APPROVAL_PATH &&
+      !destination.startsWith(`${WAITING_APPROVAL_PATH}/`)
+    ) {
+      return destination;
+    }
+  } catch {
+    // Fall through to the generic member home.
+  }
+  return MEMBER_HOME_PATH;
+}
+
+function churchIdFromPending(pending: PendingJoinStatus | null): string {
+  return pending?.churchId?.trim() || pending?.branchId?.trim() || "";
+}
 
 export function WaitingApprovalClient() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { setActiveChurchId } = useActiveChurch();
   const { authUser, loading: authLoading, refreshProfile } = useFirebaseAuth();
   const [pending, setPending] = useState<PendingJoinStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,21 +80,32 @@ export function WaitingApprovalClient() {
   const redirectStartedRef = useRef(false);
   const navigatedRef = useRef(false);
 
+  const rememberJoinedChurch = useCallback(
+    (next: PendingJoinStatus | null) => {
+      const churchId = churchIdFromPending(next);
+      if (!churchId) return;
+      persistActiveChurchCookie(churchId);
+      setActiveChurchId(churchId);
+    },
+    [setActiveChurchId]
+  );
+
   const handleApproved = useCallback(
-    (churchName: string) => {
+    (next: PendingJoinStatus) => {
       if (redirectStartedRef.current) return;
       redirectStartedRef.current = true;
 
-      setPending((current) =>
-        current
-          ? { ...current, churchName, status: "active" }
-          : { churchName, slug: "", branchId: "", status: "active" }
-      );
+      const churchId = churchIdFromPending(next);
+      if (churchId) {
+        rememberJoinedChurch(next);
+      }
+
+      setPending({ ...next, status: "active" });
       setIsApproved(true);
       setCountdown(REDIRECT_SECONDS);
 
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem(WELCOME_SESSION_KEY, churchName);
+      if (typeof window !== "undefined" && next.churchName.trim()) {
+        sessionStorage.setItem(WELCOME_SESSION_KEY, next.churchName);
       }
 
       void (async () => {
@@ -60,7 +116,7 @@ export function WaitingApprovalClient() {
         ]);
       })();
     },
-    [queryClient, refreshProfile]
+    [queryClient, refreshProfile, rememberJoinedChurch]
   );
 
   useEffect(() => {
@@ -88,16 +144,17 @@ export function WaitingApprovalClient() {
         }
         const data = (await res.json()) as { pending: PendingJoinStatus | null };
         if (data.pending) {
+          rememberJoinedChurch(data.pending);
           setPending(data.pending);
           if (data.pending.status === "active") {
-            handleApproved(data.pending.churchName);
+            handleApproved(data.pending);
           }
           return;
         }
 
         const profile = await refreshProfile();
         if (profile?.activeBranchId?.trim() && !profile.pendingBranchId?.trim()) {
-          router.replace(MEMBER_HOME);
+          router.replace(await fetchSessionMemberDestination());
           return;
         }
 
@@ -110,7 +167,7 @@ export function WaitingApprovalClient() {
     if (!authLoading && authUser) {
       void loadPending();
     }
-  }, [authUser, authLoading, handleApproved, refreshProfile, router]);
+  }, [authUser, authLoading, handleApproved, rememberJoinedChurch, refreshProfile, router]);
 
   useEffect(() => {
     const user = firebaseAuth.currentUser;
@@ -126,13 +183,13 @@ export function WaitingApprovalClient() {
         if (!res.ok || cancelled) return;
         const data = (await res.json()) as { pending: PendingJoinStatus | null };
         if (data.pending?.status === "active") {
-          handleApproved(data.pending.churchName);
+          handleApproved(data.pending);
           return;
         }
         if (!data.pending) {
           const profile = await refreshProfile();
           if (profile?.activeBranchId?.trim() && !profile.pendingBranchId?.trim()) {
-            handleApproved(pending.churchName);
+            handleApproved(pending);
             return;
           }
           router.replace(ACCESS_DENIED_PATH);
@@ -171,8 +228,10 @@ export function WaitingApprovalClient() {
   useEffect(() => {
     if (!isApproved || countdown > 0 || navigatedRef.current) return;
     navigatedRef.current = true;
-    router.replace(MEMBER_HOME);
-  }, [isApproved, countdown, router]);
+    rememberJoinedChurch(pending);
+    router.replace(destinationFromPending(pending));
+    router.refresh();
+  }, [isApproved, countdown, pending, rememberJoinedChurch, router]);
 
   if (authLoading || loading) return <AuthLoading />;
   if (!authUser) return <AuthLoading />;

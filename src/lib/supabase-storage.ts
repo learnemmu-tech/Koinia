@@ -251,6 +251,8 @@ export function buildStorageObjectKey(
       return `books/${id}/cover/${fileName}`;
     case "group":
       return `groups/${id}/avatar/${fileName}`;
+    case "church-website":
+      return `churches/${id}/website/${fileName}`;
   }
 }
 

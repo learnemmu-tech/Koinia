@@ -34,9 +34,9 @@ const OrganizationContext =
   React.createContext<OrganizationContextValue | null>(null);
 
 export function OrganizationProvider({ children }: React.PropsWithChildren) {
-  const { authUser } = useFirebaseAuth();
+  const { authUser, profile } = useFirebaseAuth();
   const { data, isLoading, error, refetch } = useOrganizationQuery(
-    authUser ? undefined : null,
+    authUser ? profile?.organizationId ?? undefined : null,
     Boolean(authUser)
   );
 

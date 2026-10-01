@@ -12,7 +12,7 @@ import {
   isSuperAdminPath,
   MEMBERSHIP_REMOVED_PATH,
   ORGANIZATION_SUSPENDED_PATH,
-  POST_AUTH_CONTINUE_PATH,
+  isPostAuthContinuePath,
   SUPER_ADMIN_BASE,
   WAITING_APPROVAL_PATH,
 } from "./auth-paths";
@@ -28,8 +28,7 @@ function stripAuthCallbackNoise(path: string): string {
     sanitized.startsWith("/sso-callback/") ||
     sanitized === "/forgot-password" ||
     sanitized.startsWith("/forgot-password/") ||
-    sanitized === POST_AUTH_CONTINUE_PATH ||
-    sanitized.startsWith(`${POST_AUTH_CONTINUE_PATH}/`)
+    isPostAuthContinuePath(sanitized)
   ) {
     sanitized = "";
   }

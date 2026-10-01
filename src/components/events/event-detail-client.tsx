@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 type EventDetailClientProps = {
   eventId: string;
   initialEvent: FirebaseEvent;
+  listHref?: string;
 };
 
 const HERO_DESCRIPTION_CHARS = 200;
@@ -45,6 +46,7 @@ function excerpt(text: string, maxChars: number) {
 export function EventDetailClient({
   eventId,
   initialEvent,
+  listHref = "/events",
 }: EventDetailClientProps) {
   const t = useTranslations("events");
   const tCommon = useTranslations("common");
@@ -67,7 +69,7 @@ export function EventDetailClient({
         </p>
         <BackButton
           label={t("backToEvents")}
-          fallbackHref="/events"
+          fallbackHref={listHref}
           className="mt-5"
         />
       </div>
@@ -93,13 +95,14 @@ export function EventDetailClient({
   return (
     <article className="mx-auto w-full min-w-0 max-w-6xl pb-8 pt-1">
       <div className="mb-8 flex items-center justify-between gap-3">
-        <BackButton label={t("backToEvents")} fallbackHref="/events" />
+        <BackButton label={t("backToEvents")} fallbackHref={listHref} />
         <ShareEventButton
           eventId={event.id}
           title={event.title}
           description={description.slice(0, 160) || undefined}
           className="h-9 rounded-xl border-border/70 bg-card px-4 text-sm font-medium"
           label={tCommon("share")}
+          path={`${listHref.replace(/\/$/, "")}/${encodeURIComponent(event.id)}`}
         />
       </div>
 
@@ -180,6 +183,7 @@ export function EventDetailClient({
             <RegisterForEventButton
               eventId={event.id}
               eventTitle={event.title}
+              signInCallbackPath={`${listHref.replace(/\/$/, "")}/${encodeURIComponent(event.id)}`}
               className={cn(
                 actionBtn,
                 "border-transparent bg-primary text-primary-foreground hover:bg-[hsl(var(--primary-hover))]"

@@ -3,18 +3,18 @@
 import Link from "next/link";
 import {
   Bell,
-  CircleHelp,
+  Check,
+  Globe,
   LogOut,
   Monitor,
   Moon,
   Palette,
-  Settings2,
   Sun,
   User2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import {
   DropdownMenuItem,
@@ -25,6 +25,12 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
+import {
+  localeNativeNames,
+  locales,
+  type Locale,
+} from "@/i18n/config";
+import { useLocaleSwitcher } from "@/i18n/provider";
 
 export function useAccountMenuActions() {
   const { signOut } = useFirebaseAuth();
@@ -44,11 +50,18 @@ export function useAccountMenuActions() {
 
 type AccountMenuItemsProps = {
   onNavigate?: () => void;
+  chatHref?: string;
+  shepherdHref?: string;
+  prayerHref?: string;
 };
 
-export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
+export function AccountMenuItems({
+  onNavigate,
+}: AccountMenuItemsProps) {
   const { setTheme } = useTheme();
   const { handleSignOut } = useAccountMenuActions();
+  const locale = useLocale() as Locale;
+  const { setLocale } = useLocaleSwitcher();
   const tn = useTranslations("navigation");
   const tc = useTranslations("common");
   const ta = useTranslations("auth");
@@ -61,12 +74,34 @@ export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
           {tn("myProfile")}
         </Link>
       </DropdownMenuItem>
-      <DropdownMenuItem asChild className="cursor-pointer">
-        <Link href="/settings" onClick={onNavigate}>
-          <Settings2 className="mr-2 size-4" />
-          {tn("accountSettings")}
-        </Link>
-      </DropdownMenuItem>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <Globe className="mr-2 size-4" />
+          {tc("language")}
+        </DropdownMenuSubTrigger>
+        <DropdownMenuPortal>
+          <DropdownMenuSubContent collisionPadding={8}>
+            {locales.map((item) => {
+              const selected = item === locale;
+              return (
+                <DropdownMenuItem
+                  key={item}
+                  className="cursor-pointer"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    if (!selected) setLocale(item);
+                  }}
+                >
+                  <span className="flex-1">{localeNativeNames[item]}</span>
+                  {selected ? (
+                    <Check className="size-3.5 text-primary" aria-hidden />
+                  ) : null}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuSubContent>
+        </DropdownMenuPortal>
+      </DropdownMenuSub>
       <DropdownMenuItem asChild className="cursor-pointer">
         <Link href="/settings/notifications" onClick={onNavigate}>
           <Bell className="mr-2 size-4" />
@@ -79,7 +114,7 @@ export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
           {tc("appearance")}
         </DropdownMenuSubTrigger>
         <DropdownMenuPortal>
-          <DropdownMenuSubContent>
+          <DropdownMenuSubContent collisionPadding={8}>
             <DropdownMenuItem asChild className="cursor-pointer">
               <Link href="/settings/appearance" onClick={onNavigate}>
                 {tn("themeSettings")}
@@ -119,12 +154,6 @@ export function AccountMenuItems({ onNavigate }: AccountMenuItemsProps) {
           </DropdownMenuSubContent>
         </DropdownMenuPortal>
       </DropdownMenuSub>
-      <DropdownMenuItem asChild className="cursor-pointer">
-        <Link href="/about" onClick={onNavigate}>
-          <CircleHelp className="mr-2 size-4" />
-          {tc("help")}
-        </Link>
-      </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
         onClick={() => {

@@ -134,6 +134,34 @@
       "when": 1789584000000,
       "tag": "0018_org_level_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789587000000,
+      "tag": "0019_church_websites",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789590000000,
+      "tag": "0020_website_setup_completed",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1789593000000,
+      "tag": "0021_website_about",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1789596000000,
+      "tag": "0022_website_about_sections",
+      "breakpoints": true
     }
   ]
 }

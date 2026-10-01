@@ -141,7 +141,7 @@ export function FirebaseAuthProvider({
       return;
     }
 
-    if (!isSignedIn || !clerkUser) {
+    if (!isSignedIn) {
       bindFirebaseAuthCurrentUser(null);
       setUser(null);
       setAuthUser(null);
@@ -153,6 +153,12 @@ export function FirebaseAuthProvider({
       setLoading(false);
       syncedUidRef.current = null;
       syncedIdentityRef.current = null;
+      return;
+    }
+
+    if (!clerkUser) {
+      setLoading(true);
+      setProfileReady(false);
       return;
     }
 
@@ -258,6 +264,7 @@ export function FirebaseAuthProvider({
             email: sessionUser.email ?? "",
             role: "user",
             needsChurchOnboarding: true,
+            websiteSetupCompleted: true,
             createdAt: new Date().toISOString(),
           };
           setProfile(fallbackProfile);

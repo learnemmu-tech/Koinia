@@ -44,6 +44,7 @@ import { ShareSongButton } from "./share-song";
 
 type SongDetailClientProps = {
   song: FirebaseSong;
+  listHref?: string;
 };
 
 /** Pill-shaped hero action buttons — reference style */
@@ -84,7 +85,10 @@ function YouTubeIcon({ className }: { className?: string }) {
   );
 }
 
-export function SongDetailClient({ song }: SongDetailClientProps) {
+export function SongDetailClient({
+  song,
+  listHref = "/songs",
+}: SongDetailClientProps) {
   useRecordRecentlyViewed({ itemType: "song", itemId: song.id });
 
   const [queue] = useQueue();
@@ -160,7 +164,7 @@ export function SongDetailClient({ song }: SongDetailClientProps) {
   return (
     <div className="mx-auto w-full min-w-0 max-w-[850px] px-0 pb-10">
       <Link
-        href="/songs"
+        href={listHref}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
       >
         <ArrowLeft className="size-3.5 shrink-0" aria-hidden />

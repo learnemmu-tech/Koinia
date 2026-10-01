@@ -21,19 +21,22 @@ import { cn } from "@/lib/utils";
 type LocaleSwitcherProps = {
   className?: string;
   align?: "start" | "center" | "end";
+  display?: "name" | "code";
 };
 
 export function LocaleSwitcher({
   className,
   align = "end",
+  display = "name",
 }: LocaleSwitcherProps) {
   const t = useTranslations("common");
   const locale = useLocale() as Locale;
   const { setLocale } = useLocaleSwitcher();
-  const currentLabel = localeNativeNames[locale];
+  const currentLabel =
+    display === "code" ? locale.toUpperCase() : localeNativeNames[locale];
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"

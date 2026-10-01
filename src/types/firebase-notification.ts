@@ -30,6 +30,13 @@ export type FirebaseNotification = {
   image?: string;
   /** ID of the related song/article/sermon, or branch for membership alerts. */
   contentId: string;
+  /**
+   * Application-relative destination computed when listing notifications.
+   * Never an absolute URL; sanitized to block open redirects and localhost.
+   */
+  href?: string;
+  /** Church website slug for the notification's church, when known. */
+  churchSlug?: string | null;
   /** Whether the user has read this notification (legacy docs may omit). */
   read?: boolean;
   createdAt: number;

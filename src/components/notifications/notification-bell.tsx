@@ -32,6 +32,7 @@ import { useTranslations } from "next-intl";
 type NotificationBellProps = {
   userId: string;
   variant?: "icon" | "sidebar";
+  className?: string;
 };
 
 function NotificationTypeIcon({
@@ -68,6 +69,7 @@ function NotificationTypeIcon({
 export function NotificationBell({
   userId,
   variant = "icon",
+  className,
 }: NotificationBellProps) {
   const router = useRouter();
   const t = useTranslations("notifications");
@@ -145,7 +147,10 @@ export function NotificationBell({
         : <button
             type="button"
             aria-label={`${t("title")}${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
-            className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-sm transition-colors hover-hover:hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn(
+              "relative flex size-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-sm transition-colors hover-hover:hover:bg-accent active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              className
+            )}
           >
             <Bell className="size-4" />
             {unreadCount > 0 ?

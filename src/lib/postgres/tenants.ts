@@ -7,15 +7,18 @@ import { db } from "@/db";
 import {
   churchMemberships,
   churches,
+  churchWebsites,
   organizationMemberships,
   organizations,
   subscriptions,
   users,
 } from "@/db/schema";
+import { isTemplateId } from "@/lib/templates/registry";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { slugifyChurchSlug } from "@/lib/church-scope";
 import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
 import { isPostgresUuid } from "@/lib/postgres/uuid";
+import { withConnectionRetry } from "@/lib/postgres/with-connection-retry";
 import { getTrialEndDate } from "@/lib/subscription/trial";
 import { resolvePrimaryBranchMembership } from "@/lib/auth/workspace-access";
 import {
@@ -196,12 +199,14 @@ export async function getChurchBySlug(
 ): Promise<FirebaseChurch | null> {
   const trimmed = slug.trim().toLowerCase();
   if (!trimmed) return null;
-  const [row] = await db
-    .select()
-    .from(churches)
-    .where(or(eq(churches.slug, trimmed), eq(churches.joinSlug, trimmed)))
-    .limit(1);
-  return row ? mapChurch(row) : null;
+  return withConnectionRetry(async () => {
+    const [row] = await db
+      .select()
+      .from(churches)
+      .where(or(eq(churches.slug, trimmed), eq(churches.joinSlug, trimmed)))
+      .limit(1);
+    return row ? mapChurch(row) : null;
+  });
 }
 
 export async function getChurchIdsForOrganization(
@@ -555,16 +560,35 @@ export async function getOrganizationSnapshot(
       }
     : undefined;
 
-  const [membership, churchRows, churchMembershipRows] = await Promise.all([
-    getMembershipForClerkUser(organizationId, clerkId),
-    db
-      .select()
-      .from(churches)
-      .where(eq(churches.organizationId, organizationId)),
-    appUser ? listChurchMembershipsForUser(appUser.id) : Promise.resolve([]),
-  ]);
+  const [membership, churchRows, websiteRows, churchMembershipRows] =
+    await Promise.all([
+      getMembershipForClerkUser(organizationId, clerkId),
+      db
+        .select()
+        .from(churches)
+        .where(eq(churches.organizationId, organizationId)),
+      db
+        .select({
+          churchId: churchWebsites.churchId,
+          activeTemplate: churchWebsites.activeTemplate,
+        })
+        .from(churchWebsites)
+        .where(eq(churchWebsites.organizationId, organizationId)),
+      appUser ? listChurchMembershipsForUser(appUser.id) : Promise.resolve([]),
+    ]);
 
-  const churchList = churchRows.map(mapChurch);
+  const templateByChurchId = new Map(
+    websiteRows.map((row) => [row.churchId, row.activeTemplate])
+  );
+
+  const churchList = churchRows.map((row) => {
+    const church = mapChurch(row);
+    const storedTemplate = templateByChurchId.get(row.id);
+    if (isTemplateId(storedTemplate)) {
+      church.activeTemplate = storedTemplate;
+    }
+    return church;
+  });
 
   const branchMemberships = churchMembershipRows
     .filter((row) => row.organizationId === organizationId)

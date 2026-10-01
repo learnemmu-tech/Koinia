@@ -9,4 +9,5 @@ export type StorageUploadKind =
   | "event"
   | "donation"
   | "book"
-  | "group";
+  | "group"
+  | "church-website";

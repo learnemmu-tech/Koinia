@@ -148,9 +148,13 @@ function bookJoins() {
 export async function listPublishedCatalogBooks(options?: {
   query?: string;
   bookType?: "digital" | "physical" | "both";
+  churchId?: string;
   includeMembersOnlyForChurchIds?: string[];
 }): Promise<BookRecord[]> {
   const filters = [eq(books.status, "published")];
+  if (options?.churchId && isPostgresUuid(options.churchId)) {
+    filters.push(eq(books.churchId, options.churchId));
+  }
   const memberChurchIds = options?.includeMembersOnlyForChurchIds?.filter(
     isPostgresUuid
   );
@@ -277,6 +281,10 @@ export async function createBook(input: {
   data: UpsertBookInput;
 }): Promise<BookRecord> {
   await assertBookOrganizationWritable(input.organizationId);
+  const { assertUsageAllowed } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertUsageAllowed(input.organizationId, "books");
   const slug = await uniqueSlug(
     input.organizationId,
     input.data.title,

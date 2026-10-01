@@ -22,7 +22,7 @@ export function OnboardingWizardShell({
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-[600px] animate-in fade-in slide-in-from-bottom-4 duration-500",
+        "mx-auto my-auto w-full max-w-[600px] animate-in fade-in slide-in-from-bottom-4 duration-500",
         className
       )}
     >

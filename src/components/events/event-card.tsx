@@ -12,6 +12,7 @@ import {
   getEventListingStatus,
   type EventListingStatusKind,
 } from "@/lib/event-schedule";
+import { contentItemHref } from "@/lib/content/item-href";
 import { cn } from "@/lib/utils";
 
 type EventCardProps = {
@@ -19,6 +20,7 @@ type EventCardProps = {
   className?: string;
   /** Stacked layout for dense multi-column grids (e.g. favorites). */
   compact?: boolean;
+  hrefPrefix?: string;
 };
 
 function statusLabel(
@@ -102,11 +104,16 @@ function ViewEventCta({ href, label }: { href: string; label: string }) {
   );
 }
 
-export function EventCard({ event, className, compact = false }: EventCardProps) {
+export function EventCard({
+  event,
+  className,
+  compact = false,
+  hrefPrefix = "/events",
+}: EventCardProps) {
   const t = useTranslations("events");
   const locale = useLocale();
   const now = useEventScheduleNow();
-  const href = `/events/${encodeURIComponent(event.id)}`;
+  const href = contentItemHref(hrefPrefix, event.id);
   const banner = event.bannerImage?.trim() ?? "";
   const hasBanner = Boolean(banner);
   const listingStatus = getEventListingStatus(event, now, locale);
