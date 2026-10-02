@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import type { AuthUser } from "@/context/firebase-auth-context";
@@ -102,10 +101,10 @@ export function HeaderUserMenu({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size={heritage ? "sm" : "icon"}
+          size="icon"
           className={
             heritage
-              ? "heritage-header-user h-9 min-h-0 max-w-[12rem] gap-2 rounded-full px-1.5 text-current hover:bg-transparent hover:text-current focus-visible:ring-0 focus-visible:ring-offset-0"
+              ? "heritage-header-user size-9 min-h-0 rounded-full p-0 text-current hover:bg-transparent hover:text-current focus-visible:ring-0 focus-visible:ring-offset-0"
               : "size-9 rounded-full"
           }
           aria-label={tNav("openAccountMenu")}
@@ -133,17 +132,6 @@ export function HeaderUserMenu({
               {initials}
             </AvatarFallback>
           </Avatar>
-          {heritage ? (
-            <>
-              <span className="hidden min-w-0 truncate text-left text-[0.7rem] font-semibold tracking-[0.12em] uppercase xl:inline">
-                {displayName}
-              </span>
-              <ChevronDown
-                className="hidden size-3.5 shrink-0 opacity-70 xl:block"
-                aria-hidden
-              />
-            </>
-          ) : null}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent

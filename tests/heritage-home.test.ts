@@ -276,18 +276,27 @@ test("Sunday Worship and Community are distinct bands with cohesive community ca
   assert.match(community, /heritage-community-band/);
   assert.match(community, /heritage-community-cards/);
   assert.match(community, /heritage-community-lede/);
+  assert.doesNotMatch(community, /Explore Community/);
   assert.doesNotMatch(community, /heritage-leaf-panel/);
+  assert.doesNotMatch(community, /HeritageImage/);
+  assert.doesNotMatch(community, /HERITAGE_FALLBACK_IMAGES/);
   assert.match(community, /Submit a Request/);
   assert.match(community, /Open Chat/);
   assert.match(community, /Chat with Shepherd AI/);
+  assert.match(community, /Find a Group/);
   assert.match(community, /heritage-community-card-icon/);
-  assert.match(community, /<Heart /);
-  assert.match(community, /<Users /);
-  assert.match(community, /<BookOpen /);
-  assert.match(css, /\.heritage-community-band \{[\s\S]*border-top/);
-  assert.match(css, /\.heritage-sermon-feature \{/);
+  assert.match(community, /Heart/);
+  assert.match(community, /Users/);
+  assert.match(community, /BookOpen/);
+  assert.doesNotMatch(community, /HeritageButton/);
+  assert.match(community, /heritage-kicker-with-rule/);
+  assert.doesNotMatch(community, /heritage-community-aside/);
+  assert.doesNotMatch(community, /heritage-community-card-orbit/);
+  assert.doesNotMatch(css, /heritage-community-card--burgundy/);
+  assert.doesNotMatch(css, /heritage-community-aside/);
   assert.match(css, /aspect-ratio: 16 \/ 9/);
   assert.match(css, /\.heritage-community-card-icon \{[\s\S]*z-index:\s*1/);
+  assert.match(css, /@media \(min-width: 1280px\)[\s\S]*heritage-community-cards[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.heritage-nav-dropdown \{[\s\S]*position:\s*absolute/);
   assert.match(css, /\.heritage-nav-dropdown \{[\s\S]*left:\s*0/);
   assert.match(css, /\.heritage-nav-dropdown \{[\s\S]*width:\s*max-content/);
@@ -302,7 +311,7 @@ test("Heritage source never hardcodes localhost or a development host", () => {
   assert.deepEqual(offenders, []);
 });
 
-test("Heritage library banner keeps compact four-up resource cards and existing routes", () => {
+test("Heritage resources section uses cards, Heritage tokens, and existing routes", () => {
   const source = readFileSync(
     join(
       import.meta.dirname,
@@ -319,15 +328,61 @@ test("Heritage library banner keeps compact four-up resource cards and existing 
     join(import.meta.dirname, "..", "src", "templates", "heritage", "heritage.css"),
     "utf8"
   );
-  assert.match(source, /HERITAGE_FALLBACK_IMAGES\.library/);
+  assert.doesNotMatch(source, /HERITAGE_FALLBACK_IMAGES\.library/);
+  assert.doesNotMatch(source, /heritage-resources-index/);
+  assert.doesNotMatch(source, /Cormorant/);
+  assert.doesNotMatch(source, /#35243f|#E8DFEA|#C66F62/i);
   assert.match(source, /path: "\/sermons"/);
   assert.match(source, /path: "\/songs"/);
   assert.match(source, /path: "\/articles"/);
   assert.match(source, /path: "\/videos"/);
-  assert.match(source, /heritage-resources-cards/);
-  assert.match(source, /View All Resources/);
-  assert.doesNotMatch(source, /heritage-glass-tile/);
-  assert.match(css, /grid-template-columns:\s*repeat\(4,/);
+  assert.match(source, /heritage-resources-grid/);
+  assert.match(source, /Learn More/);
+  assert.match(source, /Biblical messages to strengthen your faith/);
+  assert.match(source, /Worship and praise for your daily walk/);
+  assert.match(source, /Explore Scripture and Christian living/);
+  assert.match(source, /Watch inspiring Christian content/);
+  assert.match(source, /heritage-resource-card-copy/);
+  assert.doesNotMatch(source, /View All Resources/);
+  assert.doesNotMatch(source, /heritage-resource-card--/);
+  assert.doesNotMatch(source, /heritage-resource-card-mark/);
+  assert.doesNotMatch(source, /heritage-resource-card-orbit/);
+  assert.doesNotMatch(source, /CirclePlay|FileText/);
+  assert.doesNotMatch(css, /heritage-resource-card-mark/);
+  assert.doesNotMatch(css, /heritage-resource-card-orbit/);
+  assert.doesNotMatch(css, /heritage-resource-card--burgundy/);
+  assert.match(css, /@media \(min-width: 1280px\)[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(source, /HERITAGE_FALLBACK_IMAGES/);
+  assert.doesNotMatch(css, /--hub-plum/);
+  assert.doesNotMatch(css, /heritage-library-scrim/);
+});
+
+test("Heritage giving section keeps existing actions without the split image layout", () => {
+  const source = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "templates",
+      "heritage",
+      "sections",
+      "heritage-giving.tsx"
+    ),
+    "utf8"
+  );
+  assert.doesNotMatch(source, /lg:grid-cols-\[minmax\(0,0\.95fr\)/);
+  assert.doesNotMatch(source, /HeritageFrame/);
+  assert.doesNotMatch(source, /2 Corinthians|cheerful giver/i);
+  assert.match(source, /heritage-giving-banner/);
+  assert.match(source, /heritage-giving-strip/);
+  assert.match(source, /Give Online/);
+  assert.match(source, /Learn More/);
+  assert.match(source, /Support Ministries/);
+  assert.match(source, /Care for Community/);
+  assert.match(source, /Build a Brighter Future/);
+  assert.match(source, /`\/give\/\$\{campaign\.id\}`/);
+  assert.match(source, /variant="primary"/);
+  assert.match(source, /variant="secondary"/);
 });
 
 test("Heritage typography uses Manrope headings and Inter body, not a display serif", () => {
@@ -372,7 +427,7 @@ test("Heritage header keeps the logo and church name without the default subtitl
   assert.match(css, /\.heritage-header-bar \{[\s\S]*overflow:\s*visible/);
   assert.match(css, /\.heritage-brand-name \{[\s\S]*font-family:\s*var\(--font-heritage-display\)/);
   assert.match(css, /\.heritage-brand-name \{[\s\S]*white-space:\s*nowrap/);
-  assert.match(css, /@media \(max-width: 1279px\) \{[\s\S]*-webkit-line-clamp:\s*2/);
+  assert.match(css, /@media \(max-width: 1279px\) \{[\s\S]*\.heritage-brand-name \{\s*display:\s*none/);
   assert.match(frame, /heritage-header-overlay/);
   const controls = readFileSync(
     join(
@@ -409,17 +464,46 @@ test("member account menu keeps profile routes relative and omits extra shortcut
   assert.doesNotMatch(menu, /localhost/);
 });
 
-test("mobile homepage hero copy sits at the top and does not cover the speaker", () => {
+test("Heritage mobile nav is a right slide-in sidebar with overlay close behavior", () => {
+  const nav = readFileSync(
+    join(import.meta.dirname, "..", "src", "templates", "heritage", "components", "heritage-nav.tsx"),
+    "utf8"
+  );
+  const css = readFileSync(
+    join(import.meta.dirname, "..", "src", "templates", "heritage", "heritage.css"),
+    "utf8"
+  );
+  const menu = readFileSync(
+    join(import.meta.dirname, "..", "src", "components", "app-sidebar", "header-user-menu.tsx"),
+    "utf8"
+  );
+  assert.match(nav, /heritage-nav-drawer/);
+  assert.match(nav, /heritage-nav-scrim/);
+  assert.match(nav, /createPortal/);
+  assert.match(nav, /html\.style\.overflow = "hidden"/);
+  assert.match(nav, /event\.key === "Escape"/);
+  assert.doesNotMatch(nav, /heritage-header-mobile absolute inset-x-0 top-full/);
+  assert.match(css, /\.heritage-nav-layer \{[\s\S]*background:\s*transparent/);
+  assert.match(css, /\.heritage-nav-layer \{[\s\S]*visibility:\s*hidden/);
+  assert.match(css, /\.heritage-nav-drawer \{[\s\S]*right:\s*0/);
+  assert.match(css, /\.heritage-nav-drawer \{[\s\S]*transform:\s*translateX\(100%\)/);
+  assert.match(css, /\.heritage-nav-drawer\.is-open \{[\s\S]*transform:\s*translateX\(0\)/);
+  assert.match(nav, /heritage-theme heritage-nav-drawer/);
+  assert.match(css, /background-color:\s*#202624/);
+  assert.match(css, /width:\s*min\(85vw, 22\.5rem\)/);
+  assert.doesNotMatch(menu, /xl:inline/);
+  assert.doesNotMatch(menu, /ChevronDown/);
+});
+
+test("mobile homepage hero copy is centered with a speaker-visible crop", () => {
   const css = readFileSync(
     join(import.meta.dirname, "..", "src", "templates", "heritage", "heritage.css"),
     "utf8"
   );
   const heroMobile = css.match(
-    /\.heritage-hero \{\s*align-items: flex-start;[\s\S]*?\.heritage-hero-copy-wrap \{\s*align-items: flex-start;[\s\S]*?object-position: 38% 48%;/
+    /@media \(max-width: 768px\) \{[\s\S]*?object-position: 44% 52%;[\s\S]*?text-align:\s*center;/
   );
-  assert.ok(heroMobile, "mobile hero copy must be top-aligned with a right-biased image");
-  const heroEnd = css.match(
-    /\.heritage-hero \{\s*align-items: flex-end;[\s\S]{0,120}\.heritage-hero-copy-wrap \{\s*align-items: flex-end;/
-  );
-  assert.equal(heroEnd, null);
+  assert.ok(heroMobile, "mobile hero copy must be centered with a speaker-biased crop");
+  assert.match(css, /\.heritage-hero-copy-wrap \{[\s\S]*align-items:\s*center/);
+  assert.match(css, /background-color:\s*#202624/);
 });
