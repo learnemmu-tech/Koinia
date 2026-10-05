@@ -26,15 +26,15 @@ export function heritageDirectionsHref(address: string): string | null {
 }
 
 /** Month, day and weekday for an ISO event date (YYYY-MM-DD), or null when unparseable. */
-export function eventDateParts(eventDate: string) {
+export function eventDateParts(eventDate: string, locale = "en") {
   const match = eventDate.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return null;
   const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   if (Number.isNaN(date.getTime())) return null;
   return {
-    month: new Intl.DateTimeFormat("en", { month: "short" }).format(date),
+    month: new Intl.DateTimeFormat(locale, { month: "short" }).format(date),
     day: String(date.getDate()),
-    weekday: new Intl.DateTimeFormat("en", { weekday: "long" }).format(date),
+    weekday: new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date),
   };
 }
 
@@ -47,7 +47,7 @@ export function upcomingChurchEvents(
   return splitEventsBySchedule(events, now).upcoming.slice(0, limit);
 }
 
-export function formatLongDate(value: string | number | Date): string {
+export function formatLongDate(value: string | number | Date, locale = "en"): string {
   const date =
     typeof value === "number"
       ? new Date(value)
@@ -55,7 +55,7 @@ export function formatLongDate(value: string | number | Date): string {
         ? new Date(`${value}T00:00:00`)
         : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(locale, {
     month: "long",
     day: "numeric",
     year: "numeric",
@@ -158,12 +158,13 @@ export function heritageHeaderAuth(model: ChurchWebsiteViewModel) {
   };
 }
 
-export type HeritageCommunityFeature = "prayer" | "chat" | "shepherd";
+export type HeritageCommunityFeature = "prayer" | "chat" | "shepherd" | "groups";
 
 const COMMUNITY_FEATURE_PATH: Record<HeritageCommunityFeature, string> = {
   prayer: "/prayer",
   chat: "/community",
   shepherd: "/shepherd",
+  groups: "/community?tab=groups",
 };
 
 /**
@@ -183,6 +184,7 @@ export function heritageCommunityCta(
     prayer: { open: "Submit a request", gated: "Submit a request" },
     chat: { open: "Open Chat", gated: "chat" },
     shepherd: { open: "Chat with Shepherd AI", gated: "Shepherd AI" },
+    groups: { open: "Explore Groups", gated: "groups" },
   }[feature];
 
   if (feature === "prayer" || model.viewer.isMember) {

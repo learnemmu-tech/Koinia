@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 
 import { ProtectedContentLink } from "@/components/auth/protected-content-link";
@@ -37,10 +39,14 @@ export function PrayerWallCard({
   linkToDetail = true,
   detailHref: detailHrefOverride,
 }: PrayerWallCardProps) {
+  const tCategories = useTranslations("prayer.categories");
   const displayName = getPrayerRequestDisplayName(request);
   const detailHref =
     detailHrefOverride ?? `/prayer-requests/${encodeURIComponent(request.id)}`;
-  const categoryLabel = getPrayerCategoryLabel(request.category);
+  const categoryLabel =
+    request.category ?
+      tCategories(request.category)
+    : getPrayerCategoryLabel(request.category);
   const dateLabel = formatPrayerDate(request.createdAt);
 
   const initials =

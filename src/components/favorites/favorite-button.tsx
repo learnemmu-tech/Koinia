@@ -4,6 +4,8 @@ import React from "react";
 import { Bookmark, Heart, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useTranslations } from "next-intl";
+
 import type { FavoriteItemType } from "@/types/firebase-favorite";
 
 import { useFavoritesOptional } from "@/context/favorites-context";
@@ -26,6 +28,8 @@ export function FavoriteButton({
   label,
   appearance = "icon",
 }: FavoriteButtonProps) {
+  const t = useTranslations("library");
+  const tCommon = useTranslations("common");
   const favorites = useFavoritesOptional();
   const { ensureAuth } = useAuthGuard();
   const [pending, setPending] = React.useState(false);
@@ -36,8 +40,8 @@ export function FavoriteButton({
   const favorited = isFavorited(itemType, itemId);
   const ariaLabel =
     label ??
-    (favorited ? "Remove from Library" : "Save to Library");
-  const buttonText = favorited ? "Saved" : "Save";
+    (favorited ? t("removeFromLibrary") : t("saveToLibrary"));
+  const buttonText = favorited ? t("saved") : tCommon("save");
 
   async function handleClick(event: React.MouseEvent) {
     event.preventDefault();
@@ -50,7 +54,7 @@ export function FavoriteButton({
       const wasFavorited = favorited;
       await toggleFavorite(itemType, itemId);
       toast.success(
-        wasFavorited ? "Removed from Library" : "Saved to Library"
+        wasFavorited ? t("removedFromLibrary") : t("savedToLibrary")
       );
     } catch {
       toast.error("Unable to update your library. Please try again.");

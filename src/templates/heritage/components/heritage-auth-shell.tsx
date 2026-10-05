@@ -1,8 +1,3 @@
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-
-import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
 import { HeritageImage } from "@/templates/heritage/components/heritage-image";
 import { resolveHeritageImage } from "@/templates/heritage/lib";
@@ -22,8 +17,6 @@ export function HeritageAuthShell({
   model: ChurchWebsiteViewModel;
   children: React.ReactNode;
 }) {
-  const homeHref = churchWebsitePath(model.church.slug);
-  const logo = model.website.images.logo || HERITAGE_FALLBACK_IMAGES.mark;
   const image = resolveHeritageImage(
     model.website.images.hero,
     HERITAGE_FALLBACK_IMAGES.hero
@@ -43,30 +36,6 @@ export function HeritageAuthShell({
 
   return (
     <div className="heritage-theme heritage-auth-shell">
-      <header className="heritage-auth-bar">
-        <Link
-          href={homeHref}
-          className="flex min-w-0 items-center gap-3 text-[var(--heritage-primary-foreground)]"
-        >
-          <span className="relative size-8 shrink-0 overflow-hidden sm:size-9">
-            <Image
-              src={logo}
-              alt={`${model.church.name} logo`}
-              fill
-              className="object-contain"
-              sizes="36px"
-            />
-          </span>
-          <span className="heritage-display truncate text-[1.05rem] sm:text-lg">
-            {model.church.name}
-          </span>
-        </Link>
-        <Link href={homeHref} className="heritage-auth-back">
-          <ArrowLeft className="size-3.5" aria-hidden />
-          Back to website
-        </Link>
-      </header>
-
       <div className="heritage-auth-body">
         <aside className="heritage-auth-visual" aria-hidden={false}>
           <div className="heritage-auth-media">

@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import type { FirebaseArticle } from "@/types/firebase-article";
 
 import { ArticleNavigation } from "@/components/articles/article-navigation";
@@ -30,6 +32,8 @@ export function ArticleDetailView({
   nextArticle,
   hrefPrefix = "/articles",
 }: ArticleDetailViewProps) {
+  const t = useTranslations("articles");
+  const tCommon = useTranslations("common");
   const coverUrl = getSongCoverUrl(article.coverImage) || DEFAULT_SONG_COVER;
   const dateLabel = formatDetailDate(article.dateCreated);
   const category = article.category?.trim() || "";
@@ -42,29 +46,29 @@ export function ArticleDetailView({
   const metadata = [
     dateLabel,
     category || null,
-    readingMinutes ? `${readingMinutes} min read` : null,
+    readingMinutes ? t("minRead", { count: readingMinutes }) : null,
   ].filter(Boolean) as string[];
 
   const sidebarItems: ContentDetailSidebarItem[] = [];
   if (author) {
-    sidebarItems.push({ label: "Author", value: author, icon: "user" });
+    sidebarItems.push({ label: t("author"), value: author, icon: "user" });
   }
   if (dateLabel) {
-    sidebarItems.push({ label: "Date", value: dateLabel, icon: "calendar" });
+    sidebarItems.push({ label: t("date"), value: dateLabel, icon: "calendar" });
   }
   if (category) {
-    sidebarItems.push({ label: "Category", value: category, icon: "tag" });
+    sidebarItems.push({ label: t("categoryLabel"), value: category, icon: "tag" });
   }
   if (readingMinutes) {
     sidebarItems.push({
-      label: "Reading",
-      value: `${readingMinutes} min`,
+      label: t("reading"),
+      value: t("minutes", { count: readingMinutes }),
       icon: "clock",
     });
   }
   if (scripture) {
     sidebarItems.push({
-      label: "Scripture",
+      label: t("scripture"),
       value: scripture,
       icon: "book",
     });
@@ -73,8 +77,8 @@ export function ArticleDetailView({
   return (
     <ContentDetailLayout
       kind="article"
-      kindLabel="Article"
-      backLabel="Back to Articles"
+      kindLabel={t("kind")}
+      backLabel={t("back")}
       backHref={hrefPrefix}
       coverUrl={coverUrl}
       coverAlt={article.title}
@@ -84,7 +88,7 @@ export function ArticleDetailView({
       metadata={metadata}
       excerpt={excerpt || undefined}
       content={article.content}
-      sidebarTitle="About this article"
+      sidebarTitle={t("about")}
       sidebarItems={sidebarItems}
       scriptureReference={scripture || undefined}
       tags={article.tags}
@@ -95,7 +99,7 @@ export function ArticleDetailView({
           description={excerpt || undefined}
           path={contentItemHref(hrefPrefix, article.id)}
           className="h-9 rounded-xl px-4"
-          label="Share"
+          label={tCommon("share")}
         />
       }
       heroActions={

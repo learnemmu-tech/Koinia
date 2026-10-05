@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { ContentAuthRequired } from "@/components/auth/content-auth-required";
 import { PrayerRequestDetailClient } from "@/components/prayer/prayer-request-detail-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { isAuthenticatedServer } from "@/lib/auth-server";
-import { getActiveTemplateForChurch } from "@/lib/postgres/church-websites";
-import { getChurchById } from "@/lib/postgres/tenants";
 import { loadReadablePrayerRequest } from "@/lib/prayer/prayer-authorization";
 import { isPublicPrayerRequest } from "@/lib/prayer-request-firestore";
 import { buildBreadcrumbJsonLd, buildPageMetadata } from "@/lib/seo";
-import { heritagePrayerDetailPath } from "@/templates/heritage/prayer";
 
 // Per-viewer authorization: never cache this page across users.
 export const dynamic = "force-dynamic";
@@ -47,19 +44,6 @@ export default async function PrayerRequestDetailPage({
   const request = await loadReadablePrayerRequest(id);
   if (!request) {
     notFound();
-  }
-
-  const church = request.churchId
-    ? await getChurchById(request.churchId)
-    : null;
-  if (church?.organizationId) {
-    const template = await getActiveTemplateForChurch(
-      church.id,
-      church.organizationId
-    );
-    if (template === "heritage" && church.slug) {
-      redirect(heritagePrayerDetailPath(church.slug, request.id));
-    }
   }
 
   if (!isPublicPrayerRequest(request)) {

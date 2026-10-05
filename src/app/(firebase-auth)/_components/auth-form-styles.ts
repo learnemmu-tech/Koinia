@@ -44,15 +44,15 @@ export const AUTH_FIELD_GROUP_CLASS = "grid gap-1";
 export type AuthFormAppearance = "default" | "heritage";
 
 export const HERITAGE_AUTH_INPUT_CLASS =
-  "h-[52px] min-h-[52px] rounded-md border-[#DDD5C6] bg-[#FFFDF9] px-4 py-0 text-sm text-[#202624] shadow-none placeholder:text-[#5A615E] focus-visible:border-[#641F32] focus-visible:ring-[#B49A62]/30 sm:h-[52px] sm:min-h-[52px]";
+  "h-10 min-h-10 rounded-md border-[#DDD5C6] bg-[#FFFDF9] px-3 py-0 text-sm text-[#202624] shadow-none placeholder:text-[#5A615E] focus-visible:border-[#641F32] focus-visible:ring-[#B49A62]/30";
 
-export const HERITAGE_AUTH_INPUT_WITH_ICON_CLASS = `${HERITAGE_AUTH_INPUT_CLASS} pl-11`;
+export const HERITAGE_AUTH_INPUT_WITH_ICON_CLASS = `${HERITAGE_AUTH_INPUT_CLASS} pl-10`;
 
 export const HERITAGE_AUTH_PRIMARY_BUTTON_CLASS =
-  "relative inline-flex h-[52px] min-h-[52px] w-full items-center justify-center rounded-md bg-[#641F32] px-0 py-0 text-sm font-semibold text-[#FFFDF9] shadow-none hover:bg-[#7A2A40] active:bg-[#4E1727] focus-visible:ring-[#B49A62]/40 sm:h-[52px] sm:min-h-[52px]";
+  "relative inline-flex h-10 min-h-10 w-full items-center justify-center rounded-md bg-[#641F32] px-0 py-0 text-sm font-semibold text-[#FFFDF9] shadow-none hover:bg-[#7A2A40] active:bg-[#4E1727] focus-visible:ring-[#B49A62]/40";
 
 export const HERITAGE_AUTH_GOOGLE_BUTTON_CLASS =
-  "inline-flex h-[52px] min-h-[52px] w-full items-center justify-center rounded-md border border-[#DDD5C6] bg-[#FFFDF9] px-5 py-0 text-sm font-medium text-[#202624] shadow-none hover:bg-[#F6F3EC] focus-visible:ring-[#B49A62]/30 sm:h-[52px] sm:min-h-[52px]";
+  "inline-flex h-10 min-h-10 w-full items-center justify-center rounded-md border border-[#DDD5C6] bg-[#FFFDF9] px-5 py-0 text-sm font-medium text-[#202624] shadow-none hover:bg-[#F6F3EC] focus-visible:ring-[#B49A62]/30";
 
 export const HERITAGE_AUTH_LABEL_CLASS =
   "text-[11px] font-semibold uppercase tracking-[0.1em] text-[#202624]";
@@ -67,7 +67,7 @@ export const HERITAGE_AUTH_DIVIDER_LABEL_CLASS =
   "relative bg-[#FFFDF9] px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5A615E]";
 
 export const HERITAGE_AUTH_FIELD_ICON_CLASS =
-  "pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#5A615E]";
+  "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#5A615E]";
 
 export const HERITAGE_AUTH_ERROR_CLASS =
   "rounded-md border border-[#641F32]/15 bg-[#641F32]/5 px-3 py-2 text-sm text-[#641F32]";

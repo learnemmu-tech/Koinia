@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -34,6 +35,7 @@ export function HeritageFeaturedSermon({
   model: ChurchWebsiteViewModel;
   sermons: FirebaseSermon[];
 }) {
+  const t = useTranslations("heritage.featured");
   const [index, setIndex] = useState(0);
   const slug = model.church.slug;
   const allSermons = churchWebsitePath(slug, "/sermons");
@@ -57,14 +59,14 @@ export function HeritageFeaturedSermon({
         </div>
         <div className="heritage-sermon-feature-scrim" />
         <div className="heritage-sermon-feature-top">
-          <p className="heritage-sermon-pill">Featured Sermon</p>
+          <p className="heritage-sermon-pill">{t("pill")}</p>
         </div>
         <div className="heritage-sermon-play-spacer" aria-hidden />
         <div className="heritage-sermon-feature-footer">
           <div className="heritage-sermon-feature-copy">
-            <h2 className="heritage-sermon-feature-title">Latest Message</h2>
+            <h2 className="heritage-sermon-feature-title">{t("latest")}</h2>
             <Link href={allSermons} className="heritage-btn heritage-btn-inverse mt-5">
-              Browse sermons
+              {t("browse")}
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
@@ -103,13 +105,15 @@ function FeaturedSermonPlayback({
   onPrev: () => void;
   onNext: () => void;
 }) {
+  const t = useTranslations("heritage.featured");
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const youtube = sermon.youtubeUrl?.trim() ?? "";
   const audio = sermon.audioUrl?.trim() ?? "";
   const youtubePlayable = Boolean(getYouTubeVideoId(youtube));
   const playable = youtubePlayable || Boolean(audio);
-  const action = youtubePlayable ? "Watch Now" : audio ? "Listen Now" : "Read Sermon";
-  const dateLabel = formatLongDate(sermon.dateCreated);
+  const action = youtubePlayable ? t("watch") : audio ? t("listen") : t("read");
+  const dateLabel = formatLongDate(sermon.dateCreated, locale);
   const speaker = sermon.speaker?.trim();
   const scripture = sermon.scriptureReference?.trim();
   const description = sermon.shortDescription?.trim() || sermon.subtitle?.trim();
@@ -132,14 +136,14 @@ function FeaturedSermonPlayback({
       </div>
       <div className="heritage-sermon-feature-scrim" />
       <div className="heritage-sermon-feature-top">
-        <p className="heritage-sermon-pill">Featured Sermon</p>
+        <p className="heritage-sermon-pill">{t("pill")}</p>
         {total > 1 ? (
           <div className="heritage-sermon-pager">
             <span>{counter}</span>
-            <button type="button" onClick={onPrev} aria-label="Previous sermon">
+            <button type="button" onClick={onPrev} aria-label={t("previous")}>
               <ChevronLeft className="size-4" aria-hidden />
             </button>
-            <button type="button" onClick={onNext} aria-label="Next sermon">
+            <button type="button" onClick={onNext} aria-label={t("next")}>
               <ChevronRight className="size-4" aria-hidden />
             </button>
           </div>
@@ -189,7 +193,7 @@ function FeaturedSermonPlayback({
               </button>
             ) : null}
             <Link href={href} className="heritage-btn heritage-btn-secondary">
-              View Sermon Details
+              {t("details")}
               <ArrowRight className="size-4" aria-hidden />
             </Link>
           </div>
@@ -218,7 +222,7 @@ function FeaturedSermonPlayback({
             />
           ) : (
             <p className="text-sm text-[var(--heritage-muted)]">
-              This sermon does not have a playable video or audio file.
+              {t("noMedia")}
             </p>
           )}
         </DialogContent>

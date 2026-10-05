@@ -69,6 +69,9 @@ const config: NextConfig = {
   },
   experimental: {
     ppr: false,
+    staleTimes: {
+      dynamic: 0,
+    },
     reactCompiler: isProd ? true : undefined,
     /** Clerk middleware buffers bodies; Shorts allow up to 100 MB video uploads. */
     middlewareClientMaxBodySize: "110mb",

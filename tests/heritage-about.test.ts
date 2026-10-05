@@ -55,7 +55,7 @@ test("Heritage About page uses admin fields, visit links, and does not invent le
   assert.match(source, /aboutBeliefs/);
   assert.match(source, /aboutCommunity/);
   assert.match(source, /images\.about/);
-  assert.match(source, /Plan Your Visit/);
+  assert.match(source, /heritage\.about/);
   assert.match(source, /pastorName/);
   assert.doesNotMatch(source, /Steven Furtick/);
   assert.doesNotMatch(source, /Elevation/);

@@ -45,10 +45,9 @@ import {
 } from "../../_components/auth-form-styles";
 
 const signUpSchema = (
-  tValidation: ReturnType<typeof useTranslations<"validation">>,
-  requireConfirmPassword: boolean
-) => {
-  const base = z.object({
+  tValidation: ReturnType<typeof useTranslations<"validation">>
+) =>
+  z.object({
     firstName: z.string().min(1, tValidation("firstNameRequired")),
     lastName: z.string().min(1, tValidation("lastNameRequired")),
     email: z
@@ -59,36 +58,13 @@ const signUpSchema = (
       .string()
       .min(1, tValidation("passwordRequired"))
       .min(8, tValidation("passwordMinLength")),
-    confirmPassword: z.string().optional(),
   });
-
-  if (!requireConfirmPassword) return base;
-
-  return base.superRefine((data, ctx) => {
-    if (!data.confirmPassword?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: tValidation("passwordRequired"),
-        path: ["confirmPassword"],
-      });
-      return;
-    }
-    if (data.password !== data.confirmPassword) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: tValidation("passwordsDoNotMatch"),
-        path: ["confirmPassword"],
-      });
-    }
-  });
-};
 
 type SignUpValues = {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
-  confirmPassword?: string;
 };
 
 type FirebaseSignUpFormProps = React.HTMLAttributes<HTMLDivElement> & {
@@ -96,7 +72,6 @@ type FirebaseSignUpFormProps = React.HTMLAttributes<HTMLDivElement> & {
   hideIntro?: boolean;
   appearance?: AuthFormAppearance;
   inlineErrors?: boolean;
-  showConfirmPassword?: boolean;
   signInHref?: string;
 };
 
@@ -116,7 +91,6 @@ export function FirebaseSignUpForm({
   hideIntro = false,
   appearance = "default",
   inlineErrors = false,
-  showConfirmPassword = false,
   signInHref,
   ...props
 }: FirebaseSignUpFormProps) {
@@ -125,14 +99,13 @@ export function FirebaseSignUpForm({
   const tCommon = useTranslations("common");
   const styles = authFormStyles(appearance);
   const signUpSchemaMemo = useMemo(
-    () => signUpSchema(tValidation, showConfirmPassword),
-    [tValidation, showConfirmPassword]
+    () => signUpSchema(tValidation),
+    [tValidation]
   );
   const [isLoading, setIsLoading] = React.useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false);
   const [isResending, setIsResending] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
-  const [showConfirm, setShowConfirm] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [verificationCode, setVerificationCode] = React.useState("");
   const [verificationEmail, setVerificationEmail] = React.useState("");
@@ -438,41 +411,6 @@ export function FirebaseSignUpForm({
             <p className="text-sm text-destructive">{errors.password.message}</p>
           : null}
         </div>
-
-        {showConfirmPassword ? (
-          <div className={AUTH_FIELD_GROUP_CLASS}>
-            <Label htmlFor="confirmPassword" className={styles.label}>
-              {tAuth("confirmPassword")}
-            </Label>
-            <div className="relative">
-              <Lock className={styles.fieldIcon} aria-hidden />
-              <Input
-                id="confirmPassword"
-                type={showConfirm ? "text" : "password"}
-                placeholder={tAuth("confirmPassword")}
-                autoComplete="new-password"
-                disabled={isDisabled}
-                className={cn(styles.inputWithIcon, "pr-11")}
-                {...register("confirmPassword")}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className={styles.passwordToggle}
-                aria-label={showConfirm ? tAuth("hidePassword") : tAuth("showPassword")}
-              >
-                {showConfirm ?
-                  <EyeOff className="size-4" aria-hidden />
-                : <Eye className="size-4" aria-hidden />}
-              </button>
-            </div>
-            {errors.confirmPassword ?
-              <p className="text-sm text-destructive">
-                {errors.confirmPassword.message}
-              </p>
-            : null}
-          </div>
-        ) : null}
 
         <Button
           type="submit"

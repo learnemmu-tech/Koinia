@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 
 import { churchWebsitePath } from "@/lib/templates/paths";
@@ -12,7 +13,9 @@ import {
 } from "@/templates/heritage/lib";
 
 /** Service information and the featured sermon share one composed row. */
-export function HeritageWorshipSermonSection({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageWorshipSermonSection({ model }: { model: ChurchWebsiteViewModel }) {
+  const t = await getTranslations("heritage.worship");
+  const tCommon = await getTranslations("heritage.common");
   const slug = model.church.slug;
   const visibility = model.website.visibility;
   const serviceLabel = model.website.serviceLabel?.trim();
@@ -35,7 +38,7 @@ export function HeritageWorshipSermonSection({ model }: { model: ChurchWebsiteVi
   const scriptureRef = model.website.scriptureReference?.trim();
 
   return (
-    <section className="heritage-worship-band" aria-label="Worship and featured sermon">
+    <section className="heritage-worship-band" aria-label={t("aria")}>
       <HeritageFrame
         className={
           hasService && showSermon
@@ -46,14 +49,13 @@ export function HeritageWorshipSermonSection({ model }: { model: ChurchWebsiteVi
         {hasService ? (
           <div className="heritage-leaf-panel relative z-[1] min-w-0">
             <p className="heritage-eyebrow heritage-kicker-with-rule">
-              {serviceLabel || "Sunday Worship"}
+              {serviceLabel || t("sunday")}
             </p>
             <h2 className="heritage-display heritage-worship-heading mt-3">
-              Join Us This <span className="heritage-worship-accent">Sunday</span>
+              {t("joinLead")} <span className="heritage-worship-accent">{t("joinAccent")}</span>
             </h2>
             <p className="mt-3 max-w-md text-[var(--heritage-muted)]">
-              Experience a time of worship, teaching, and God&apos;s presence.
-              Everyone is welcome.
+              {t("lede")}
             </p>
             <div className="heritage-worship-meta">
               {serviceTime ? (
@@ -83,14 +85,14 @@ export function HeritageWorshipSermonSection({ model }: { model: ChurchWebsiteVi
                     rel="noreferrer"
                     className="heritage-btn heritage-btn-oxblood"
                   >
-                    Get Directions
+                    {t("directions")}
                     <ArrowRight className="size-4" aria-hidden />
-                    <span className="sr-only"> (opens map in a new tab)</span>
+                    <span className="sr-only"> {tCommon("opensMap")}</span>
                   </a>
                 ) : null}
                 {expectHref ? (
                   <HeritageButton href={expectHref} variant="outline" arrow>
-                    What to Expect
+                    {t("expect")}
                   </HeritageButton>
                 ) : null}
               </div>

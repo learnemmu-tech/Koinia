@@ -111,15 +111,17 @@ test("every prayer mutation action checks the server session before writing", ()
   assert.ok(revalidateAt < notifyAt, "notify only after the wall is revalidated");
 });
 
-test("platform and Heritage prayer detail pages share the server-side read gate", () => {
+test("platform prayer detail stays on the app route for every template", () => {
   const platform = src("app/(root)/prayer-requests/[id]/page.tsx");
   const heritage = src("templates/heritage/pages/member-prayer.tsx");
   assert.match(platform, /loadReadablePrayerRequest/);
   assert.match(heritage, /loadReadablePrayerRequest/);
-  assert.match(platform, /heritagePrayerDetailPath/);
   assert.match(heritage, /requestBelongsToChurch/);
+  assert.doesNotMatch(platform, /heritagePrayerDetailPath/);
+  assert.doesNotMatch(platform, /resolveCurrentMemberChurchContext/);
+  assert.doesNotMatch(platform, /resolvePublicTemplateId/);
+  assert.doesNotMatch(platform, /getActiveTemplateForChurch/);
   assert.doesNotMatch(platform, /firebase-prayer-request-queries/);
-  // Metadata must not reveal request titles before authorization.
   assert.doesNotMatch(platform, /request\.title[\s\S]{0,40}description/);
 });
 

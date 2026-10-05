@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 
 import { churchWebsitePath } from "@/lib/templates/paths";
@@ -21,6 +22,10 @@ export function HeritagePrayerForm({
   variant?: "page" | "dialog";
   onCancel?: () => void;
 }) {
+  const t = useTranslations("heritage.prayer");
+  const tCommon = useTranslations("common");
+  const tCategories = useTranslations("prayer.categories");
+  const tPrayer = useTranslations("prayer");
   const topSpace = flush || variant === "dialog" ? "mt-4" : "mt-10";
   const prayerPath = churchWebsitePath(model.church.slug, "/prayer");
   const [title, setTitle] = useState("");
@@ -50,13 +55,11 @@ export function HeritagePrayerForm({
     return (
       <div className="border border-[var(--heritage-border)] bg-[var(--heritage-surface)] p-6 sm:p-8">
         <p className="text-[var(--heritage-muted)]">
-          Sign in to share a prayer request with {model.church.name}. Choose
-          whether it may appear on the members&apos; prayer wall after church
-          leaders approve it.
+          {t("signInPrompt", { name: model.church.name })}
         </p>
         <div className="mt-6">
           <HeritageButton href={heritageLoginHref(model, prayerPath)} arrow>
-            Sign in to request prayer
+            {t("signInCta")}
           </HeritageButton>
         </div>
       </div>
@@ -74,13 +77,10 @@ export function HeritagePrayerForm({
         role="status"
       >
         <p className={variant === "dialog" ? "heritage-dialog-title" : "heritage-display text-3xl"}>
-          Your request was received
+          {t("received")}
         </p>
         <p className={variant === "dialog" ? "heritage-dialog-description" : "mt-4 text-[var(--heritage-muted)]"}>
-          Church leaders will review it before anyone else can see it.
-          {submittedShareable
-            ? " If they approve it and you allowed sharing, it can appear on this church's prayer wall."
-            : " You kept it private, so it will not appear on the prayer wall even after approval."}
+          {submittedShareable ? t("receivedShared") : t("receivedPrivate")}
         </p>
         <div className="mt-6 flex shrink-0 flex-wrap gap-3">
           <button
@@ -88,7 +88,7 @@ export function HeritagePrayerForm({
             className="heritage-btn heritage-btn-primary"
             onClick={resetForAnother}
           >
-            Share another request
+            {t("shareAnother")}
           </button>
           {onCancel ? (
             <button
@@ -96,7 +96,7 @@ export function HeritagePrayerForm({
               className="heritage-btn heritage-btn-outline"
               onClick={onCancel}
             >
-              Close
+              {tCommon("close")}
             </button>
           ) : null}
         </div>
@@ -146,7 +146,7 @@ export function HeritagePrayerForm({
       <div className={isDialog ? "heritage-dialog-body" : "contents"}>
         <div className={isDialog ? "heritage-dialog-field" : undefined}>
           <label htmlFor="heritage-prayer-title" className={labelClass}>
-            Title
+            {t("title")}
           </label>
           <input
             id="heritage-prayer-title"
@@ -159,7 +159,7 @@ export function HeritagePrayerForm({
         </div>
         <div className={isDialog ? "heritage-dialog-field" : undefined}>
           <label htmlFor="heritage-prayer-request" className={labelClass}>
-            Request
+            {t("request")}
           </label>
           <textarea
             id="heritage-prayer-request"
@@ -173,7 +173,7 @@ export function HeritagePrayerForm({
         </div>
         <div className={isDialog ? "heritage-dialog-field" : undefined}>
           <label htmlFor="heritage-prayer-category" className={labelClass}>
-            Category
+            {tPrayer("category")}
           </label>
           <select
             id="heritage-prayer-category"
@@ -185,7 +185,7 @@ export function HeritagePrayerForm({
           >
             {PRAYER_CATEGORIES.map((item) => (
               <option key={item.value} value={item.value}>
-                {item.label}
+                {tCategories(item.value)}
               </option>
             ))}
           </select>
@@ -193,7 +193,7 @@ export function HeritagePrayerForm({
         {isAnonymous ? null : (
           <div className={isDialog ? "heritage-dialog-field" : undefined}>
             <label htmlFor="heritage-prayer-name" className={labelClass}>
-              Your name
+              {t("yourName")}
             </label>
             <input
               id="heritage-prayer-name"
@@ -211,7 +211,7 @@ export function HeritagePrayerForm({
             checked={isAnonymous}
             onChange={(event) => setIsAnonymous(event.target.checked)}
           />
-          Submit anonymously
+          {t("anonymous")}
         </label>
         <label className={isDialog ? "heritage-dialog-checkrow" : "flex items-center gap-3 text-sm text-[var(--heritage-muted)]"}>
           <input
@@ -220,7 +220,7 @@ export function HeritagePrayerForm({
             checked={shareWithCommunity}
             onChange={(event) => setShareWithCommunity(event.target.checked)}
           />
-          Allow this request to appear on the members&apos; prayer wall once leaders approve it
+          {t("shareWall")}
         </label>
         {error ? (
           <p className="mt-4 text-sm text-[var(--heritage-primary)]" role="alert">
@@ -234,7 +234,7 @@ export function HeritagePrayerForm({
           disabled={submitting}
           className="heritage-btn heritage-btn-primary disabled:opacity-60"
         >
-          {submitting ? "Sending…" : "Submit prayer request"}
+          {submitting ? t("sending") : t("submit")}
         </button>
         {onCancel ? (
           <button
@@ -243,7 +243,7 @@ export function HeritagePrayerForm({
             onClick={onCancel}
             disabled={submitting}
           >
-            Cancel
+            {tCommon("cancel")}
           </button>
         ) : null}
       </div>

@@ -1,18 +1,25 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { getTranslations } from "next-intl/server";
+
 import { configuredSocialLinks } from "@/lib/templates/social-links";
 import { isSectionVisible } from "@/lib/templates/visibility";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
 import { HeritageSocialIcon } from "@/templates/heritage/components/heritage-social-icon";
-import { getHeritageFooterNavLinks } from "@/templates/heritage/public-nav";
+import {
+  getHeritageFooterNavLinks,
+  heritageNavMessageKey,
+} from "@/templates/heritage/public-nav";
 import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
 
 const footerLinkClass =
   "inline-flex min-h-11 items-center rounded-sm px-1 text-[0.8125rem] font-medium text-[color-mix(in_srgb,var(--heritage-primary-foreground)_86%,transparent)] transition-colors hover:text-[var(--heritage-primary-foreground)]";
 
-export function HeritageFooter({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageFooter({ model }: { model: ChurchWebsiteViewModel }) {
+  const t = await getTranslations("heritage.footer");
+  const tNav = await getTranslations("heritage.nav");
   const logo = model.website.images.logo || HERITAGE_FALLBACK_IMAGES.mark;
   const social = configuredSocialLinks(model.website.socialLinks);
   const year = new Date().getFullYear();
@@ -33,17 +40,19 @@ export function HeritageFooter({ model }: { model: ChurchWebsiteViewModel }) {
               {model.church.name}
             </span>
             <span className="mt-1 block text-[0.625rem] font-medium tracking-[0.1em] uppercase text-[color-mix(in_srgb,var(--heritage-primary-foreground)_62%,transparent)]">
-              Faith · Community · Service
+              {t("tagline")}
             </span>
           </span>
         </Link>
 
-        <nav aria-label="Footer">
+        <nav aria-label={tNav("footer")}>
           <ul className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {links.map((item) => (
               <li key={`${item.href}-${item.label}`}>
                 <Link href={item.href} className={footerLinkClass}>
-                  {item.label}
+                  {heritageNavMessageKey(item.label)
+                    ? tNav(heritageNavMessageKey(item.label)!)
+                    : item.label}
                 </Link>
               </li>
             ))}
@@ -59,7 +68,7 @@ export function HeritageFooter({ model }: { model: ChurchWebsiteViewModel }) {
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex size-10 items-center justify-center rounded-full text-[var(--heritage-primary-foreground)] transition-colors hover:text-[var(--heritage-accent)]"
-                  aria-label={`${item.platform} (opens in a new tab)`}
+                  aria-label={tNav("socialNewTab", { platform: item.platform })}
                 >
                   <HeritageSocialIcon platform={item.platform} />
                 </a>
@@ -72,21 +81,21 @@ export function HeritageFooter({ model }: { model: ChurchWebsiteViewModel }) {
       <div className="border-t border-[color-mix(in_srgb,var(--heritage-primary-foreground)_12%,transparent)]">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-5 text-sm text-[color-mix(in_srgb,var(--heritage-primary-foreground)_68%,transparent)] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>
-            © {year} {model.church.name}. All rights reserved.
+            {t("rights", { year, name: model.church.name })}
           </p>
           <p className="flex flex-wrap gap-x-6">
             <Link href="/privacy" className="inline-block rounded-sm py-1.5 hover:text-[var(--heritage-primary-foreground)]">
-              Privacy
+              {t("privacy")}
             </Link>
             <Link href="/terms" className="inline-block rounded-sm py-1.5 hover:text-[var(--heritage-primary-foreground)]">
-              Terms
+              {t("terms")}
             </Link>
             {isSectionVisible(model.website.visibility, "contact") ? (
               <Link
                 href={churchWebsitePath(model.church.slug, "/contact")}
                 className="inline-block rounded-sm py-1.5 hover:text-[var(--heritage-primary-foreground)]"
               >
-                Contact
+                {t("contact")}
               </Link>
             ) : null}
           </p>

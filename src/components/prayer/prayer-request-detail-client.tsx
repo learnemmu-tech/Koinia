@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, Loader2, UserRound } from "lucide-react";
 
@@ -36,6 +37,8 @@ export function PrayerRequestDetailClient({
   backHref = "/prayer-requests",
   sharePath,
 }: PrayerRequestDetailClientProps) {
+  const t = useTranslations("prayer");
+  const tCategories = useTranslations("prayer.categories");
   const { request, loading } = usePrayerRequest(requestId, initialRequest);
 
   if (loading && !request) {
@@ -50,20 +53,22 @@ export function PrayerRequestDetailClient({
     return (
       <div className="rounded-2xl border border-dashed border-border/60 px-6 py-16 text-center">
         <p className="text-sm text-muted-foreground">
-          This prayer request is not available.
+          {t("unavailable")}
         </p>
         <Link
           href={backHref}
           className="mt-4 inline-flex text-sm font-medium text-primary hover:underline"
         >
-          Back to Prayer Requests
+          {t("backToRequests")}
         </Link>
       </div>
     );
   }
 
   const displayName = getPrayerRequestDisplayName(request);
-  const categoryLabel = getPrayerCategoryLabel(request.category);
+  const categoryLabel = request.category
+    ? tCategories(request.category)
+    : getPrayerCategoryLabel(request.category);
 
   return (
     <article className={`${pageDetailClass} space-y-6 pt-2`}>
@@ -72,7 +77,7 @@ export function PrayerRequestDetailClient({
         className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" aria-hidden />
-        Back to Prayer Requests
+        {t("backToRequests")}
       </Link>
 
       <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">

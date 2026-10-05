@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { tenantContentQuery } from "@/lib/content/content-scope";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
@@ -10,6 +12,7 @@ export async function HeritageSermonsPage({
 }: {
   model: ChurchWebsiteViewModel;
 }) {
+  const t = await getTranslations("heritage.pages");
   const sermons = await listSermons(
     tenantContentQuery({
       organizationId: model.church.organizationId,
@@ -21,9 +24,9 @@ export async function HeritageSermonsPage({
   return (
     <HeritageContentFrame
       churchName={model.church.name}
-      eyebrow="Messages"
-      title="Sermons"
-      description={`Messages and teaching from ${model.church.name}.`}
+      eyebrow={t("messages")}
+      title={t("sermons")}
+      description={t("sermonsDescription", { name: model.church.name })}
     >
       <SermonsTabContent
         initialSermons={sermons}

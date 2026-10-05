@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
@@ -14,34 +15,19 @@ import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
  * Homepage ministry row matching the approved screenshot. These labels are the
  * layout when the church has not published ministries; they are not church records.
  */
-const MINISTRY_LAYOUT_FALLBACKS = [
-  {
-    name: "Youth",
-    description: "Next Generation",
-    image: HERITAGE_FALLBACK_IMAGES.communityPrayer,
-  },
-  {
-    name: "Worship",
-    description: "Lift His Name",
-    image: HERITAGE_FALLBACK_IMAGES.about,
-  },
-  {
-    name: "Families",
-    description: "Stronger Together",
-    image: HERITAGE_FALLBACK_IMAGES.communityChat,
-  },
-  {
-    name: "Outreach",
-    description: "Serve Our Community",
-    image: HERITAGE_FALLBACK_IMAGES.giving,
-  },
+const MINISTRY_FALLBACK_KEYS = [
+  { name: "youth", description: "youthCopy", image: HERITAGE_FALLBACK_IMAGES.communityPrayer },
+  { name: "worship", description: "worshipCopy", image: HERITAGE_FALLBACK_IMAGES.about },
+  { name: "families", description: "familiesCopy", image: HERITAGE_FALLBACK_IMAGES.communityChat },
+  { name: "outreach", description: "outreachCopy", image: HERITAGE_FALLBACK_IMAGES.giving },
 ] as const;
 
 /**
  * Ministries on the homepage. About / Our Church lives on `/about`, not here.
  */
-export function HeritageIntroductionSection({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageIntroductionSection({ model }: { model: ChurchWebsiteViewModel }) {
   if (!isSectionVisible(model.website.visibility, "ministries")) return null;
+  const t = await getTranslations("heritage.ministries");
 
   const slug = model.church.slug;
   const ministriesHref = churchWebsitePath(slug, "/ministries");
@@ -56,26 +42,30 @@ export function HeritageIntroductionSection({ model }: { model: ChurchWebsiteVie
             HERITAGE_FALLBACK_IMAGES.featuredMinistry
           ),
         }))
-      : MINISTRY_LAYOUT_FALLBACKS.map((item) => ({ ...item }));
+      : MINISTRY_FALLBACK_KEYS.map((item) => ({
+          name: t(item.name),
+          description: t(item.description),
+          image: item.image,
+        }));
 
   return (
     <section aria-labelledby="heritage-intro-heading" className="heritage-section">
       <HeritageFrame>
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
           <div className="max-w-lg">
-            <p className="heritage-eyebrow">Our Ministries</p>
+            <p className="heritage-eyebrow">{t("eyebrow")}</p>
             <h2
               id="heritage-intro-heading"
               className="heritage-display mt-3 text-[length:var(--heritage-section)]"
             >
-              Real People. Real Faith. Real Impact.
+              {t("title")}
             </h2>
             <p className="mt-4 max-w-md text-[length:var(--heritage-body)] leading-[1.65] text-[var(--heritage-muted)]">
-              Discover our ministries and find a place to serve, grow, and make a difference.
+              {t("lede")}
             </p>
             <div className="mt-8">
               <HeritageButton href={ministriesHref} variant="ghost" arrow>
-                Explore All Ministries
+                {t("explore")}
               </HeritageButton>
             </div>
           </div>

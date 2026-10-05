@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -14,13 +15,15 @@ export function HeritageSharePrayerDialog({
 }: {
   model: ChurchWebsiteViewModel;
 }) {
+  const t = useTranslations("heritage.prayer");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <DialogPrimitive.Trigger asChild>
         <button type="button" className="heritage-btn heritage-btn-primary w-full sm:w-auto">
-          Share a Request
+          {t("shareButton")}
         </button>
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
@@ -33,20 +36,18 @@ export function HeritageSharePrayerDialog({
             "heritage-theme heritage-dialog-panel"
           )}
         >
-          <DialogPrimitive.Close className="heritage-dialog-close" aria-label="Close">
+          <DialogPrimitive.Close className="heritage-dialog-close" aria-label={tCommon("close")}>
             <X className="size-4" />
           </DialogPrimitive.Close>
           <header className="heritage-dialog-header">
             <DialogPrimitive.Title className="heritage-dialog-title">
-              Share a request
+              {t("shareTitle")}
             </DialogPrimitive.Title>
             <DialogPrimitive.Description
               id="heritage-share-prayer-desc"
               className="heritage-dialog-description"
             >
-              Every request is sent to the church leaders. Choose whether it may
-              also appear on this wall once they approve it. It is not published
-              until then.
+              {t("shareDescription")}
             </DialogPrimitive.Description>
           </header>
           {open ? (

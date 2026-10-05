@@ -1,9 +1,22 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useDeferredValue, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Loader2, Search } from "lucide-react";
 
-import { PrayerWallCard } from "@/components/prayer/prayer-wall-card";
+import {
+  PrayerWallCard,
+  PrayerWallCardSkeleton,
+} from "@/components/prayer/prayer-wall-card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PRAYER_CATEGORIES } from "@/lib/prayer-request-validation";
 import type { FirebasePrayerRequest } from "@/types/firebase-prayer-request";
 import { listHeritagePrayerWall } from "@/templates/heritage/prayer-wall-data";
@@ -23,6 +36,9 @@ export function HeritagePrayerWall({
   initialRequests: FirebasePrayerRequest[];
   loadFailed: boolean;
 }) {
+  const t = useTranslations("heritage.prayer");
+  const tCategories = useTranslations("prayer.categories");
+  const tPrayer = useTranslations("prayer");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const deferredSearch = useDeferredValue(search);
@@ -57,148 +73,121 @@ export function HeritagePrayerWall({
     [uniqueRequests, churchId, deferredSearch, category]
   );
 
-  const filtersActive = search.trim().length > 0 || category !== "all";
-  const activeCategoryLabel =
-    category === "all"
-      ? null
-      : PRAYER_CATEGORIES.find((item) => item.value === category)?.label ?? category;
+  const showToolbar = uniqueRequests.length > 0;
+  const loadingInitial = query.isLoading && uniqueRequests.length === 0;
 
   if (loadFailed && uniqueRequests.length === 0) {
     return (
       <div
         role="alert"
-        className="mt-4 border border-[var(--heritage-border)] bg-[var(--heritage-surface)] p-6 text-[var(--heritage-muted)]"
+        className="rounded-2xl border border-[var(--heritage-border)] bg-[var(--heritage-surface)] px-6 py-14 text-center text-[var(--heritage-muted)]"
       >
-        The prayer wall could not be loaded right now. Please refresh the page
-        in a moment.
+        {t("loadFailed")}
       </div>
     );
   }
 
   return (
-    <div className="min-w-0" aria-labelledby="heritage-prayer-wall-heading">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <h2 id="heritage-prayer-wall-heading" className="heritage-eyebrow">
-          Shared requests
-        </h2>
-        {query.isFetching ? (
-          <p className="text-xs text-[var(--heritage-muted)]" aria-live="polite">
-            Updating…
-          </p>
-        ) : null}
-      </div>
+    <div className="heritage-prayer-wall space-y-6" aria-labelledby="heritage-prayer-wall-heading">
+      <h2 id="heritage-prayer-wall-heading" className="sr-only">
+        {t("sharedHeading")}
+      </h2>
 
-      {uniqueRequests.length > 0 ? (
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative min-w-0 flex-1">
+      {showToolbar ?
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full max-w-[400px]">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--heritage-muted)]"
+              aria-hidden
+            />
             <label htmlFor="heritage-prayer-search" className="sr-only">
-              Search prayer requests
+              {t("searchLabel")}
             </label>
-            <input
+            <Input
               id="heritage-prayer-search"
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search requests"
-              className="h-11 w-full border border-[var(--heritage-border)] bg-[var(--heritage-background)] px-3 pr-20 text-[var(--heritage-text)] outline-none focus:border-[var(--heritage-accent)]"
+              placeholder={t("searchPlaceholder")}
+              className="h-10 rounded-full border-[var(--heritage-border)] bg-[var(--heritage-surface)] pl-10 shadow-none"
             />
-            {search ? (
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-[var(--heritage-muted)] underline"
-                onClick={() => setSearch("")}
-              >
-                Clear
-              </button>
-            ) : null}
           </div>
-          <div className="sm:w-56">
-            <label htmlFor="heritage-prayer-category-filter" className="sr-only">
-              Filter by category
-            </label>
-            <select
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger
               id="heritage-prayer-category-filter"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              className="h-11 w-full border border-[var(--heritage-border)] bg-[var(--heritage-background)] px-3 text-[var(--heritage-text)] outline-none focus:border-[var(--heritage-accent)]"
+              className="h-10 w-full rounded-full border-[var(--heritage-border)] bg-[var(--heritage-surface)] shadow-none sm:w-[11rem]"
+              aria-label={t("filterCategory")}
             >
-              <option value="all">All categories</option>
+              <SelectValue placeholder={tPrayer("category")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{tPrayer("allCategories")}</SelectItem>
               {PRAYER_CATEGORIES.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
+                <SelectItem key={item.value} value={item.value}>
+                  {tCategories(item.value)}
+                </SelectItem>
               ))}
-            </select>
-          </div>
+            </SelectContent>
+          </Select>
         </div>
-      ) : null}
+      : null}
 
-      {filtersActive ? (
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--heritage-muted)]">
-          {activeCategoryLabel ? (
-            <p>
-              Category:{" "}
-              <span className="text-[var(--heritage-text)]">{activeCategoryLabel}</span>
-            </p>
-          ) : null}
-          {search.trim() ? (
-            <p>
-              Search:{" "}
-              <span className="break-all text-[var(--heritage-text)]">
-                {search.trim()}
-              </span>
-            </p>
-          ) : null}
-          <button
-            type="button"
-            className="underline"
-            onClick={() => {
-              setSearch("");
-              setCategory("all");
-            }}
-          >
-            Reset filters
-          </button>
+      {query.isFetching && uniqueRequests.length > 0 ?
+        <p className="sr-only" aria-live="polite">
+          {t("updating")}
+        </p>
+      : null}
+
+      {loadingInitial ?
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <PrayerWallCardSkeleton key={index} />
+          ))}
         </div>
-      ) : null}
-
-      {query.isError && uniqueRequests.length === 0 ? (
+      : query.isError && uniqueRequests.length === 0 ?
         <div
           role="alert"
-          className="mt-4 border border-[var(--heritage-border)] bg-[var(--heritage-surface)] p-6 text-[var(--heritage-muted)]"
+          className="rounded-2xl border border-[var(--heritage-border)] bg-[var(--heritage-surface)] px-6 py-14 text-center text-[var(--heritage-muted)]"
         >
-          The prayer wall could not be updated right now. Please try again in a
-          moment.
+          {t("updateFailed")}
         </div>
-      ) : uniqueRequests.length === 0 ? (
-        <div className="mt-4 border border-dashed border-[var(--heritage-border)] bg-[var(--heritage-surface)] p-8 text-center">
-          <p className="heritage-display text-2xl">No shared requests yet</p>
-          <p className="mt-3 text-[var(--heritage-muted)]">
-            When members share a request and leaders approve it, it will appear
-            here so the church can pray together.
+      : uniqueRequests.length === 0 ?
+        <div className="rounded-2xl border border-dashed border-[var(--heritage-border)] bg-[var(--heritage-surface)] px-6 py-16 text-center sm:py-20">
+          <p className="heritage-display text-xl text-[var(--heritage-text)]">
+            {t("emptyTitle")}
+          </p>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-[var(--heritage-muted)]">
+            {t("emptyDescription")}
           </p>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="mt-4 border border-dashed border-[var(--heritage-border)] bg-[var(--heritage-surface)] p-8 text-center">
-          <p className="heritage-display text-2xl">No matching requests</p>
-          <p className="mt-3 text-[var(--heritage-muted)]">
-            Try a different search or category, or reset the filters to see every
-            shared request.
+      : filtered.length === 0 ?
+        <div className="rounded-2xl border border-dashed border-[var(--heritage-border)] bg-[var(--heritage-muted-bg)]/50 px-6 py-14 text-center">
+          <p className="text-sm font-medium text-[var(--heritage-text)]">
+            {t("noMatchTitle")}
+          </p>
+          <p className="mt-1 text-sm text-[var(--heritage-muted)]">
+            {t("noMatchDescription")}
           </p>
         </div>
-      ) : (
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-          {filtered.map((request) => (
-            <li key={request.id} className="min-w-0">
-              <PrayerWallCard
-                request={request}
-                detailHref={heritagePrayerDetailPath(slug, request.id)}
-                className="border-[color:var(--heritage-border)] shadow-none"
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+      : <>
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((request) => (
+              <li key={request.id} className="min-w-0">
+                <PrayerWallCard
+                  request={request}
+                  detailHref={heritagePrayerDetailPath(slug, request.id)}
+                />
+              </li>
+            ))}
+          </ul>
+          {query.isFetching ?
+            <div className="flex justify-center pt-1 text-[var(--heritage-muted)]">
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+              <span className="sr-only">{t("updatingShort")}</span>
+            </div>
+          : null}
+        </>
+      }
     </div>
   );
 }

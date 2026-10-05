@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -17,6 +18,7 @@ export function ArticleNavigation({
   next,
   hrefPrefix = "/articles",
 }: ArticleNavigationProps) {
+  const t = useTranslations("common");
   if (!previous && !next) return null;
 
   return (
@@ -32,7 +34,7 @@ export function ArticleNavigation({
               <span className="flex w-full flex-col gap-1.5">
                 <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                   <ChevronLeft className="size-3.5" />
-                  Previous
+                  {t("previous")}
                 </span>
                 <span className="line-clamp-2 font-sans text-sm font-medium leading-snug text-foreground sm:text-base">
                   {previous.title}
@@ -53,7 +55,7 @@ export function ArticleNavigation({
             <Link href={contentItemHref(hrefPrefix, next.id)}>
               <span className="flex w-full flex-col items-end gap-1.5">
                 <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                  Next
+                  {t("next")}
                   <ChevronRight className="size-3.5" />
                 </span>
                 <span className="line-clamp-2 font-sans text-sm font-medium leading-snug text-foreground sm:text-base">

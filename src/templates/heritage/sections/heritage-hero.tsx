@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { Play } from "lucide-react";
 import { Cormorant_Garamond } from "next/font/google";
 import type { ReactNode } from "react";
@@ -9,11 +10,7 @@ import { HeritageButton } from "@/templates/heritage/components/heritage-button"
 import { HeritageImage } from "@/templates/heritage/components/heritage-image";
 import { HeritageFrame } from "@/templates/heritage/sections/heritage-frame";
 import { heritageJoinCta, resolveHeritageImage } from "@/templates/heritage/lib";
-import {
-  HERITAGE_FALLBACK_HEADLINE,
-  HERITAGE_FALLBACK_IMAGES,
-  HERITAGE_FALLBACK_SUPPORTING,
-} from "@/templates/heritage/theme";
+import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
 
 const heroHeading = Cormorant_Garamond({
   subsets: ["latin"],
@@ -39,7 +36,7 @@ function renderHeroHeadline(headline: string): ReactNode {
     );
   }
 
-  const community = headline.trim().match(/^(.*?)(\bCommunity\.?)$/i);
+  const community = headline.trim().match(/^(.*?)(\b(?:Community|comunidad|సమాజం)\.?)$/i);
   if (community?.[1] && community[2]) {
     return (
       <>
@@ -62,7 +59,9 @@ function renderHeroHeadline(headline: string): ReactNode {
   return headline;
 }
 
-export function HeritageHero({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageHero({ model }: { model: ChurchWebsiteViewModel }) {
+  const t = await getTranslations("heritage.hero");
+  const tCommon = await getTranslations("heritage.common");
   const slug = model.church.slug;
   const visibility = model.website.visibility;
   const joinCta = heritageJoinCta(model);
@@ -70,21 +69,21 @@ export function HeritageHero({ model }: { model: ChurchWebsiteViewModel }) {
     model.website.images.hero,
     HERITAGE_FALLBACK_IMAGES.hero
   );
-  const eyebrow = model.website.heroEyebrow?.trim() || `Welcome to ${model.church.name}`;
-  const headline = model.website.heroHeadline?.trim() || HERITAGE_FALLBACK_HEADLINE;
+  const eyebrow = model.website.heroEyebrow?.trim() || t("welcomeTo", { name: model.church.name });
+  const headline = model.website.heroHeadline?.trim() || t("fallbackHeadline");
   const supporting =
-    model.website.heroSubheadline?.trim() || HERITAGE_FALLBACK_SUPPORTING;
-
+    model.website.heroSubheadline?.trim() || t("fallbackSupporting");
+  const visitLabel = t("planVisit");
   const visit = isSectionVisible(visibility, "contact")
-    ? { href: churchWebsitePath(slug, "/contact"), label: "Plan Your Visit" }
+    ? { href: churchWebsitePath(slug, "/contact"), label: visitLabel }
     : isSectionVisible(visibility, "about")
-      ? { href: churchWebsitePath(slug, "/about"), label: "Plan Your Visit" }
-      : joinCta;
+      ? { href: churchWebsitePath(slug, "/about"), label: visitLabel }
+      : { href: joinCta.href, label: tCommon("joinOurChurch") };
   const latestSermon = isSectionVisible(visibility, "sermons") ? model.sermons[0] : undefined;
 
   return (
     <section
-      aria-label={`Welcome to ${model.church.name}`}
+      aria-label={t("welcomeAria", { name: model.church.name })}
       className="heritage-hero heritage-on-dark"
     >
       <div className="heritage-hero-media">
@@ -116,11 +115,11 @@ export function HeritageHero({ model }: { model: ChurchWebsiteViewModel }) {
                 variant="secondary"
               >
                 <Play className="size-4 fill-current" aria-hidden />
-                Watch Latest Sermon
+                {t("watchLatest")}
               </HeritageButton>
             ) : visit.href !== joinCta.href ? (
               <HeritageButton href={joinCta.href} variant="secondary">
-                {joinCta.label}
+                {tCommon("joinOurChurch")}
               </HeritageButton>
             ) : null}
           </div>

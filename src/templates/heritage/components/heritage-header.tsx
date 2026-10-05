@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { getTranslations } from "next-intl/server";
+
 import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
 import { HeritageHeaderFrame } from "@/templates/heritage/components/heritage-header-frame";
@@ -12,7 +14,9 @@ import {
 } from "@/templates/heritage/public-nav";
 import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
 
-export function HeritageHeader({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageHeader({ model }: { model: ChurchWebsiteViewModel }) {
+  const tNav = await getTranslations("heritage.nav");
+  const tCommon = await getTranslations("heritage.common");
   const logo = model.website.images.logo || HERITAGE_FALLBACK_IMAGES.mark;
   const homeHref = churchWebsitePath(model.church.slug);
   const auth = heritageHeaderAuth(model);
@@ -23,7 +27,7 @@ export function HeritageHeader({ model }: { model: ChurchWebsiteViewModel }) {
         <Link
           href={homeHref}
           className="heritage-brand rounded-sm"
-          aria-label={`${model.church.name} home`}
+          aria-label={tNav("homeAria", { name: model.church.name })}
         >
           <span className="heritage-brand-mark">
             <Image
@@ -45,9 +49,9 @@ export function HeritageHeader({ model }: { model: ChurchWebsiteViewModel }) {
           isAuthenticated={auth.isAuthenticated}
           isMember={auth.isMember}
           joinHref={auth.joinHref}
-          joinLabel={auth.joinLabel}
+          joinLabel={tCommon("joinUs")}
           signInHref={auth.signInHref}
-          signInLabel={auth.signInLabel}
+          signInLabel={tCommon("signIn")}
         />
       </div>
     </HeritageHeaderFrame>

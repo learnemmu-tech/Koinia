@@ -177,8 +177,8 @@ test("Heritage homepage hero uses saved branding images with a photographic fall
   );
   assert.match(source, /model\.website\.images\.hero/);
   assert.match(source, /HERITAGE_FALLBACK_IMAGES\.hero/);
-  assert.match(source, /Plan Your Visit/);
-  assert.match(source, /Watch Latest Sermon/);
+  assert.match(source, /planVisit/);
+  assert.match(source, /watchLatest/);
   assert.match(source, /heritage-hero-media/);
   assert.match(source, /heritage-hero-copy/);
   assert.doesNotMatch(source, /heritage-hero-banner/);
@@ -212,7 +212,7 @@ test("homepage does not show unimplemented ministry cards; Ministries page remai
   assert.doesNotMatch(home, /MINISTRY_LAYOUT_FALLBACKS/);
   assert.doesNotMatch(home, /Explore All Ministries/);
   assert.match(pages, /HeritageMinistriesPage/);
-  assert.match(about, /Who we are/);
+  assert.match(about, /heritage\.about/);
 });
 
 test("featured sermon empty state keeps the approved overlay layout", () => {
@@ -228,11 +228,11 @@ test("featured sermon empty state keeps the approved overlay layout", () => {
     ),
     "utf8"
   );
-  assert.match(source, /Featured Sermon/);
+  assert.match(source, /heritage\.featured/);
   assert.match(source, /SermonMediaSection/);
   assert.match(source, /coverImage/);
-  assert.match(source, /Watch Now/);
-  assert.match(source, /View Sermon Details/);
+  assert.match(source, /t\("watch"\)/);
+  assert.match(source, /t\("details"\)/);
   assert.match(source, /heritage-sermon-play/);
   assert.match(source, /getYouTubeVideoId/);
   assert.match(source, /youtubeUrl/);
@@ -274,20 +274,20 @@ test("Sunday Worship and Community are distinct bands with cohesive community ca
   assert.match(worship, /HeritageFeaturedSermon/);
   assert.match(worship, /sermons=\{sermons\}/);
   assert.match(community, /heritage-community-band/);
-  assert.match(community, /heritage-community-cards/);
+  assert.match(community, /heritage-community-features/);
+  assert.match(community, /heritage-community-wall/);
+  assert.match(community, /heritage-community-shepherd/);
   assert.match(community, /heritage-community-lede/);
   assert.doesNotMatch(community, /Explore Community/);
   assert.doesNotMatch(community, /heritage-leaf-panel/);
-  assert.doesNotMatch(community, /HeritageImage/);
-  assert.doesNotMatch(community, /HERITAGE_FALLBACK_IMAGES/);
-  assert.match(community, /Submit a Request/);
-  assert.match(community, /Open Chat/);
-  assert.match(community, /Chat with Shepherd AI/);
-  assert.match(community, /Find a Group/);
-  assert.match(community, /heritage-community-card-icon/);
-  assert.match(community, /Heart/);
-  assert.match(community, /Users/);
-  assert.match(community, /BookOpen/);
+  assert.match(community, /HeritageImage/);
+  assert.match(community, /HERITAGE_FALLBACK_IMAGES/);
+  assert.match(community, /prayerCta/);
+  assert.match(community, /chat\.href/);
+  assert.match(community, /shepherd\.href/);
+  assert.match(community, /groupsTitle/);
+  assert.doesNotMatch(community, /heritage-community-card/);
+  assert.doesNotMatch(community, /Heart/);
   assert.doesNotMatch(community, /HeritageButton/);
   assert.match(community, /heritage-kicker-with-rule/);
   assert.doesNotMatch(community, /heritage-community-aside/);
@@ -295,8 +295,7 @@ test("Sunday Worship and Community are distinct bands with cohesive community ca
   assert.doesNotMatch(css, /heritage-community-card--burgundy/);
   assert.doesNotMatch(css, /heritage-community-aside/);
   assert.match(css, /aspect-ratio: 16 \/ 9/);
-  assert.match(css, /\.heritage-community-card-icon \{[\s\S]*z-index:\s*1/);
-  assert.match(css, /@media \(min-width: 1280px\)[\s\S]*heritage-community-cards[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(min-width: 1280px\)[\s\S]*heritage-community-features[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.heritage-nav-dropdown \{[\s\S]*position:\s*absolute/);
   assert.match(css, /\.heritage-nav-dropdown \{[\s\S]*left:\s*0/);
   assert.match(css, /\.heritage-nav-dropdown \{[\s\S]*width:\s*max-content/);
@@ -311,7 +310,7 @@ test("Heritage source never hardcodes localhost or a development host", () => {
   assert.deepEqual(offenders, []);
 });
 
-test("Heritage resources section uses cards, Heritage tokens, and existing routes", () => {
+test("Heritage resources section uses editorial columns, Heritage tokens, and existing routes", () => {
   const source = readFileSync(
     join(
       import.meta.dirname,
@@ -328,8 +327,11 @@ test("Heritage resources section uses cards, Heritage tokens, and existing route
     join(import.meta.dirname, "..", "src", "templates", "heritage", "heritage.css"),
     "utf8"
   );
-  assert.doesNotMatch(source, /HERITAGE_FALLBACK_IMAGES\.library/);
-  assert.doesNotMatch(source, /heritage-resources-index/);
+  assert.match(source, /HERITAGE_FALLBACK_IMAGES\.featuredSermon/);
+  assert.match(source, /HERITAGE_FALLBACK_IMAGES\.songs/);
+  assert.match(source, /HERITAGE_FALLBACK_IMAGES\.library/);
+  assert.match(source, /HERITAGE_FALLBACK_IMAGES\.videos/);
+  assert.doesNotMatch(source, /heritage-resource-card-index/);
   assert.doesNotMatch(source, /Cormorant/);
   assert.doesNotMatch(source, /#35243f|#E8DFEA|#C66F62/i);
   assert.match(source, /path: "\/sermons"/);
@@ -337,12 +339,12 @@ test("Heritage resources section uses cards, Heritage tokens, and existing route
   assert.match(source, /path: "\/articles"/);
   assert.match(source, /path: "\/videos"/);
   assert.match(source, /heritage-resources-grid/);
-  assert.match(source, /Learn More/);
+  assert.match(source, /t\("learnMore"\)/);
   assert.match(source, /Biblical messages to strengthen your faith/);
   assert.match(source, /Worship and praise for your daily walk/);
   assert.match(source, /Explore Scripture and Christian living/);
   assert.match(source, /Watch inspiring Christian content/);
-  assert.match(source, /heritage-resource-card-copy/);
+  assert.match(source, /heritage-resource-text/);
   assert.doesNotMatch(source, /View All Resources/);
   assert.doesNotMatch(source, /heritage-resource-card--/);
   assert.doesNotMatch(source, /heritage-resource-card-mark/);
@@ -352,7 +354,6 @@ test("Heritage resources section uses cards, Heritage tokens, and existing route
   assert.doesNotMatch(css, /heritage-resource-card-orbit/);
   assert.doesNotMatch(css, /heritage-resource-card--burgundy/);
   assert.match(css, /@media \(min-width: 1280px\)[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.doesNotMatch(source, /HERITAGE_FALLBACK_IMAGES/);
   assert.doesNotMatch(css, /--hub-plum/);
   assert.doesNotMatch(css, /heritage-library-scrim/);
 });
@@ -375,11 +376,11 @@ test("Heritage giving section keeps existing actions without the split image lay
   assert.doesNotMatch(source, /2 Corinthians|cheerful giver/i);
   assert.match(source, /heritage-giving-banner/);
   assert.match(source, /heritage-giving-strip/);
-  assert.match(source, /Give Online/);
-  assert.match(source, /Learn More/);
-  assert.match(source, /Support Ministries/);
-  assert.match(source, /Care for Community/);
-  assert.match(source, /Build a Brighter Future/);
+  assert.match(source, /giveOnline/);
+  assert.match(source, /learnMore/);
+  assert.match(source, /t\("support"\)/);
+  assert.match(source, /t\("care"\)/);
+  assert.match(source, /t\("future"\)/);
   assert.match(source, /`\/give\/\$\{campaign\.id\}`/);
   assert.match(source, /variant="primary"/);
   assert.match(source, /variant="secondary"/);
@@ -479,7 +480,7 @@ test("Heritage mobile nav is a right slide-in sidebar with overlay close behavio
   );
   assert.match(nav, /heritage-nav-drawer/);
   assert.match(nav, /heritage-nav-scrim/);
-  assert.match(nav, /createPortal/);
+  assert.doesNotMatch(nav, /createPortal/);
   assert.match(nav, /html\.style\.overflow = "hidden"/);
   assert.match(nav, /event\.key === "Escape"/);
   assert.doesNotMatch(nav, /heritage-header-mobile absolute inset-x-0 top-full/);
@@ -506,4 +507,100 @@ test("mobile homepage hero copy is centered with a speaker-visible crop", () => 
   assert.ok(heroMobile, "mobile hero copy must be centered with a speaker-biased crop");
   assert.match(css, /\.heritage-hero-copy-wrap \{[\s\S]*align-items:\s*center/);
   assert.match(css, /background-color:\s*#202624/);
+});
+
+test("public auth pages have no website header and compact fields", () => {
+  const shell = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "templates",
+      "heritage",
+      "components",
+      "heritage-auth-shell.tsx"
+    ),
+    "utf8"
+  );
+  const signup = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "templates",
+      "heritage",
+      "pages",
+      "signup.tsx"
+    ),
+    "utf8"
+  );
+  const form = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "app",
+      "(firebase-auth)",
+      "signup",
+      "_components",
+      "firebase-signup-form.tsx"
+    ),
+    "utf8"
+  );
+  const css = readFileSync(
+    join(import.meta.dirname, "..", "src", "templates", "heritage", "heritage.css"),
+    "utf8"
+  );
+  const styles = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "app",
+      "(firebase-auth)",
+      "_components",
+      "auth-form-styles.ts"
+    ),
+    "utf8"
+  );
+  assert.doesNotMatch(shell, /heritage-auth-bar/);
+  assert.doesNotMatch(shell, /Back to website/);
+  assert.doesNotMatch(signup, /showConfirmPassword/);
+  assert.doesNotMatch(form, /confirmPassword/);
+  assert.doesNotMatch(css, /\.heritage-auth-shell \{[\s\S]{0,180}overflow:\s*hidden/);
+  assert.doesNotMatch(css, /\.heritage-auth-shell \{[\s\S]{0,120}(?<!min-)height:\s*100dvh/);
+  assert.match(styles, /HERITAGE_AUTH_INPUT_CLASS[\s\S]*h-10 min-h-10/);
+});
+
+test("inner content pages use a compact shared header, not the homepage hero", () => {
+  const frame = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "templates",
+      "heritage",
+      "components",
+      "heritage-content-frame.tsx"
+    ),
+    "utf8"
+  );
+  const hero = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "templates",
+      "heritage",
+      "sections",
+      "heritage-hero.tsx"
+    ),
+    "utf8"
+  );
+  assert.match(frame, /heritage-page-intro/);
+  assert.match(frame, /py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7/);
+  assert.match(frame, /mt-5/);
+  assert.doesNotMatch(frame, /sm:pt-10/);
+  assert.doesNotMatch(frame, /min-h-svh/);
+  assert.match(hero, /heritage-hero/);
 });

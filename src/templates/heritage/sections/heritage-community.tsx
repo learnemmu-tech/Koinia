@@ -1,85 +1,72 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Heart, Users, UsersRound } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
-import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
-import { isSectionVisible } from "@/lib/templates/visibility";
+import { HeritageImage } from "@/templates/heritage/components/heritage-image";
 import { heritageCommunityCta } from "@/templates/heritage/lib";
 import { HeritageFrame } from "@/templates/heritage/sections/heritage-frame";
+import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
 
-type CommunityCard = {
+type Feature = {
   href: string;
-  title: string;
+  index: string;
+  eyebrow: string;
+  titleLead: string;
+  titleRest: string;
   description: string;
   cta: string;
-  icon: LucideIcon;
+  image: string;
+  alt: string;
 };
 
-function FeatureCard({ href, title, description, cta, icon: Icon }: CommunityCard) {
-  return (
-    <Link href={href} className="heritage-community-card">
-      <span className="heritage-community-card-icon" aria-hidden>
-        <Icon />
-      </span>
-      <div className="heritage-community-card-body">
-        <h3 className="heritage-community-card-title">{title}</h3>
-        <p className="heritage-community-card-copy">{description}</p>
-        <span className="heritage-community-card-link">
-          {cta}
-          <ArrowRight className="size-3.5 shrink-0" aria-hidden />
-        </span>
-      </div>
-    </Link>
-  );
-}
-
-/** Prayer Requests, Community Chat, Shepherd AI, and groups from the home page. */
-export function HeritageCommunitySection({ model }: { model: ChurchWebsiteViewModel }) {
+/** Community Chat, Shepherd AI, and groups. Prayer stays on the wall above. */
+export async function HeritageCommunitySection({ model }: { model: ChurchWebsiteViewModel }) {
+  const t = await getTranslations("heritage.community");
   const prayer = heritageCommunityCta(model, "prayer");
   const chat = heritageCommunityCta(model, "chat");
   const shepherd = heritageCommunityCta(model, "shepherd");
+  const groups = heritageCommunityCta(model, "groups");
   const showPrayer = model.church.showPrayerWall !== false;
-  const showGroups = isSectionVisible(model.website.visibility, "ministries");
 
-  const cards: CommunityCard[] = [
-    ...(showPrayer
-      ? [
-          {
-            href: prayer.href,
-            title: "Prayer Requests",
-            description: "Share a prayer request and let our community pray with you.",
-            cta: "Submit a Request",
-            icon: Heart,
-          },
-        ]
-      : []),
+  const features: Feature[] = [
     {
       href: chat.href,
-      title: "Community Chat",
-      description: "Connect with members, join discussions, and build meaningful relationships.",
-      cta: "Open Chat",
-      icon: Users,
+      index: "02",
+      eyebrow: t("chatTitle"),
+      titleLead: t("chatHeadlineLead"),
+      titleRest: t("chatHeadlineRest"),
+      description: t("chatCopy"),
+      cta: t("chatExplore"),
+      image: HERITAGE_FALLBACK_IMAGES.communityChat,
+      alt: t("chatImageAlt"),
     },
     {
       href: shepherd.href,
-      title: "Meet Shepherd AI",
-      description: "Your companion for Scripture, faith questions, and spiritual guidance.",
-      cta: "Chat with Shepherd AI",
-      icon: BookOpen,
+      index: "03",
+      eyebrow: t("shepherdPrompt"),
+      titleLead: t("shepherdTitle"),
+      titleRest: "",
+      description: t("shepherdCopy"),
+      cta: t("shepherdCta"),
+      image: HERITAGE_FALLBACK_IMAGES.communityShepherd,
+      alt: t("shepherdImageAlt"),
     },
-    ...(showGroups
-      ? [
-          {
-            href: churchWebsitePath(model.church.slug, "/ministries"),
-            title: "Find a Group",
-            description: "Join a small group, serve together, and grow in faith.",
-            cta: "Explore Groups",
-            icon: UsersRound,
-          },
-        ]
-      : []),
-  ];
+    {
+      href: groups.href,
+      index: "04",
+      eyebrow: t("groupsTitle"),
+      titleLead: t("groupsHeadlineLead"),
+      titleRest: t("groupsHeadlineRest"),
+      description: t("groupsCopy"),
+      cta: t("groupsCta"),
+      image: HERITAGE_FALLBACK_IMAGES.worship,
+      alt: t("groupsImageAlt"),
+    },
+  ].map((feature, position) => ({
+    ...feature,
+    index: String(position + 1).padStart(2, "0"),
+  }));
 
   return (
     <section
@@ -87,25 +74,89 @@ export function HeritageCommunitySection({ model }: { model: ChurchWebsiteViewMo
       className="heritage-community-band"
     >
       <HeritageFrame className="heritage-community-inner">
-        <header className="heritage-community-header">
-          <p className="heritage-eyebrow heritage-kicker-with-rule">Community</p>
-          <h2
-            id="heritage-community-heading"
-            className="heritage-display heritage-community-title"
-          >
-            We&apos;re Stronger When
-            <span className="heritage-community-accent">We Pray Together.</span>
-          </h2>
-          <p className="heritage-community-lede">
-            {showPrayer
-              ? "Share your prayer requests, connect with church members, and get spiritual guidance through meaningful conversations and Shepherd AI."
-              : "Connect with church members and get spiritual guidance through meaningful conversations and Shepherd AI."}
-          </p>
-        </header>
-        <ul className="heritage-community-cards">
-          {cards.map((card) => (
-            <li key={card.title}>
-              <FeatureCard {...card} />
+        <div className="heritage-community-stage">
+          <header className="heritage-community-header">
+            <p className="heritage-eyebrow heritage-kicker-with-rule">{t("eyebrow")}</p>
+            <h2
+              id="heritage-community-heading"
+              className="heritage-display heritage-community-title"
+            >
+              {t("titleLead")}{" "}
+              <span className="heritage-community-accent">{t("titleAccent")}</span>
+            </h2>
+            <p className="heritage-community-lede">
+              {showPrayer ? t("lede") : t("ledeNoPrayer")}
+            </p>
+            <Link href={shepherd.href} className="heritage-community-shepherd">
+              <span className="heritage-community-shepherd-kicker">{t("shepherdPrompt")}</span>
+              <span className="heritage-community-shepherd-cta">
+                {t("shepherdTitle")}
+                <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+              </span>
+            </Link>
+          </header>
+
+          {showPrayer ? (
+            <Link href={prayer.href} className="heritage-community-wall">
+              <span className="heritage-community-wall-copy">
+                <span className="heritage-community-wall-kicker">{t("wallEyebrow")}</span>
+                <span className="heritage-display heritage-community-wall-title">
+                  {t("wallTitleLead")}{" "}
+                  <span className="heritage-community-wall-title-rest">{t("wallTitleRest")}</span>
+                </span>
+                <span className="heritage-community-wall-text">{t("prayerCopy")}</span>
+                <span className="heritage-community-wall-cta">
+                  {t("prayerCta")}
+                  <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+                </span>
+              </span>
+              <span className="heritage-community-wall-photo">
+                <HeritageImage
+                  src={HERITAGE_FALLBACK_IMAGES.library}
+                  alt={t("wallImageAlt")}
+                  sizes="(max-width: 767px) 100vw, 34vw"
+                />
+              </span>
+            </Link>
+          ) : null}
+        </div>
+
+        <ul className="heritage-community-features">
+          {features.map((feature) => (
+            <li key={feature.eyebrow}>
+              <Link href={feature.href} className="heritage-community-feature">
+                <span className="heritage-community-feature-copy">
+                  <span className="heritage-community-feature-meta">
+                    <span className="heritage-community-feature-index">{feature.index}</span>
+                    <span className="heritage-community-feature-rule" aria-hidden />
+                    <span className="heritage-community-feature-eyebrow">{feature.eyebrow}</span>
+                  </span>
+                  <span className="heritage-display heritage-community-feature-title">
+                    {feature.titleLead}
+                    {feature.titleRest ? (
+                      <>
+                        {" "}
+                        <span className="heritage-community-feature-title-rest">
+                          {feature.titleRest}
+                        </span>
+                      </>
+                    ) : null}
+                  </span>
+                  <span className="heritage-community-feature-text">{feature.description}</span>
+                  <span className="heritage-community-feature-cta">
+                    {feature.cta}
+                    <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+                  </span>
+                </span>
+                <span className="heritage-community-feature-photo">
+                  <HeritageImage
+                    src={feature.image}
+                    alt={feature.alt}
+                    className="heritage-community-feature-img"
+                    sizes="(max-width: 767px) 92vw, 22vw"
+                  />
+                </span>
+              </Link>
             </li>
           ))}
         </ul>

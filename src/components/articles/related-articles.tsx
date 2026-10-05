@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import type { FirebaseArticle } from "@/types/firebase-article";
@@ -19,13 +20,14 @@ export function RelatedArticles({
   articles,
   hrefPrefix = "/articles",
 }: RelatedArticlesProps) {
+  const t = useTranslations("articles");
   if (articles.length === 0) return null;
 
   return (
     <section className="mt-14 border-t border-border/30 pt-10 sm:mt-16">
       <div className="mb-6">
         <h2 className="font-sans text-lg font-semibold text-foreground sm:text-xl">
-          Related Articles
+          {t("related")}
         </h2>
       </div>
 

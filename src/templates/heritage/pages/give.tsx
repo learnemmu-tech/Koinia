@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { DonationCampaignDetailClient } from "@/components/donations/donation-campaign-detail-client";
 import { DonationsListClient } from "@/components/donations/donations-list-client";
 import { tenantContentQuery } from "@/lib/content/content-scope";
@@ -8,6 +10,7 @@ import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
 import { HeritageContentFrame } from "@/templates/heritage/components/heritage-content-frame";
 
 export async function HeritageGivePage({ model }: { model: ChurchWebsiteViewModel }) {
+  const t = await getTranslations("heritage.giving");
   const campaigns = await listDonationCampaigns(
     tenantContentQuery({
       organizationId: model.church.organizationId,
@@ -19,9 +22,9 @@ export async function HeritageGivePage({ model }: { model: ChurchWebsiteViewMode
   return (
     <HeritageContentFrame
       churchName={model.church.name}
-      eyebrow="Give"
-      title="Donations"
-      description="Support active ministry campaigns with secure, transparent giving."
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
     >
       <DonationsListClient
         initialCampaigns={campaigns}

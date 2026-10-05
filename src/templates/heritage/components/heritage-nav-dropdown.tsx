@@ -4,9 +4,14 @@ import { useEffect, useId, useRef } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 
+import { useTranslations } from "next-intl";
+
 import { persistActiveChurchCookie } from "@/lib/church-cookies";
 import { cn } from "@/lib/utils";
-import type { HeritagePublicNavGroup } from "@/templates/heritage/public-nav";
+import {
+  heritageNavMessageKey,
+  type HeritagePublicNavGroup,
+} from "@/templates/heritage/public-nav";
 
 const triggerClass =
   "heritage-nav-link inline-flex h-[4.5rem] items-center gap-1 whitespace-nowrap rounded-sm bg-transparent text-[0.875rem] font-medium tracking-[-0.01em] text-current outline-none transition-colors sm:h-[5rem] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--heritage-accent)]";
@@ -30,6 +35,11 @@ export function HeritageNavDropdown({
   onLeave: () => void;
   onDismiss: () => void;
 }) {
+  const tNav = useTranslations("heritage.nav");
+  const labelOf = (label: string) => {
+    const key = heritageNavMessageKey(label);
+    return key ? tNav(key) : label;
+  };
   const rootRef = useRef<HTMLLIElement>(null);
   const menuId = useId();
 
@@ -92,7 +102,7 @@ export function HeritageNavDropdown({
         onFocus={onOpen}
         onClick={() => onOpen()}
       >
-        {group.label}
+        {labelOf(group.label)}
         <ChevronDown
           className={cn("size-3 opacity-70 transition-transform", open && "rotate-180")}
           aria-hidden
@@ -123,7 +133,7 @@ export function HeritageNavDropdown({
                   onDismiss();
                 }}
               >
-                {item.label}
+                {labelOf(item.label)}
               </Link>
             </li>
           ))}

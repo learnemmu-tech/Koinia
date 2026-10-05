@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import type { ChurchVideo } from "@/types/church-video";
@@ -9,6 +10,7 @@ import { ContentListToolbar } from "@/components/worship/content-list-toolbar";
 import { contentCardGridClassName } from "@/lib/responsive-classes";
 
 export function HeritageVideosList({ videos }: { videos: ChurchVideo[] }) {
+  const t = useTranslations("heritage.pages");
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -24,7 +26,7 @@ export function HeritageVideosList({ videos }: { videos: ChurchVideo[] }) {
   }, [videos, search]);
 
   if (videos.length === 0) {
-    return <TabEmptyState message="No videos published yet" />;
+    return <TabEmptyState message={t("noVideos")} />;
   }
 
   return (
@@ -32,10 +34,10 @@ export function HeritageVideosList({ videos }: { videos: ChurchVideo[] }) {
       <ContentListToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search videos…"
+        searchPlaceholder={t("searchVideos")}
       />
       {filtered.length === 0 ? (
-        <TabEmptyState message="No videos match that search." />
+        <TabEmptyState message={t("noVideoMatch")} />
       ) : (
         <div className={contentCardGridClassName}>
           {filtered.map((video) => (

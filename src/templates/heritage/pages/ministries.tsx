@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
 import { tenantContentQuery } from "@/lib/content/content-scope";
@@ -9,23 +11,24 @@ import { HeritageImage } from "@/templates/heritage/components/heritage-image";
 import { heritageMemberHref, resolveHeritageImage } from "@/templates/heritage/lib";
 import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
 
-export function HeritageMinistriesPage({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageMinistriesPage({ model }: { model: ChurchWebsiteViewModel }) {
+  const t = await getTranslations("heritage.ministries");
   if (model.ministries.length === 0) {
     return (
-      <section className="mx-auto max-w-3xl px-4 py-24 text-center">
+      <section className="heritage-content-system mx-auto max-w-3xl px-4 py-6 text-center sm:px-6 lg:py-8">
         <p className="heritage-eyebrow">{model.church.name}</p>
-        <h1 className="heritage-display mt-4 text-[length:var(--heritage-section)]">Ministries</h1>
+        <h1 className="heritage-display mt-4 text-[length:var(--heritage-section)]">{t("pageTitle")}</h1>
         <p className="mt-4 text-[var(--heritage-muted)]">
-          Ministry groups will appear here when they are created.
+          {t("empty")}
         </p>
       </section>
     );
   }
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+    <section className="heritage-content-system mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <p className="heritage-eyebrow">{model.church.name}</p>
-      <h1 className="heritage-display mt-4 text-[length:var(--heritage-section)]">Ministries</h1>
+      <h1 className="heritage-display mt-4 text-[length:var(--heritage-section)]">{t("pageTitle")}</h1>
       <div className="mt-12 space-y-16">
         {model.ministries.map((ministry, index) => (
           <article
@@ -50,7 +53,7 @@ export function HeritageMinistriesPage({ model }: { model: ChurchWebsiteViewMode
               : null}
               <div className="mt-6">
                 <HeritageButton href={heritageMemberHref(model, "groups")} variant="outline">
-                  Join groups
+                  {t("joinGroups")}
                 </HeritageButton>
               </div>
             </div>
@@ -66,6 +69,7 @@ export async function HeritageArticlesPage({
 }: {
   model: ChurchWebsiteViewModel;
 }) {
+  const t = await getTranslations("heritage.pages");
   const articles = await listArticles(
     tenantContentQuery({
       organizationId: model.church.organizationId,
@@ -77,9 +81,9 @@ export async function HeritageArticlesPage({
   return (
     <HeritageContentFrame
       churchName={model.church.name}
-      eyebrow="Resources"
-      title="Articles"
-      description={`Articles and resources from ${model.church.name}.`}
+      eyebrow={t("resources")}
+      title={t("articles")}
+      description={t("articlesDescription", { name: model.church.name })}
     >
       <ArticlesTabContent
         initialArticles={articles}

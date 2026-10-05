@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import {
   BookOpen,
   Church,
@@ -56,7 +57,10 @@ function pastorInitials(name: string): string {
     .join("");
 }
 
-export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) {
+  const t = await getTranslations("heritage.about");
+  const tNav = await getTranslations("heritage.nav");
+  const tCommon = await getTranslations("heritage.common");
   const name = model.church.name;
   const slug = model.church.slug;
   const heading = resolveAboutHeadline(model.website.aboutHeadline, name);
@@ -111,22 +115,22 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
       <section className="heritage-about-hero" aria-labelledby="heritage-about-heading">
         <HeritageFrame className="heritage-about-hero-grid">
           <div className="heritage-about-hero-copy">
-            <p className="heritage-eyebrow">Who we are</p>
+            <p className="heritage-eyebrow">{t("who")}</p>
             <h1 id="heritage-about-heading" className="heritage-display heritage-about-hero-title">
               {heading}
             </h1>
             <p className="heritage-about-lede">{intro}</p>
             <div className="heritage-about-actions">
-              <HeritageButton href={visitHref}>Plan Your Visit</HeritageButton>
+              <HeritageButton href={visitHref}>{t("visit")}</HeritageButton>
               <HeritageButton href={joinCta.href} variant="outline">
-                {joinCta.label}
+                {tCommon("joinOurChurch")}
               </HeritageButton>
             </div>
           </div>
           <div className="heritage-about-hero-media">
             <HeritageImage
               src={aboutImage}
-              alt={`${name} church`}
+              alt={t("churchAlt", { name })}
               fallback={HERITAGE_FALLBACK_IMAGES.about}
               sizes="(max-width: 1024px) 100vw, 52vw"
             />
@@ -145,22 +149,22 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
             />
           </div>
           <div>
-            <p className="heritage-eyebrow">Our story</p>
+            <p className="heritage-eyebrow">{t("story")}</p>
             <h2 id="heritage-about-story" className="heritage-display mt-3 text-[length:var(--heritage-section)]">
-              A church gathered around Christ
+              {t("gathered")}
             </h2>
             <p className="mt-4 whitespace-pre-line text-[var(--heritage-muted)]">{intro}</p>
             {established || address ? (
               <dl className="heritage-about-facts">
                 {established ? (
                   <div>
-                    <dt>Established</dt>
+                    <dt>{t("established")}</dt>
                     <dd>{established}</dd>
                   </div>
                 ) : null}
                 {address ? (
                   <div>
-                    <dt>Location</dt>
+                    <dt>{t("location")}</dt>
                     <dd>{address}</dd>
                   </div>
                 ) : null}
@@ -172,14 +176,14 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
 
       <section className="heritage-about-mission" aria-labelledby="heritage-about-mission">
         <HeritageFrame className="heritage-about-mission-inner">
-          <p className="heritage-eyebrow heritage-eyebrow-dark">Our mission</p>
+          <p className="heritage-eyebrow heritage-eyebrow-dark">{t("mission")}</p>
           <h2 id="heritage-about-mission" className="heritage-display mt-3">
-            Why we exist
+            {t("why")}
           </h2>
           <p>{mission}</p>
           {vision ? (
             <figure className="heritage-about-vision">
-              <figcaption>Vision</figcaption>
+              <figcaption>{t("vision")}</figcaption>
               <blockquote>{vision}</blockquote>
             </figure>
           ) : null}
@@ -188,9 +192,9 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
 
       <section className="heritage-about-band" aria-labelledby="heritage-about-values">
         <HeritageFrame>
-          <p className="heritage-eyebrow">Our values</p>
+          <p className="heritage-eyebrow">{t("values")}</p>
           <h2 id="heritage-about-values" className="heritage-display mt-3 text-[length:var(--heritage-section)]">
-            What shapes our life together
+            {t("shapes")}
           </h2>
           <ul className="heritage-about-values">
             {values.map((value) => (
@@ -209,13 +213,12 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
       <section className="heritage-about-band heritage-about-band-surface" aria-labelledby="heritage-about-believe">
         <HeritageFrame className="heritage-about-believe">
           <div>
-            <p className="heritage-eyebrow">What we believe</p>
+            <p className="heritage-eyebrow">{t("believe")}</p>
             <h2 id="heritage-about-believe" className="heritage-display mt-3 text-[length:var(--heritage-section)]">
-              Faith that guides our church
+              {t("faithGuides")}
             </h2>
             <p className="mt-4 max-w-xl text-[var(--heritage-muted)]">
-              These statements come from this church&apos;s About settings. Leaders can
-              replace the default introduction with their own statement of faith.
+              {t("beliefsNote")}
             </p>
           </div>
           <HeritageAboutBeliefs items={beliefs} />
@@ -225,9 +228,9 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
       <section className="heritage-about-band" aria-labelledby="heritage-about-community">
         <HeritageFrame className="heritage-about-split">
           <div>
-            <p className="heritage-eyebrow">Our community</p>
+            <p className="heritage-eyebrow">{t("community")}</p>
             <h2 id="heritage-about-community" className="heritage-display mt-3 text-[length:var(--heritage-section)]">
-              There is a place for you here
+              {t("place")}
             </h2>
             <p className="mt-4 whitespace-pre-line text-[var(--heritage-muted)]">
               {communityCopy}
@@ -235,19 +238,19 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
             <div className="heritage-about-connect">
               {sermonsVisible ? (
                 <HeritageButton href={churchWebsitePath(slug, "/sermons")} variant="outline">
-                  Sermons
+                  {tNav("sermons")}
                 </HeritageButton>
               ) : null}
               {ministriesVisible ? (
                 <HeritageButton href={churchWebsitePath(slug, "/ministries")} variant="outline">
-                  Ministries
+                  {tNav("ministries")}
                 </HeritageButton>
               ) : null}
               <HeritageButton href={prayer.href} variant="outline">
-                Prayer
+                {tNav("prayer")}
               </HeritageButton>
               <HeritageButton href={churchWebsitePath(slug, "/community")} variant="outline">
-                Community
+                {tNav("community")}
               </HeritageButton>
             </div>
           </div>
@@ -265,9 +268,9 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
       {pastor ? (
         <section className="heritage-about-band heritage-about-band-surface" aria-labelledby="heritage-about-leadership">
           <HeritageFrame>
-            <p className="heritage-eyebrow">Leadership</p>
+            <p className="heritage-eyebrow">{t("leadership")}</p>
             <h2 id="heritage-about-leadership" className="heritage-display mt-3 text-[length:var(--heritage-section)]">
-              Meet our pastor
+              {t("pastor")}
             </h2>
             <article className="heritage-about-leader">
               <span className="heritage-about-leader-mark" aria-hidden>
@@ -275,7 +278,7 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
               </span>
               <div>
                 <h3>{pastor}</h3>
-                <p>Pastor</p>
+                <p>{t("pastorRole")}</p>
               </div>
             </article>
           </HeritageFrame>
@@ -284,17 +287,17 @@ export function HeritageAboutPage({ model }: { model: ChurchWebsiteViewModel }) 
 
       <section className="heritage-about-cta" aria-labelledby="heritage-about-visit">
         <HeritageFrame className="heritage-about-cta-inner">
-          <p className="heritage-eyebrow">Visit</p>
+          <p className="heritage-eyebrow">{t("visitEyebrow")}</p>
           <h2 id="heritage-about-visit" className="heritage-display mt-3 text-[length:var(--heritage-section)]">
-            Join us this Sunday
+            {t("sunday")}
           </h2>
           <p>
-            Come worship with {name}. We would be glad to welcome you.
+            {t("sundayLede", { name })}
           </p>
           <div className="heritage-about-actions">
-            <HeritageButton href={visitHref}>Plan Your Visit</HeritageButton>
+            <HeritageButton href={visitHref}>{t("visit")}</HeritageButton>
             <HeritageButton href={joinCta.href} variant="outline">
-              {joinCta.label}
+              {tCommon("joinOurChurch")}
             </HeritageButton>
           </div>
         </HeritageFrame>

@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { tenantContentQuery } from "@/lib/content/content-scope";
 import { getPublishedEventsGroupedCached } from "@/lib/cached-event-data";
 import { churchWebsitePath } from "@/lib/templates/paths";
@@ -15,6 +17,7 @@ export async function HeritageEventsPage({
 }: {
   model: ChurchWebsiteViewModel;
 }) {
+  const t = await getTranslations("heritage.events");
   const { upcoming, past } = await getPublishedEventsGroupedCached(
     tenantContentQuery({
       organizationId: model.church.organizationId,
@@ -25,9 +28,9 @@ export async function HeritageEventsPage({
   return (
     <HeritageContentFrame
       churchName={model.church.name}
-      eyebrow="Gather"
-      title="Events"
-      description={`Upcoming gatherings and events at ${model.church.name}.`}
+      eyebrow={t("eyebrow")}
+      title={t("pageTitle")}
+      description={t("pageDescription", { name: model.church.name })}
     >
       <EventsListClient
         initialUpcoming={upcoming}

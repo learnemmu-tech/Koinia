@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,17 +12,16 @@ import {
   heritageJoinChurchHref,
   heritageSignupHref,
 } from "@/templates/heritage/lib";
-import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
 
-export function HeritageLoginPage({
+export async function HeritageLoginPage({
   model,
   callbackUrl,
 }: {
   model: ChurchWebsiteViewModel;
   callbackUrl: string;
 }) {
+  const t = await getTranslations("heritage.auth");
   const homeHref = churchWebsitePath(model.church.slug);
-  const logo = model.website.images.logo || HERITAGE_FALLBACK_IMAGES.mark;
   const signupHref = isJoinPath(callbackUrl)
     ? heritageSignupHref(model, callbackUrl)
     : heritageSignupHref(model, heritageJoinChurchHref(model));
@@ -33,51 +32,29 @@ export function HeritageLoginPage({
 
   return (
     <div className="flex w-full flex-col">
-      <div className="mb-7 flex items-center gap-3">
-        <span className="relative size-11 overflow-hidden">
-          <Image
-            src={logo}
-            alt={`${model.church.name} logo`}
-            fill
-            className="object-contain"
-            sizes="44px"
-          />
-        </span>
-        <div className="min-w-0">
-          <p className="heritage-display text-xl leading-tight">
-            {model.church.name}
-          </p>
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[var(--heritage-muted)]">
-            {model.website.heroEyebrow?.trim() || "Worship · Community · Faith"}
-          </p>
-        </div>
-      </div>
-
       {model.viewer.isAuthenticated ? (
         <div className="space-y-5">
-          <p className="heritage-eyebrow">Welcome</p>
+          <p className="heritage-eyebrow">{t("welcome")}</p>
           <h1 className="heritage-display text-[length:var(--heritage-section)] text-[var(--heritage-text)]">
-            Join this church
+            {t("joinChurch")}
           </h1>
           <p className="text-sm leading-relaxed text-[var(--heritage-muted)]">
-            You are signed in, but you are not a member of {model.church.name}{" "}
-            yet. Join to belong to this church community.
+            {t("signedInBody", { name: model.church.name })}
           </p>
           <HeritageButton href={heritageJoinChurchHref(model)} arrow>
-            Continue joining
+            {t("continueJoining")}
           </HeritageButton>
         </div>
       ) : (
         <>
-          <p className="heritage-eyebrow">Welcome back</p>
-          <h1 className="heritage-display mt-3 text-[length:var(--heritage-section)] text-[var(--heritage-text)]">
-            Sign in
+          <p className="heritage-eyebrow">{t("welcomeBack")}</p>
+          <h1 className="heritage-display mt-1.5 text-[length:var(--heritage-section)] text-[var(--heritage-text)]">
+            {t("signIn")}
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-[var(--heritage-muted)]">
-            Access your church account to stay connected, view resources, and be
-            part of our community.
+          <p className="mt-2 text-sm leading-relaxed text-[var(--heritage-muted)]">
+            {t("signInLede")}
           </p>
-          <div className="mt-8">
+          <div className="mt-5">
             <FirebaseSignInForm
               callbackUrl={callbackUrl}
               hideIntro
@@ -90,9 +67,9 @@ export function HeritageLoginPage({
         </>
       )}
 
-      <p className="mt-8">
+      <p className="mt-5">
         <Link href={homeHref} className="heritage-auth-site-link">
-          ← Back to website
+          ← {t("backToWebsite")}
         </Link>
       </p>
     </div>

@@ -1,0 +1,6 @@
+2026/10/05-16:10:05.680 7c88 Reusing MANIFEST D:\repo\Koinia\.tmp-heritage-shots\final\profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/10/05-16:10:05.682 7c88 Recovering log #3
+2026/10/05-16:10:05.685 7c88 Reusing old log D:\repo\Koinia\.tmp-heritage-shots\final\profile\Default\Local Storage\leveldb/000003.log 
+2026/10/05-16:13:22.196 f00 Level-0 table #5: started
+2026/10/05-16:13:22.224 f00 Level-0 table #5: 27306 bytes OK
+2026/10/05-16:13:22.228 f00 Delete type=0 #3

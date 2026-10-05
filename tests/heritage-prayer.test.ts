@@ -206,6 +206,29 @@ test("search and category filters stay on authorized wall requests", () => {
   assert.equal(none.length, 0);
 });
 
+test("Heritage prayer wall follows Signature search, filter, and card structure", () => {
+  const wall = readFileSync(
+    join(
+      import.meta.dirname,
+      "..",
+      "src",
+      "templates",
+      "heritage",
+      "components",
+      "heritage-prayer-wall.tsx"
+    ),
+    "utf8"
+  );
+  assert.match(wall, /PrayerWallCard/);
+  assert.match(wall, /heritagePrayerDetailPath/);
+  assert.match(wall, /filterHeritagePrayerWallRequests/);
+  assert.match(wall, /SelectTrigger/);
+  assert.match(wall, /searchLabel/);
+  assert.match(wall, /lg:grid-cols-3/);
+  assert.match(wall, /PrayerWallCardSkeleton/);
+  assert.doesNotMatch(wall, /["'`]\/prayer-requests/);
+});
+
 test("Heritage member wall uses a share modal instead of a permanent form", () => {
   const page = readFileSync(
     join(import.meta.dirname, "..", "src", "templates", "heritage", "pages", "member-prayer.tsx"),
@@ -294,7 +317,8 @@ test("Heritage share dialog stacks above the page and uses Heritage type tokens"
   assert.match(form, /heritage-dialog-footer/);
   assert.match(form, /heritage-dialog-body/);
   assert.doesNotMatch(form, /heritage-dialog-switch/);
-  assert.match(dialog, /Share a Request/);
+  assert.match(dialog, /shareButton/);
+  assert.doesNotMatch(dialog, /Share a Request/);
   assert.doesNotMatch(dialog, /Request Prayer/);
   assert.doesNotMatch(
     dialog,

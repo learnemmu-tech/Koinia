@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import {
   ContentDetailLayout,
   ContentListenWatchLink,
@@ -18,6 +20,8 @@ export function SermonDetailView({
   sermon: FirebaseSermon;
   hrefPrefix?: string;
 }) {
+  const t = useTranslations("sermons");
+  const tCommon = useTranslations("common");
   const coverUrl = getSongCoverUrl(sermon.coverImage);
   const path = contentItemHref(hrefPrefix, sermon.id);
   const dateLabel = formatDetailDate(sermon.dateCreated);
@@ -32,25 +36,25 @@ export function SermonDetailView({
 
   const sidebarItems: ContentDetailSidebarItem[] = [];
   if (dateLabel) {
-    sidebarItems.push({ label: "Date", value: dateLabel, icon: "calendar" });
+    sidebarItems.push({ label: t("date"), value: dateLabel, icon: "calendar" });
   }
   if (scripture) {
-    sidebarItems.push({ label: "Scripture", value: scripture, icon: "book" });
+    sidebarItems.push({ label: t("scripture"), value: scripture, icon: "book" });
   }
   if (speaker) {
-    sidebarItems.push({ label: "Speaker", value: speaker, icon: "user" });
+    sidebarItems.push({ label: t("speaker"), value: speaker, icon: "user" });
   }
 
   const listenLabel =
-    hasVideo && hasAudio ? "Listen / Watch"
-    : hasVideo ? "Watch Sermon"
-    : "Listen to Sermon";
+    hasVideo && hasAudio ? t("listenWatch")
+    : hasVideo ? t("watch")
+    : t("listen");
 
   return (
     <ContentDetailLayout
       kind="sermon"
-      kindLabel="Sermon"
-      backLabel="Back to Sermons"
+      kindLabel={t("kind")}
+      backLabel={t("back")}
       backHref={hrefPrefix}
       coverUrl={coverUrl}
       coverAlt={sermon.title}
@@ -59,8 +63,8 @@ export function SermonDetailView({
       metadata={metadata}
       excerpt={excerpt || sermon.subtitle?.trim() || undefined}
       content={sermon.content}
-      contentHeading={sermon.content.trim() ? "Notes" : undefined}
-      sidebarTitle="About this sermon"
+      contentHeading={sermon.content.trim() ? t("notes") : undefined}
+      sidebarTitle={t("about")}
       sidebarItems={sidebarItems}
       scriptureReference={scripture || undefined}
       tags={sermon.tags}
@@ -72,7 +76,7 @@ export function SermonDetailView({
           description={excerpt || undefined}
           path={path}
           className="h-9 rounded-xl px-4"
-          label="Share"
+          label={tCommon("share")}
         />
       }
       heroActions={

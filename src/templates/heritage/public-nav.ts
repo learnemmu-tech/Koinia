@@ -5,6 +5,36 @@ import type {
 } from "@/lib/templates/types";
 import { isSectionVisible } from "@/lib/templates/visibility";
 
+const HERITAGE_NAV_MESSAGE_KEYS = {
+  Home: "home",
+  About: "about",
+  Sermons: "sermons",
+  Give: "give",
+  Contact: "contact",
+  Resources: "resources",
+  Songs: "songs",
+  Articles: "articles",
+  Videos: "videos",
+  Books: "books",
+  Events: "events",
+  Prayer: "prayer",
+  "Prayer Requests": "prayerRequests",
+  Community: "community",
+  Chat: "chat",
+  "Shepherd AI": "shepherd",
+  Ministries: "ministries",
+} as const;
+
+export type HeritageNavMessageKey =
+  (typeof HERITAGE_NAV_MESSAGE_KEYS)[keyof typeof HERITAGE_NAV_MESSAGE_KEYS];
+
+export function heritageNavMessageKey(label: string): HeritageNavMessageKey | null {
+  if (label in HERITAGE_NAV_MESSAGE_KEYS) {
+    return HERITAGE_NAV_MESSAGE_KEYS[label as keyof typeof HERITAGE_NAV_MESSAGE_KEYS];
+  }
+  return null;
+}
+
 export type HeritagePublicNavLink = {
   href: string;
   label: string;

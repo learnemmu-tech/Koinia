@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { Heart, Loader2, MoreHorizontal, Reply, Send, Pencil, Trash2, Flag } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +30,8 @@ type ResponseItem = {
 type ConversationProps = { requestId: string };
 
 export function PrayerConversation({ requestId }: ConversationProps) {
+  const t = useTranslations("prayer");
+  const tCommon = useTranslations("common");
   const { authUser } = useFirebaseAuth();
   const [items, setItems] = useState<ResponseItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +43,7 @@ export function PrayerConversation({ requestId }: ConversationProps) {
 
   async function request(path: string, init?: RequestInit) {
     const user = firebaseAuth.currentUser;
-    if (!user) throw new Error("Please sign in to join the conversation.");
+    if (!user) throw new Error(t("signInToReply"));
     const token = await user.getIdToken();
     const response = await fetch(path, {
       ...init,
@@ -51,7 +54,7 @@ export function PrayerConversation({ requestId }: ConversationProps) {
       },
     });
     const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Conversation request failed.");
+    if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : t("conversationFailed"));
     return data;
   }
 
@@ -60,7 +63,7 @@ export function PrayerConversation({ requestId }: ConversationProps) {
       const data = await request(`/api/prayer-requests/${encodeURIComponent(requestId)}/responses`);
       setItems((data.responses as ResponseItem[]) ?? []);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Responses unavailable.");
+      toast.error(error instanceof Error ? error.message : t("responsesUnavailable"));
     } finally {
       setLoading(false);
     }
@@ -109,7 +112,7 @@ export function PrayerConversation({ requestId }: ConversationProps) {
       setEditing(null);
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to save response.");
+      toast.error(error instanceof Error ? error.message : t("saveResponseFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -123,7 +126,7 @@ export function PrayerConversation({ requestId }: ConversationProps) {
       });
       setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, likedByMe: Boolean(data.liked), likeCount: Number(data.likeCount ?? entry.likeCount) } : entry));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to update like.");
+      toast.error(error instanceof Error ? error.message : t("likeFailed"));
     }
   }
 
@@ -132,7 +135,7 @@ export function PrayerConversation({ requestId }: ConversationProps) {
       await request(`/api/prayer-requests/${encodeURIComponent(requestId)}/responses?responseId=${item.id}`, { method: "DELETE" });
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to delete response.");
+      toast.error(error instanceof Error ? error.message : t("deleteResponseFailed"));
     }
   }
 
@@ -142,9 +145,9 @@ export function PrayerConversation({ requestId }: ConversationProps) {
         method: "PUT",
         body: JSON.stringify({ action: "report", responseId: item.id }),
       });
-      toast.success("Response reported. Thank you.");
+      toast.success(t("reported"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to report response.");
+      toast.error(error instanceof Error ? error.message : t("reportFailed"));
     }
   }
 
@@ -160,7 +163,7 @@ export function PrayerConversation({ requestId }: ConversationProps) {
       <div className={isReply ? "mt-2 pl-1" : "mt-1"}>
         {isReply || editing ? (
           <div className="mb-1 flex items-center justify-between px-1 text-xs text-muted-foreground">
-            <span>{editing ? "Editing your response" : `Replying to ${replyingTo?.authorName ?? "this response"}`}</span>
+            <span>{editing ? t("editingResponse") : t("replyingTo", { name: replyingTo?.authorName ?? t("thisResponse") })}</span>
             <button
               type="button"
               className="rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
@@ -170,14 +173,14 @@ export function PrayerConversation({ requestId }: ConversationProps) {
                 setContent("");
                 setComposerOpen(false);
               }}
-              aria-label={editing ? "Cancel editing" : "Cancel reply"}
+              aria-label={editing ? t("cancelEditing") : t("cancelReply")}
             >
-              Cancel
+              {tCommon("cancel")}
             </button>
           </div>
         ) : null}
         <div className="flex items-start gap-2.5">
-          <AuthorAvatar name={authUser?.displayName ?? "You"} className="size-8" />
+          <AuthorAvatar name={authUser?.displayName ?? t("you")} className="size-8" />
           <div className="min-w-0 flex-1 border-b border-border/70 focus-within:border-primary/50">
             <div className="relative">
               <Textarea
@@ -192,8 +195,8 @@ export function PrayerConversation({ requestId }: ConversationProps) {
                 maxLength={2000}
                 autoFocus
                 rows={1}
-                placeholder={isReply ? "Write a reply..." : "Write a response..."}
-                aria-label={isReply ? "Write a reply" : "Write a response"}
+                placeholder={isReply ? t("writeReply") : t("writeResponse")}
+                aria-label={isReply ? t("writeReply") : t("writeResponse")}
                 className="min-h-9 resize-none border-0 bg-transparent px-0 py-2 pr-10 text-sm shadow-none focus-visible:ring-0"
               />
               <Button
@@ -203,7 +206,7 @@ export function PrayerConversation({ requestId }: ConversationProps) {
                 className="absolute bottom-0.5 right-0 size-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
                 disabled={!content.trim() || submitting}
                 onClick={() => void submit()}
-                aria-label={editing ? "Save response" : isReply ? "Send reply" : "Send response"}
+                aria-label={editing ? t("saveResponse") : isReply ? t("sendReply") : t("sendResponse")}
               >
                 {submitting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-[18px]" />}
               </Button>
@@ -219,36 +222,36 @@ export function PrayerConversation({ requestId }: ConversationProps) {
     return (
       <div key={item.id} className={depth > 0 ? "ml-5 border-l border-border/50 pl-3 sm:ml-8 sm:pl-4" : ""}>
         <div className="flex gap-3 py-3.5">
-          <AuthorAvatar name={item.deleted ? "Deleted response" : item.authorName} className="size-8" />
+          <AuthorAvatar name={item.deleted ? t("deletedResponse") : item.authorName} className="size-8" />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-medium leading-tight">{item.deleted ? "Deleted response" : item.authorName}</p>
+                <p className="text-sm font-medium leading-tight">{item.deleted ? t("deletedResponse") : item.authorName}</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">{formatRelativeTime(new Date(item.createdAt).getTime())}</p>
               </div>
               {!item.deleted ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="icon" className="size-7 text-muted-foreground" aria-label="More response actions">
+                    <Button type="button" variant="ghost" size="icon" className="size-7 text-muted-foreground" aria-label={t("moreActions")}>
                       <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {isOwn ? <>
-                      <DropdownMenuItem onClick={() => beginEdit(item)}><Pencil className="size-4" /> Edit</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void remove(item)}><Trash2 className="size-4" /> Delete</DropdownMenuItem>
-                    </> : <DropdownMenuItem onClick={() => void report(item)}><Flag className="size-4" /> Report</DropdownMenuItem>}
+                      <DropdownMenuItem onClick={() => beginEdit(item)}><Pencil className="size-4" /> {tCommon("edit")}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => void remove(item)}><Trash2 className="size-4" /> {tCommon("delete")}</DropdownMenuItem>
+                    </> : <DropdownMenuItem onClick={() => void report(item)}><Flag className="size-4" /> {tCommon("report")}</DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : null}
             </div>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{item.content}</p>
             {!item.deleted ? <div className="mt-2.5 flex items-center gap-3 text-xs text-muted-foreground">
-              <button type="button" className={item.likedByMe ? "inline-flex items-center gap-1 text-primary" : "inline-flex items-center gap-1 hover:text-foreground"} onClick={() => void toggleLike(item)} aria-label={item.likedByMe ? "Unlike response" : "Like response"}>
+              <button type="button" className={item.likedByMe ? "inline-flex items-center gap-1 text-primary" : "inline-flex items-center gap-1 hover:text-foreground"} onClick={() => void toggleLike(item)} aria-label={item.likedByMe ? t("unlikeResponse") : t("likeResponse")}>
                 <Heart className={item.likedByMe ? "size-3.5 fill-current" : "size-3.5"} /> {item.likeCount}
               </button>
-              <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => openComposer(item)} aria-label={`Reply to ${item.authorName}`}>
-                <Reply className="size-3.5" /> Reply
+              <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => openComposer(item)} aria-label={t("replyTo", { name: item.authorName })}>
+                <Reply className="size-3.5" /> {t("reply")}
               </button>
             </div> : null}
             {composerOpen && replyingTo?.id === item.id ? renderComposer(true) : null}
@@ -262,8 +265,8 @@ export function PrayerConversation({ requestId }: ConversationProps) {
   return (
     <section className="space-y-1" aria-labelledby="prayer-conversation-title">
       <div className="flex items-baseline justify-between gap-3 px-1 pb-2">
-        <h2 id="prayer-conversation-title" className="flex items-center gap-2 text-lg font-semibold"><Reply className="size-4 text-primary" /> Prayer Conversation</h2>
-        <p className="text-xs text-muted-foreground">{items.length} {items.length === 1 ? "response" : "responses"}</p>
+        <h2 id="prayer-conversation-title" className="flex items-center gap-2 text-lg font-semibold"><Reply className="size-4 text-primary" /> {t("conversationTitle")}</h2>
+        <p className="text-xs text-muted-foreground">{t("responseCount", { count: items.length })}</p>
       </div>
       {composerOpen && !replyingTo ? renderComposer() : (
         !composerOpen ? (
@@ -272,14 +275,14 @@ export function PrayerConversation({ requestId }: ConversationProps) {
             onClick={() => openComposer()}
             className="flex min-h-10 w-full items-center gap-2.5 px-1 text-left text-sm text-muted-foreground"
           >
-            <AuthorAvatar name={authUser?.displayName ?? "You"} className="size-8" />
-            <span className="min-w-0 flex-1 border-b border-border/70 py-2.5 hover:border-primary/50 hover:text-foreground">Write a response...</span>
+            <AuthorAvatar name={authUser?.displayName ?? t("you")} className="size-8" />
+            <span className="min-w-0 flex-1 border-b border-border/70 py-2.5 hover:border-primary/50 hover:text-foreground">{t("writeResponse")}</span>
             <Send className="size-[18px] shrink-0 text-muted-foreground/70" aria-hidden />
           </button>
         ) : null
       )}
       <div className="divide-y divide-border/50">
-        {loading ? <div className="flex justify-center py-8"><Loader2 className="size-5 animate-spin text-primary" /></div> : items.length === 0 ? <p className="py-3 pl-11 text-xs text-muted-foreground">Be the first to encourage this community.</p> : (children.get(null) ?? []).map((item) => renderResponse(item))}
+        {loading ? <div className="flex justify-center py-8"><Loader2 className="size-5 animate-spin text-primary" /></div> : items.length === 0 ? <p className="py-3 pl-11 text-xs text-muted-foreground">{t("beFirstEncourage")}</p> : (children.get(null) ?? []).map((item) => renderResponse(item))}
       </div>
     </section>
   );

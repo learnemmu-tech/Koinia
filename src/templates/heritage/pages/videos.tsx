@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { tenantContentQuery } from "@/lib/content/content-scope";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
@@ -10,6 +12,7 @@ export async function HeritageVideosPage({
 }: {
   model: ChurchWebsiteViewModel;
 }) {
+  const t = await getTranslations("heritage.pages");
   const videos = await listPublishedChurchVideos({
     query: tenantContentQuery({
       organizationId: model.church.organizationId,
@@ -21,15 +24,15 @@ export async function HeritageVideosPage({
   return (
     <HeritageContentFrame
       churchName={model.church.name}
-      eyebrow="Watch"
-      title="Videos"
-      description={`Videos from ${model.church.name}.`}
+      eyebrow={t("watch")}
+      title={t("videos")}
+      description={t("videosDescription", { name: model.church.name })}
     >
       <HeritageVideosList videos={videos} />
       <p className="mt-8 text-sm text-muted-foreground">
-        Looking for sermons?{" "}
+        {t("lookingForSermons")}{" "}
         <a className="underline" href={churchWebsitePath(model.church.slug, "/sermons")}>
-          Browse the sermon archive
+          {t("browseArchive")}
         </a>
         .
       </p>

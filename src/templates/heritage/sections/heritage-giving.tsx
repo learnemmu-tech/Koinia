@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { Church, HeartHandshake, Sprout } from "lucide-react";
 import { Cormorant_Garamond } from "next/font/google";
 
@@ -19,8 +20,9 @@ const givingHeading = Cormorant_Garamond({
  * Invitation to give. It only links to the existing giving pages; the donation itself
  * and its confirmation stay in the payment flow.
  */
-export function HeritageGivingSection({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageGivingSection({ model }: { model: ChurchWebsiteViewModel }) {
   if (!isSectionVisible(model.website.visibility, "giving")) return null;
+  const t = await getTranslations("heritage.giving");
 
   const slug = model.church.slug;
   const [campaign] = model.campaigns;
@@ -47,31 +49,30 @@ export function HeritageGivingSection({ model }: { model: ChurchWebsiteViewModel
         </div>
         <div className="heritage-giving-scrim" />
         <div className="heritage-giving-main">
-          <p className="heritage-giving-kicker">Give with purpose</p>
+          <p className="heritage-giving-kicker">{t("kicker")}</p>
           <h2
             id="heritage-giving-heading"
             className={`${givingHeading.className} heritage-giving-title`}
           >
-            {campaign?.title || "Your Generosity Changes Lives."}
+            {campaign?.title || t("fallbackTitle")}
           </h2>
           <p className="heritage-giving-lede">
-            {campaign?.description ||
-              `Support our church, our ministries, and the people we serve. Together we can make a lasting impact.`}
+            {campaign?.description || t("fallbackLede")}
           </p>
           <div className="heritage-giving-actions">
             <HeritageButton href={giveHref} variant="primary" arrow>
-              Give Online
+              {t("giveOnline")}
             </HeritageButton>
             <HeritageButton href={learnMoreHref} variant="secondary" arrow>
-              Learn More
+              {t("learnMore")}
             </HeritageButton>
           </div>
         </div>
         <ul className="heritage-giving-strip">
           {[
-            { icon: Church, label: "Support Ministries" },
-            { icon: HeartHandshake, label: "Care for Community" },
-            { icon: Sprout, label: "Build a Brighter Future" },
+            { icon: Church, label: t("support") },
+            { icon: HeartHandshake, label: t("care") },
+            { icon: Sprout, label: t("future") },
           ].map((item) => (
             <li key={item.label}>
               <item.icon aria-hidden />

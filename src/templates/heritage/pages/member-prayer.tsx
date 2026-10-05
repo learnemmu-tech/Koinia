@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 
@@ -68,6 +69,7 @@ export async function HeritageMemberPrayerPage({
   const churchId = model.church.id;
   const slug = model.church.slug;
 
+  const t = await getTranslations("heritage.prayer");
   let requests: FirebasePrayerRequest[] = [];
   let loadFailed = false;
   try {
@@ -89,9 +91,9 @@ export async function HeritageMemberPrayerPage({
   return (
     <HeritageContentFrame
       churchName={model.church.name}
-      eyebrow="Prayer"
-      title="Prayer wall"
-      description={`Lift up the needs of the ${model.church.name} family, and share your own. Requests are reviewed by church leaders before they appear here.`}
+      eyebrow={t("eyebrow")}
+      title={t("wallTitle")}
+      description={t("wallDescription", { name: model.church.name })}
       action={<HeritageSharePrayerDialog model={model} />}
     >
       <HeritageActiveChurchSync churchId={churchId} />

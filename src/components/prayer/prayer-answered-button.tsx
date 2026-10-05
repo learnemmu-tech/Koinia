@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ type PrayerAnsweredBadgeProps = {
 };
 
 export function PrayerAnsweredBadge({ className }: PrayerAnsweredBadgeProps) {
+  const t = useTranslations("prayer");
   return (
     <Badge
       className={cn(
@@ -25,7 +27,7 @@ export function PrayerAnsweredBadge({ className }: PrayerAnsweredBadgeProps) {
       )}
     >
       <CheckCircle2 className="mr-1 size-3.5" aria-hidden />
-      Prayer Answered
+      {t("answered")}
     </Badge>
   );
 }
@@ -41,6 +43,7 @@ export function PrayerAnsweredButton({
   className,
   onAnswered,
 }: PrayerAnsweredButtonProps) {
+  const t = useTranslations("prayer");
   const { authUser } = useFirebaseAuth();
   const [submitting, setSubmitting] = useState(false);
 
@@ -87,7 +90,7 @@ export function PrayerAnsweredButton({
       {submitting ?
         <Loader2 className="mr-1.5 size-4 animate-spin" aria-hidden />
       : <CheckCircle2 className="mr-1.5 size-4" aria-hidden />}
-      Prayer Answered
+      {t("answered")}
     </Button>
   );
 }

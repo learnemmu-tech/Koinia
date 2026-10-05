@@ -11,6 +11,8 @@ export const HERITAGE_FALLBACK_IMAGES = {
   communityPrayer: "/templates/heritage/community-prayer.jpg",
   communityChat: "/templates/heritage/community-chat.jpg",
   communityShepherd: "/templates/heritage/community-shepherd.jpg",
+  songs: "/templates/heritage/songs-worship.jpg",
+  videos: "/templates/heritage/videos-media.jpg",
   mark: "/templates/heritage/mark.svg",
 } as const;
 

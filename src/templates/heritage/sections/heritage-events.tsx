@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
@@ -15,8 +16,10 @@ import {
 import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
 
 /** The only place events appear on the home page. */
-export function HeritageEventsSection({ model }: { model: ChurchWebsiteViewModel }) {
+export async function HeritageEventsSection({ model }: { model: ChurchWebsiteViewModel }) {
   if (!isSectionVisible(model.website.visibility, "events")) return null;
+  const t = await getTranslations("heritage.events");
+  const locale = await getLocale();
 
   const slug = model.church.slug;
   const events = upcomingChurchEvents(model.events, 4);
@@ -31,23 +34,23 @@ export function HeritageEventsSection({ model }: { model: ChurchWebsiteViewModel
       <HeritageFrame>
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
           <div>
-            <p className="heritage-eyebrow">Gather</p>
+            <p className="heritage-eyebrow">{t("eyebrow")}</p>
             <h2
               id="heritage-events-heading"
               className="heritage-display mt-3 text-[length:var(--heritage-section)]"
             >
-              Upcoming events
+              {t("title")}
             </h2>
           </div>
           <HeritageButton href={allEvents} variant="ghost">
-            View all events
+            {t("viewAll")}
           </HeritageButton>
         </div>
 
         <ul className="mt-10 divide-y divide-[var(--heritage-border)] border-y border-[var(--heritage-border)]">
           {events.map((event) => {
             const href = churchWebsitePath(slug, `/events/${event.id}`);
-            const parts = eventDateParts(event.eventDate);
+            const parts = eventDateParts(event.eventDate, locale);
             const meta = [event.eventTime, event.location].filter(Boolean).join(" · ");
             return (
               <li key={event.id}>
@@ -67,7 +70,7 @@ export function HeritageEventsSection({ model }: { model: ChurchWebsiteViewModel
                       </>
                     ) : (
                       <span className="text-sm font-semibold text-[var(--heritage-accent-ink)]">
-                        {formatLongDate(event.eventDate)}
+                        {formatLongDate(event.eventDate, locale)}
                       </span>
                     )}
                   </div>
@@ -94,7 +97,7 @@ export function HeritageEventsSection({ model }: { model: ChurchWebsiteViewModel
                     <div className="hidden w-36 md:block" aria-hidden />
                   )}
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--heritage-primary)] sm:justify-self-end">
-                    Details
+                    {t("details")}
                     <ArrowRight
                       className="size-4 transition-transform group-hover:translate-x-1"
                       aria-hidden

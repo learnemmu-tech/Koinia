@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
+
+import { useTranslations } from "next-intl";
 
 import { persistActiveChurchCookie } from "@/lib/church-cookies";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,11 @@ import {
   HeritageMemberControls,
 } from "@/templates/heritage/components/heritage-member-controls";
 import { HeritageNavDropdown } from "@/templates/heritage/components/heritage-nav-dropdown";
-import type { HeritagePublicNavGroup, HeritagePublicNavLink } from "@/templates/heritage/public-nav";
+import {
+  heritageNavMessageKey,
+  type HeritagePublicNavGroup,
+  type HeritagePublicNavLink,
+} from "@/templates/heritage/public-nav";
 
 const CLOSE_DELAY_MS = 90;
 const XL_MIN_WIDTH = 1280;
@@ -53,9 +58,13 @@ export function HeritageNav({
   signInLabel: string;
 }) {
   const pathname = usePathname();
+  const tNav = useTranslations("heritage.nav");
+  const labelOf = (label: string) => {
+    const key = heritageNavMessageKey(label);
+    return key ? tNav(key) : label;
+  };
   const drawerTitleId = useId();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [portalReady, setPortalReady] = useState(false);
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -107,15 +116,11 @@ export function HeritageNav({
   const trailing = contactIndex >= 0 ? primary.slice(contactIndex) : [];
 
   useEffect(() => {
-    setPortalReady(true);
-  }, []);
-
-  useEffect(() => {
     if (!mobileOpen) return;
 
     previouslyFocused.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : toggleRef.current;
-    const frame = window.requestAnimationFrame(() => {
+    const focusFrame = window.requestAnimationFrame(() => {
       closeBtnRef.current?.focus();
     });
 
@@ -157,7 +162,7 @@ export function HeritageNav({
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", onResize);
     return () => {
-      window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", onResize);
       html.style.overflow = prevHtmlOverflow;
@@ -190,7 +195,7 @@ export function HeritageNav({
       <button
         type="button"
         className={cn("heritage-nav-scrim", mobileOpen && "is-open")}
-        aria-label="Close menu"
+        aria-label={tNav("closeMenu")}
         tabIndex={mobileOpen ? 0 : -1}
         onClick={closeMobile}
       />
@@ -205,37 +210,37 @@ export function HeritageNav({
       >
         <div className="heritage-nav-drawer-head">
           <p id={drawerTitleId} className="heritage-nav-drawer-title">
-            Menu
+            {tNav("menu")}
           </p>
           <button
             ref={closeBtnRef}
             type="button"
             className="heritage-nav-drawer-close"
-            aria-label="Close menu"
+            aria-label={tNav("closeMenu")}
             onClick={closeMobile}
           >
             <X className="size-5" aria-hidden />
           </button>
         </div>
         <div className="heritage-nav-drawer-body heritage-header-mobile">
-          <nav aria-label="Mobile">
+          <nav aria-label={tNav("mobile")}>
             <ul>
               {leading.map((item) => (
                 <li key={`${item.href}-${item.label}`}>
                   <Link href={item.href} className={mobileLinkClass} onClick={onMobileNavigate}>
-                    {item.label}
+                    {labelOf(item.label)}
                   </Link>
                 </li>
               ))}
             </ul>
             {groups.map((group) => (
               <div key={group.id} className="heritage-nav-drawer-section">
-                <p className="heritage-nav-drawer-heading">{group.label}</p>
+                <p className="heritage-nav-drawer-heading">{labelOf(group.label)}</p>
                 <ul>
                   {group.items.map((item) => (
                     <li key={`${item.href}-${item.label}`}>
                       <Link href={item.href} className={mobileLinkClass} onClick={onMobileNavigate}>
-                        {item.label}
+                        {labelOf(item.label)}
                       </Link>
                     </li>
                   ))}
@@ -247,7 +252,7 @@ export function HeritageNav({
                 {trailing.map((item) => (
                   <li key={`${item.href}-${item.label}`}>
                     <Link href={item.href} className={mobileLinkClass} onClick={onMobileNavigate}>
-                      {item.label}
+                      {labelOf(item.label)}
                     </Link>
                   </li>
                 ))}
@@ -287,7 +292,7 @@ export function HeritageNav({
   return (
     <>
       <nav
-        aria-label="Primary"
+        aria-label={tNav("primary")}
         className="heritage-header-nav hidden min-w-0 items-center justify-center xl:flex"
       >
         <ul className="flex min-w-0 max-w-full flex-nowrap items-center justify-center gap-x-4">
@@ -300,7 +305,7 @@ export function HeritageNav({
                   isActive(item.href) ? navLinkActive : navLinkIdle
                 )}
               >
-                {item.label}
+                {labelOf(item.label)}
               </Link>
             </li>
           ))}
@@ -326,7 +331,7 @@ export function HeritageNav({
                   isActive(item.href) ? navLinkActive : navLinkIdle
                 )}
               >
-                {item.label}
+                {labelOf(item.label)}
               </Link>
             </li>
           ))}
@@ -357,13 +362,13 @@ export function HeritageNav({
         className="heritage-header-toggle inline-flex size-11 shrink-0 items-center justify-center text-current xl:hidden"
         aria-expanded={mobileOpen}
         aria-controls="heritage-mobile-nav"
-        aria-label="Open menu"
+        aria-label={tNav("openMenu")}
         onClick={() => setMobileOpen((value) => !value)}
       >
         <Menu className="size-5" aria-hidden />
       </button>
 
-      {portalReady ? createPortal(mobileNav, document.body) : null}
+      <div className="heritage-nav-layer-host">{mobileNav}</div>
     </>
   );
 }

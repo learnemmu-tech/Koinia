@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { setCookie } from "cookies-next";
 import { NextIntlClientProvider } from "next-intl";
 
@@ -30,25 +31,43 @@ const LocaleSwitcherContext = createContext<LocaleSwitcherContextValue | null>(
   null
 );
 
+function readLocaleCookie(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const prefix = `${LOCALE_COOKIE}=`;
+  const match = document.cookie
+    .split("; ")
+    .find((part) => part.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
+}
+
 type I18nProviderProps = {
   initialLocale: Locale;
   children: ReactNode;
 };
 
 export function I18nProvider({ initialLocale, children }: I18nProviderProps) {
+  const router = useRouter();
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
   const setLocale = useCallback((nextLocale: Locale) => {
     const resolved = parseLocale(nextLocale);
-    startTransition(() => {
-      setLocaleState(resolved);
-    });
     setCookie(LOCALE_COOKIE, resolved, {
       path: "/",
       maxAge: LOCALE_COOKIE_MAX_AGE,
       sameSite: "lax",
     });
-  }, []);
+    startTransition(() => {
+      setLocaleState(resolved);
+      router.refresh();
+    });
+  }, [router]);
+
+  useEffect(() => {
+    const cookieLocale = parseLocale(readLocaleCookie());
+    if (cookieLocale === initialLocale) {
+      setLocaleState(initialLocale);
+    }
+  }, [initialLocale]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -62,7 +81,12 @@ export function I18nProvider({ initialLocale, children }: I18nProviderProps) {
   );
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
+    <NextIntlClientProvider
+      key={locale}
+      locale={locale}
+      messages={messages}
+      timeZone="UTC"
+    >
       <LocaleSwitcherContext.Provider value={value}>
         {children}
       </LocaleSwitcherContext.Provider>

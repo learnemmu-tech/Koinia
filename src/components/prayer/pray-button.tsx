@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
@@ -33,6 +34,7 @@ export function PrayButton({
   showCountInLabel = false,
   appearance = "default",
 }: PrayButtonProps) {
+  const t = useTranslations("prayer");
   const { authUser } = useFirebaseAuth();
   const queryClient = useQueryClient();
   const { ensureAuth } = useAuthGuard();
@@ -60,10 +62,10 @@ export function PrayButton({
         true
       );
       setCount((current) => current + 1);
-      toast.success("Thank you for praying");
+      toast.success(t("thankYou"));
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to record your prayer";
+        error instanceof Error ? error.message : t("recordFailed");
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -94,8 +96,8 @@ export function PrayButton({
   if (isWall) {
     const countLabel =
       count > 0 ?
-        `${displayCount} praying`
-      : "Be the first to pray";
+        t("prayingCount", { count: displayCount })
+      : t("beFirst");
 
     return (
       <div className={cn("flex shrink-0 items-center gap-2.5", className)}>
@@ -111,8 +113,8 @@ export function PrayButton({
           aria-pressed={hasPrayed}
           aria-label={
             hasPrayed ?
-              "You have prayed for this request"
-            : "Pray for this request"
+              t("youHavePrayed")
+            : t("prayForThis")
           }
           className={cn(
             "h-8 shrink-0 rounded-full px-3.5 text-[13px] font-medium shadow-none",
@@ -125,7 +127,7 @@ export function PrayButton({
           {submitting ?
             <Loader2 className="size-3.5 animate-spin" aria-hidden />
           : hasPrayed ?
-            "Prayed ✓"
+            `${t("prayed")} ✓`
           : "🙏 Pray"}
         </Button>
       </div>
@@ -150,8 +152,8 @@ export function PrayButton({
           aria-pressed={hasPrayed}
           aria-label={
             hasPrayed ?
-              "You have prayed for this request"
-            : "Pray for this request"
+              t("youHavePrayed")
+            : t("prayForThis")
           }
           className={cn(
             "h-8 shrink-0 rounded-full px-3.5 text-xs font-medium shadow-none",
@@ -184,8 +186,8 @@ export function PrayButton({
         aria-pressed={hasPrayed}
         aria-label={
           hasPrayed ?
-            "You have prayed for this request"
-          : "Pray for this request"
+            t("youHavePrayed")
+          : t("prayForThis")
         }
         className={cn(
           "font-medium transition-all duration-200 ease-out",
