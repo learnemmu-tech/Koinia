@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -10,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useMounted } from "@/hooks/use-mounted";
+import { signInPathPreservingChurch } from "@/lib/templates/paths";
 
 type AppHeaderProps = {
   search: ReactNode;
@@ -18,6 +20,7 @@ type AppHeaderProps = {
 export function AppHeader({ search }: AppHeaderProps) {
   const tCommon = useTranslations("common");
   const { authUser, loading } = useFirebaseAuth();
+  const pathname = usePathname();
   const mounted = useMounted();
 
   return (
@@ -38,7 +41,7 @@ export function AppHeader({ search }: AppHeaderProps) {
           <NotificationBell userId={authUser.uid} />
         ) : (
           <Button asChild size="sm" variant="outline">
-            <Link href="/signin">{tCommon("signIn")}</Link>
+            <Link href={signInPathPreservingChurch(pathname)}>{tCommon("signIn")}</Link>
           </Button>
         )}
       </div>

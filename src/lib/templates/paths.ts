@@ -1,5 +1,16 @@
 import { resolveAppOrigin } from "@/lib/join-url";
 
+/** Keep `/c/[slug]` on the sign-in callback. Other routes stay on `/signin`. */
+export function signInPathPreservingChurch(
+  pathname: string | null | undefined
+): string {
+  const value = pathname?.split(/[?#]/)[0] ?? "";
+  if (/^\/c\/[^/]+/.test(value)) {
+    return `/signin?callbackUrl=${encodeURIComponent(value)}`;
+  }
+  return "/signin";
+}
+
 export function churchWebsitePath(slug: string, subpath = ""): string {
   const normalized = slug.trim().toLowerCase();
   const base = `/c/${encodeURIComponent(normalized)}`;

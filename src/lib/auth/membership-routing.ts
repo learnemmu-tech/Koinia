@@ -159,6 +159,8 @@ export type ResolveMembershipRoutingInput = WorkspaceAccessInput & {
   websiteSetupCompleted?: boolean;
   churchSlug?: string | null;
   activeTemplate?: string | null;
+  /** Slugs of churches where this user already has an active membership. */
+  memberChurchSlugs?: string[];
 };
 
 /**
@@ -176,6 +178,7 @@ export function resolveMembershipRouting({
   websiteSetupCompleted,
   churchSlug,
   activeTemplate,
+  memberChurchSlugs = [],
 }: ResolveMembershipRoutingInput): MembershipRoutingResult {
   let sanitized = callbackUrl ? sanitizeCallbackUrl(callbackUrl, "") : "";
   if (
@@ -254,8 +257,16 @@ export function resolveMembershipRouting({
 
   const pgOnboardingDone = profile?.needsChurchOnboarding === false;
   const callbackChurchSlug = parseChurchWebsiteSlugFromPath(sanitized);
+  const memberSlugSet = new Set(
+    memberChurchSlugs
+      .map((slug) => slug.trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const callbackIsMemberChurch = Boolean(
+    callbackChurchSlug && memberSlugSet.has(callbackChurchSlug.toLowerCase())
+  );
 
-  if (!pgOnboardingDone) {
+  if (!pgOnboardingDone && !callbackIsMemberChurch) {
     if (callbackChurchSlug && !isChurchWebsiteAuthPath(sanitized)) {
       return { status: "none", destination: joinPathForSlug(callbackChurchSlug) };
     }
@@ -264,7 +275,7 @@ export function resolveMembershipRouting({
 
   const setupComplete =
     websiteSetupCompleted ?? profile?.websiteSetupCompleted !== false;
-  if (!setupComplete) {
+  if (!setupComplete && !callbackIsMemberChurch) {
     return { status: "none", destination: ONBOARDING_WEBSITE_PATH };
   }
 
@@ -288,6 +299,7 @@ export function resolveMembershipRouting({
   // that church's existing join flow — sign-in must never bypass approval.
   if (
     callbackChurchSlug &&
+    !callbackIsMemberChurch &&
     callbackChurchSlug.toLowerCase() !== (churchSlug?.trim().toLowerCase() ?? "")
   ) {
     return {

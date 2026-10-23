@@ -1943,6 +1943,9 @@ export async function listChurchAdminAppUsers(
       );
 
     for (const row of orgRows) {
+      if (!roleMeetsMinimum(row.role as MembershipRole, "church_admin")) {
+        continue;
+      }
       admins.set(row.userId, { userId: row.userId, clerkId: row.clerkId });
     }
   }

@@ -5,6 +5,7 @@ import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { persistActiveChurchCookie } from "@/lib/church-cookies";
+import { churchWebsitePath } from "@/lib/templates/paths";
 import { cn } from "@/lib/utils";
 import { HeritageActiveChurchSync } from "@/templates/heritage/components/heritage-member-app-redirect";
 
@@ -39,6 +40,7 @@ export function HeritageLocaleControl({
 
 export function HeritageMemberControls({
   churchId,
+  churchSlug,
   onNavigate,
 }: {
   churchId: string;
@@ -57,6 +59,7 @@ export function HeritageMemberControls({
       <HeaderUserMenu
         variant="heritage"
         guestFallback="skeleton"
+        signOutRedirect={churchWebsitePath(churchSlug)}
         onNavigate={() => {
           persistActiveChurchCookie(churchId);
           onNavigate?.();

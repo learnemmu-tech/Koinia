@@ -1,9 +1,10 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { churchMemberships } from "@/db/schema";
+import { churches } from "@/db/schema/tenants";
 import {
   resolveMembershipRouting,
   resolvePrimaryBranchMembership,
@@ -135,6 +136,25 @@ export async function resolveUserMembershipRouting(
   const branchMemberships = churchRows.map((row) =>
     mapChurchMembership(row, userId)
   );
+  const activeChurchIds = [
+    ...new Set(
+      churchRows
+        .filter((row) => row.status === "active")
+        .map((row) => row.churchId)
+        .filter(Boolean)
+    ),
+  ];
+  const memberChurchSlugs =
+    activeChurchIds.length > 0
+      ? (
+          await db
+            .select({ slug: churches.slug })
+            .from(churches)
+            .where(inArray(churches.id, activeChurchIds))
+        )
+          .map((row) => row.slug)
+          .filter((slug): slug is string => Boolean(slug?.trim()))
+      : [];
   const workspaceType = getWorkspaceType(organization);
   const primaryBranch = resolvePrimaryBranchMembership(
     profile,
@@ -160,5 +180,6 @@ export async function resolveUserMembershipRouting(
     websiteSetupCompleted: profile?.websiteSetupCompleted,
     churchSlug: church?.slug,
     activeTemplate,
+    memberChurchSlugs,
   });
 }

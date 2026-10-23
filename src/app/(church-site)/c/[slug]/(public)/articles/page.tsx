@@ -1,5 +1,9 @@
+import AppArticlesPage from "@/app/(root)/articles/page";
 import { generateChurchWebsiteMetadata } from "@/lib/templates/church-page-metadata";
-import { requireVisibleChurchWebsite } from "@/lib/templates/require-church-website";
+import { requireChurchWebsite } from "@/lib/templates/require-church-website";
+import { isSectionVisible } from "@/lib/templates/visibility";
+import { notFound } from "next/navigation";
+import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +22,8 @@ export default async function ArticlesPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const { model, pages } = await requireVisibleChurchWebsite(slug, "articles");
+  const { model, pages } = await requireChurchWebsite(slug);
+  if (usesSignatureAppExperience(model.templateId)) return <AppArticlesPage />;
+  if (!isSectionVisible(model.website.visibility, "articles")) notFound();
   return <pages.Articles model={model} />;
 }

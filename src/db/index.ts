@@ -5,20 +5,27 @@ import { Pool } from "pg";
 
 import { env } from "@/lib/env";
 
-import { normalizeDatabaseUrl } from "./normalize-database-url";
+import { neonConnectionConfig } from "./neon-connection";
 import * as schema from "./schema";
+
+const POOL_KEY = "neon-public-dns-v1";
 
 const globalForDb = globalThis as unknown as {
   pgPool?: Pool;
+  pgPoolKey?: string;
 };
 
 function getPool(): Pool {
-  if (globalForDb.pgPool) {
+  if (globalForDb.pgPool && globalForDb.pgPoolKey === POOL_KEY) {
     return globalForDb.pgPool;
   }
+  if (globalForDb.pgPool) {
+    void globalForDb.pgPool.end().catch(() => undefined);
+  }
 
+  const connection = neonConnectionConfig(env.DATABASE_URL);
   const pool = new Pool({
-    connectionString: normalizeDatabaseUrl(env.DATABASE_URL),
+    ...connection,
     // Keep serverless pools tiny. Locally allow more concurrency so Next.js
     // compile + RSC fan-out does not exhaust the pool.
     max: process.env.VERCEL ? 1 : 20,
@@ -35,6 +42,7 @@ function getPool(): Pool {
   });
 
   globalForDb.pgPool = pool;
+  globalForDb.pgPoolKey = POOL_KEY;
 
   return pool;
 }

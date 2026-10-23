@@ -1,5 +1,9 @@
+import AppVideosPage from "@/app/(root)/videos/page";
 import { generateChurchWebsiteMetadata } from "@/lib/templates/church-page-metadata";
-import { requireVisibleChurchWebsite } from "@/lib/templates/require-church-website";
+import { requireChurchWebsite } from "@/lib/templates/require-church-website";
+import { isSectionVisible } from "@/lib/templates/visibility";
+import { notFound } from "next/navigation";
+import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +18,16 @@ export async function generateMetadata({
 
 export default async function VideosPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tab?: string; short?: string }>;
 }) {
   const { slug } = await params;
-  const { model, pages } = await requireVisibleChurchWebsite(slug, "videos");
+  const { model, pages } = await requireChurchWebsite(slug);
+  if (usesSignatureAppExperience(model.templateId)) {
+    return <AppVideosPage searchParams={searchParams} />;
+  }
+  if (!isSectionVisible(model.website.visibility, "videos")) notFound();
   return <pages.Videos model={model} />;
 }

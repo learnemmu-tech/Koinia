@@ -1,4 +1,6 @@
+import AppCommunityPage from "@/app/(root)/community/page";
 import { generateChurchWebsiteMetadata } from "@/lib/templates/church-page-metadata";
+import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
 import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { HeritageCommunityPage } from "@/templates/heritage/pages/catalog";
 import { HeritageMemberChatPage } from "@/templates/heritage/pages/member-features";
@@ -22,8 +24,11 @@ export default async function CommunityPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { slug } = await params;
-  const { tab } = await searchParams;
   const { model, pages } = await requireChurchWebsite(slug);
+  if (usesSignatureAppExperience(model.templateId)) {
+    return <AppCommunityPage searchParams={searchParams} />;
+  }
+  const { tab } = await searchParams;
   if (model.templateId === "heritage") {
     if (model.viewer.isMember) {
       return <HeritageMemberChatPage model={model} tab={tab} />;

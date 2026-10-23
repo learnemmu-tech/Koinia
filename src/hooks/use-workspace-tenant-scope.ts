@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 
+import { useChurchUrlScope } from "@/lib/templates/church-url-scope";
+
 import type { TenantScope } from "@/lib/organization/tenant-scope";
 import { isWorkspaceTenantScopeComplete } from "@/lib/organization/tenant-scope";
 import {
@@ -103,6 +105,7 @@ export function useWorkspaceTenantScope(): WorkspaceTenantScopeState {
 export function useContentTenantScope(): WorkspaceTenantScopeState & {
   isLoading: boolean;
 } {
+  const urlChurch = useChurchUrlScope();
   const workspace = useWorkspaceTenantScope();
   const organization = useOrganizationOptional();
   const { activeChurch, activeChurchId } = useActiveChurch();
@@ -111,6 +114,17 @@ export function useContentTenantScope(): WorkspaceTenantScopeState & {
   const isSuperAdmin = useIsPlatformSuperAdmin();
 
   return useMemo(() => {
+    if (urlChurch) {
+      return {
+        organizationId: urlChurch.organizationId,
+        churchId: urlChurch.churchId,
+        defaultBranchId: null,
+        isComplete: false,
+        blocked: true,
+        isLoading: false,
+      };
+    }
+
     if (workspace.isComplete) {
       return { ...workspace, isLoading: false };
     }
@@ -170,6 +184,7 @@ export function useContentTenantScope(): WorkspaceTenantScopeState & {
       isLoading: resolving && !isComplete && !blocked,
     };
   }, [
+    urlChurch,
     workspace,
     organization?.churches,
     organization?.branchesByChurch,

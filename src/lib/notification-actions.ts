@@ -10,7 +10,12 @@ import type { FirebaseNotification } from "@/types/firebase-notification";
 export async function fetchUserNotifications(
   userId: string
 ): Promise<FirebaseNotification[]> {
-  return listUserNotifications(userId);
+  try {
+    return await listUserNotifications(userId);
+  } catch (error) {
+    console.error("[notifications] list failed", error);
+    return [];
+  }
 }
 
 export async function markNotificationReadAction(

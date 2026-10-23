@@ -803,8 +803,29 @@ export function triggerJoinRequestNotification(input: {
   memberName: string;
   userId: string;
 }): void {
-  dispatchEmail("admin-join-request", () =>
-    EmailService.notifyAdmin({
+  dispatchEmail("admin-join-request", async () => {
+    const admins = await getChurchAdminUserIds({
+      churchId: input.branchId,
+      organizationId: input.organizationId,
+      excludeUserId: input.userId,
+    });
+    const profiles = await getUsersByIds(admins.map((admin) => admin.userId));
+    const recipients = [
+      ...new Set(
+        profiles
+          .map((profile) => profile.email?.trim().toLowerCase() ?? "")
+          .filter(Boolean)
+      ),
+    ];
+    if (recipients.length === 0) {
+      console.info("[email] join request skipped", {
+        churchId: input.branchId,
+        reason: "no-admin-recipients",
+      });
+      return { success: true };
+    }
+
+    return EmailService.notifyAdminTo(recipients, {
       type: "join_request",
       title: "New membership request",
       summary: `Someone requested to join ${input.churchName}.`,
@@ -814,8 +835,8 @@ export function triggerJoinRequestNotification(input: {
         Email: input.memberEmail || "—",
       },
       actionUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://faithconnecthub.com"}/dashboard/church-settings?tab=members`,
-    })
-  );
+    });
+  });
 }
 
 export async function triggerJoinRequestAdminNotifications(input: {

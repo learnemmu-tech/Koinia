@@ -35,7 +35,7 @@ type FirebaseAuthContextType = {
   loading: boolean;
   /** False until the Firestore user profile has been loaded from the server. */
   profileReady: boolean;
-  signOut: () => Promise<void>;
+  signOut: (redirectTo?: string) => Promise<void>;
   refreshProfile: (
     patch?: Partial<FirestoreUser>
   ) => Promise<FirestoreUser | null>;
@@ -283,7 +283,8 @@ export function FirebaseAuthProvider({
     })();
   }, [isLoaded, isSignedIn, clerkUser, getToken]);
 
-  const signOut = React.useCallback(async () => {
+  const signOut = React.useCallback(async (redirectTo?: string) => {
+    const destination = redirectTo?.startsWith("/") ? redirectTo : "/signin";
     await signOutUser();
     bindFirebaseAuthCurrentUser(null);
     clearUserCache();
@@ -295,7 +296,7 @@ export function FirebaseAuthProvider({
     // Server (root) layout chooses public vs workspace chrome from Clerk.
     // Soft router.refresh() can keep the authenticated RSC shell until a
     // full document load; navigate hard so signed-out UI is immediate.
-    window.location.assign("/signin");
+    window.location.assign(destination);
   }, []);
 
   const refreshProfile = React.useCallback(

@@ -149,6 +149,62 @@ test("church admins still land on the workspace dashboard", () => {
   assert.equal(result.destination, WORKSPACE_BASE);
 });
 
+test("an existing member signing in from their church URL returns there", () => {
+  const result = resolveMembershipRouting({
+    profile: memberProfile({ needsChurchOnboarding: false }),
+    membership: orgMembership(),
+    branchMemberships: [branch()],
+    churchesCount: 1,
+    websiteSetupCompleted: true,
+    churchSlug: "other-church",
+    activeTemplate: "signature",
+    memberChurchSlugs: ["gethsemane-church", "other-church"],
+    callbackUrl: "/c/gethsemane-church",
+  });
+  assert.equal(result.destination, "/c/gethsemane-church");
+});
+
+test("a visitor who is not a member of the church URL is sent to join", () => {
+  const result = resolveMembershipRouting({
+    profile: memberProfile({ needsChurchOnboarding: false }),
+    membership: orgMembership(),
+    branchMemberships: [branch()],
+    churchesCount: 1,
+    websiteSetupCompleted: true,
+    churchSlug: "other-church",
+    activeTemplate: "signature",
+    memberChurchSlugs: ["other-church"],
+    callbackUrl: "/c/gethsemane-church",
+  });
+  assert.equal(result.destination, "/join/gethsemane-church");
+});
+
+test("a member of Church of the Holy who opens Gethsemane is sent to join Gethsemane", () => {
+  const result = resolveMembershipRouting({
+    profile: memberProfile({
+      needsChurchOnboarding: false,
+      churchId: "holy",
+      activeBranchId: "holy",
+      organizationId: "org-holy",
+    }),
+    membership: orgMembership({ organizationId: "org-holy" }),
+    branchMemberships: [
+      branch({
+        churchId: "holy",
+        branchId: "holy",
+        organizationId: "org-holy",
+      }),
+    ],
+    churchesCount: 1,
+    websiteSetupCompleted: true,
+    churchSlug: "church-of-the-holy",
+    activeTemplate: "heritage",
+    memberChurchSlugs: ["church-of-the-holy"],
+    callbackUrl: "/c/gethsemane-church",
+  });
+  assert.equal(result.destination, "/join/gethsemane-church");
+});
+
 test("primary membership selection prefers the active church", () => {
   const selected = resolvePrimaryBranchMembership(memberProfile({
     churchId: "church-b",

@@ -9,6 +9,8 @@ import { resolveAuthenticatedChurchScope } from "@/lib/organization/resolve-curr
 import type { TenantScope } from "@/lib/organization/tenant-scope";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 
+import { getRequestChurchUrlScope } from "@/lib/templates/church-url-request";
+
 import {
   PUBLIC_PLATFORM_CONTENT_QUERY,
   tenantContentQuery,
@@ -69,6 +71,19 @@ export const resolvePageContentQuery = cache(
     const authStarted = performance.now();
     const { userId } = await auth();
     perfLog("resolve.clerkAuth", authStarted);
+
+    const urlChurch = await getRequestChurchUrlScope();
+    if (urlChurch) {
+      perfLog("resolve.total", totalStarted);
+      return {
+        contentQuery: tenantContentQuery(urlChurch),
+        isPlatformPublic: false,
+        tenantScope: {
+          organizationId: urlChurch.organizationId,
+          churchId: urlChurch.churchId,
+        },
+      };
+    }
 
     if (!userId) {
       if (options.tenantOnly) {

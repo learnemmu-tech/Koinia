@@ -1,7 +1,11 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isOnboardingPath, isSuperAdminPath } from "@/lib/auth/auth-paths";
+import {
+  isOnboardingPath,
+  isSuperAdminPath,
+  joinIntentSlugFromPath,
+} from "@/lib/auth/auth-paths";
 import { isWorkspaceRoute } from "@/lib/dashboard-routes";
 import { churchGroupsRedirectPath } from "@/lib/templates/paths";
 
@@ -61,6 +65,22 @@ function requestCallbackPath(req: NextRequest) {
  * PostgreSQL (`users.needs_church_onboarding`) via /auth/continue, OnboardingGuard,
  * and dashboard/onboarding layouts. Clerk session is identity only.
  */
+function continueRequest(req: NextRequest) {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-koinia-pathname", req.nextUrl.pathname);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  const joinSlug = joinIntentSlugFromPath(req.nextUrl.pathname);
+  if (joinSlug) {
+    response.cookies.set("fc_join_slug", joinSlug, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 45 * 60,
+    });
+  }
+  return response;
+}
+
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
 
@@ -77,7 +97,7 @@ export default clerkMiddleware(async (auth, req) => {
   // can handshake-redirect the request to Clerk's origin, which makes browser
   // fetch() throw TypeError: Failed to fetch.
   if (pathname.startsWith("/api/") || pathname.startsWith("/trpc/")) {
-    return NextResponse.next();
+    return continueRequest(req);
   }
 
   const { userId } = await auth();
@@ -87,18 +107,18 @@ export default clerkMiddleware(async (auth, req) => {
     if (!isAuthenticated) {
       return NextResponse.redirect(buildSignInUrl(req, requestCallbackPath(req)));
     }
-    return NextResponse.next();
+    return continueRequest(req);
   }
 
   if (pathname === POST_AUTH_CONTINUE_PATH || pathname.startsWith(`${POST_AUTH_CONTINUE_PATH}/`)) {
     if (!isAuthenticated) {
       return NextResponse.redirect(buildSignInUrl(req, requestCallbackPath(req)));
     }
-    return NextResponse.next();
+    return continueRequest(req);
   }
 
   if (AUTH_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
-    return NextResponse.next();
+    return continueRequest(req);
   }
 
   // Legacy obscure admin UI — never leave it publicly reachable.
@@ -118,7 +138,7 @@ export default clerkMiddleware(async (auth, req) => {
         buildSignInUrl(req, `${pathname}${req.nextUrl.search}`)
       );
     }
-    return NextResponse.next();
+    return continueRequest(req);
   }
 
   if (isProtectedPath(pathname)) {
@@ -127,10 +147,10 @@ export default clerkMiddleware(async (auth, req) => {
         buildSignInUrl(req, `${pathname}${req.nextUrl.search}`)
       );
     }
-    return NextResponse.next();
+    return continueRequest(req);
   }
 
-  return NextResponse.next();
+  return continueRequest(req);
 });
 
 export const config = {

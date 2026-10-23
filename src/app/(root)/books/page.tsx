@@ -9,6 +9,7 @@ import {
   resolveBookAdminScope,
 } from "@/lib/books/admin-scope";
 import { listPublishedCatalogBooks } from "@/lib/postgres/books";
+import { getRequestChurchUrlScope } from "@/lib/templates/church-url-request";
 import { pageContentClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
 
@@ -28,8 +29,13 @@ export default async function BooksPage() {
     listCatalogMemberChurchIds(userId),
     userId ? resolveBookAdminScope(userId) : Promise.resolve(null),
   ]);
+  const urlChurch = await getRequestChurchUrlScope();
   const books = await listPublishedCatalogBooks({
-    includeMembersOnlyForChurchIds: memberChurchIds,
+    churchId: urlChurch?.churchId,
+    includeMembersOnlyForChurchIds:
+      urlChurch ?
+        memberChurchIds.filter((id) => id === urlChurch.churchId)
+      : memberChurchIds,
   });
 
   return (

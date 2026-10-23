@@ -32,13 +32,13 @@ import {
 } from "@/i18n/config";
 import { useLocaleSwitcher } from "@/i18n/provider";
 
-export function useAccountMenuActions() {
+export function useAccountMenuActions(redirectTo?: string) {
   const { signOut } = useFirebaseAuth();
   const ta = useTranslations("auth");
 
   async function handleSignOut() {
     try {
-      await signOut();
+      await signOut(redirectTo);
       toast.success(ta("signedOut"));
     } catch {
       toast.error(ta("signOutFailed"));
@@ -53,13 +53,15 @@ type AccountMenuItemsProps = {
   chatHref?: string;
   shepherdHref?: string;
   prayerHref?: string;
+  signOutRedirect?: string;
 };
 
 export function AccountMenuItems({
   onNavigate,
+  signOutRedirect,
 }: AccountMenuItemsProps) {
   const { setTheme } = useTheme();
-  const { handleSignOut } = useAccountMenuActions();
+  const { handleSignOut } = useAccountMenuActions(signOutRedirect);
   const locale = useLocale() as Locale;
   const { setLocale } = useLocaleSwitcher();
   const tn = useTranslations("navigation");

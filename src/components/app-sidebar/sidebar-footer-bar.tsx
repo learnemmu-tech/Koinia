@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowRight, ChevronsUpDown, User } from "lucide-react";
 import type { AuthUser } from "@/context/firebase-auth-context";
@@ -17,6 +18,7 @@ import {
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useMounted } from "@/hooks/use-mounted";
 import { useSidebar } from "@/components/ui/sidebar";
+import { signInPathPreservingChurch } from "@/lib/templates/paths";
 import { cn } from "@/lib/utils";
 
 import { AccountMenuItems } from "./account-menu-items";
@@ -74,7 +76,9 @@ function ProfileAvatar({
 export function SidebarFooterBar() {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("navigation");
-  const { authUser, profile, loading } = useFirebaseAuth();  const { isMobile, state } = useSidebar();
+  const { authUser, profile, loading } = useFirebaseAuth();
+  const pathname = usePathname();
+  const { isMobile, state } = useSidebar();
   const mounted = useMounted();
   const isCollapsed = state === "collapsed" && !isMobile;
 
@@ -107,7 +111,7 @@ export function SidebarFooterBar() {
         )}
       >
         <Link
-          href="/signin"
+          href={signInPathPreservingChurch(pathname)}
           className={cn(
             "inline-flex items-center rounded-md text-[13px] font-medium text-muted-foreground transition-colors hover-hover:hover:bg-accent hover-hover:hover:text-foreground active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             isCollapsed ? "size-9 justify-center" : "h-9 gap-2 px-2.5"

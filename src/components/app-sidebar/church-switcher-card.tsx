@@ -22,6 +22,9 @@ import { isMultiChurchOrgWorkspace } from "@/lib/organization/workspace-type";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
 
+import { churchWebsitePath } from "@/lib/templates/paths";
+import { useChurchUrlScope } from "@/lib/templates/church-url-scope";
+
 import { ChurchBrand } from "./church-brand";
 
 function getInitials(name: string): string {
@@ -77,11 +80,32 @@ const workspaceTriggerClass =
   "group/workspace relative flex min-w-0 w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/20";
 
 export function SidebarWorkspaceHeader() {
+  const urlChurch = useChurchUrlScope();
   const organizationCtx = useOrganizationOptional();
   const branchContext = useActiveBranchOptional();
   const { profile } = useFirebaseAuth();
   const { state, isMobile } = useSidebar();
   const isCollapsed = state === "collapsed" && !isMobile;
+
+  if (urlChurch?.name) {
+    return (
+      <Link
+        href={churchWebsitePath(urlChurch.slug)}
+        title={isCollapsed ? urlChurch.name : undefined}
+        className={cn(
+          workspaceTriggerClass,
+          isCollapsed && "justify-center px-1.5"
+        )}
+      >
+        <WorkspaceAvatar name={urlChurch.name} logoUrl={urlChurch.logoUrl} />
+        {!isCollapsed ?
+          <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-none tracking-[-0.01em] text-sidebar-foreground">
+            {urlChurch.name}
+          </p>
+        : null}
+      </Link>
+    );
+  }
 
   if (organizationCtx?.loading && !organizationCtx.organization) {
     return (

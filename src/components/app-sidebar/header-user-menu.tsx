@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import type { AuthUser } from "@/context/firebase-auth-context";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useMounted } from "@/hooks/use-mounted";
+import { signInPathPreservingChurch } from "@/lib/templates/paths";
 import { cn } from "@/lib/utils";
 
 import { AccountMenuItems } from "./account-menu-items";
@@ -47,16 +49,19 @@ type HeaderUserMenuProps = {
   variant?: "default" | "heritage";
   guestFallback?: "signin" | "skeleton";
   onNavigate?: () => void;
+  signOutRedirect?: string;
 };
 
 export function HeaderUserMenu({
   variant = "default",
   guestFallback = "signin",
   onNavigate,
+  signOutRedirect,
 }: HeaderUserMenuProps) {
   const tCommon = useTranslations("common");
   const tNav = useTranslations("navigation");
   const { authUser, profile, loading } = useFirebaseAuth();
+  const pathname = usePathname();
   const mounted = useMounted();
   const heritage = variant === "heritage";
 
@@ -88,7 +93,7 @@ export function HeaderUserMenu({
     }
     return (
       <Button asChild size="sm" variant="outline" className="rounded-full">
-        <Link href="/signin">{tCommon("signIn")}</Link>
+        <Link href={signInPathPreservingChurch(pathname)}>{tCommon("signIn")}</Link>
       </Button>
     );
   }
@@ -148,7 +153,10 @@ export function HeaderUserMenu({
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <AccountMenuItems onNavigate={onNavigate} />
+        <AccountMenuItems
+          onNavigate={onNavigate}
+          signOutRedirect={signOutRedirect}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

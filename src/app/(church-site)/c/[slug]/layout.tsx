@@ -55,9 +55,18 @@ export async function generateMetadata({
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: "#F5F1E8",
-};
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Viewport> {
+  const { slug } = await params;
+  const model = await loadChurchWebsiteBySlug(slug);
+  if (model?.templateId === "heritage") {
+    return { themeColor: "#F5F1E8" };
+  }
+  return {};
+}
 
 export default async function ChurchWebsiteLayout({
   children,

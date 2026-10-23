@@ -120,7 +120,7 @@ export function ChurchMembersPanel({
   const [removeMember, setRemoveMember] =
     useState<FirebaseBranchMembership | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     if (!organization) return;
     const user = firebaseAuth.currentUser;
     if (!user) return;
@@ -130,8 +130,9 @@ export function ChurchMembersPanel({
       const token = await user.getIdToken();
       const res = await fetch(
         `/api/memberships/branch?organizationId=${encodeURIComponent(organization.id)}&branchId=${encodeURIComponent(branchId)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, signal }
       );
+      if (signal?.aborted) return;
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         toast.error(body.error ?? t("loadFailed"));
@@ -139,13 +140,20 @@ export function ChurchMembersPanel({
       }
       setData((await res.json()) as BranchMembersResponse);
       setSelectedIds(new Set());
+    } catch (error) {
+      if (signal?.aborted || (error instanceof DOMException && error.name === "AbortError")) {
+        return;
+      }
+      toast.error(t("loadFailed"));
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [organization, branchId, t]);
 
   useEffect(() => {
-    void load();
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
   const pending = data?.pending ?? [];

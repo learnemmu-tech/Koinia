@@ -14,6 +14,7 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useContentTenantScope } from "@/hooks/use-workspace-tenant-scope";
 import { useMounted } from "@/hooks/use-mounted";
 import { isMembershipStatusPath } from "@/lib/auth/auth-paths";
+import { signInPathPreservingChurch } from "@/lib/templates/paths";
 import { getGlobalSearchPlaceholder } from "@/lib/worship-collection";
 
 export function AppSiteHeaderClient() {
@@ -62,7 +63,7 @@ export function AppSiteHeaderClient() {
         : authUser ?
           <NotificationBell userId={authUser.uid} />
         : <Button asChild size="sm" variant="outline" className="rounded-full">
-            <Link href="/signin">{tCommon("signIn")}</Link>
+            <Link href={signInPathPreservingChurch(pathname)}>{tCommon("signIn")}</Link>
           </Button>
         }
       </div>

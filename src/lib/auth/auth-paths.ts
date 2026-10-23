@@ -55,6 +55,46 @@ export function isJoinPath(path: string | null | undefined): boolean {
   return parseJoinSlugFromPath(path) !== null;
 }
 
+/**
+ * The callback already names a church. A leftover join-intent cookie for a
+ * different church must not replace it.
+ */
+export function callbackNamesChurch(path: string | null | undefined): boolean {
+  if (!path?.trim()) return false;
+  return Boolean(
+    parseJoinSlugFromPath(path) ||
+      parseChurchWebsiteSlugFromPath(path) ||
+      isInvitePath(path)
+  );
+}
+
+const JOIN_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** Slug to store as the join intent while the browser is on `/c/{slug}`. */
+export function joinIntentSlugFromPath(
+  path: string | null | undefined
+): string | null {
+  const slug = parseChurchWebsiteSlugFromPath(path);
+  if (!slug) return null;
+  const normalized = slug.trim().toLowerCase();
+  return JOIN_SLUG_PATTERN.test(normalized) ? normalized : null;
+}
+
+/**
+ * Explicit church or invite callbacks win. A join-intent path (from the
+ * cookie) is used only when the callback does not name a church.
+ */
+export function choosePostAuthCallback(
+  sanitizedCallback: string,
+  joinIntentPath: string | null,
+  isCreateWorkspace: boolean
+): string {
+  if (callbackNamesChurch(sanitizedCallback)) return sanitizedCallback;
+  if (isCreateWorkspace) return sanitizedCallback;
+  if (joinIntentPath) return joinIntentPath;
+  return sanitizedCallback;
+}
+
 export function joinPathForSlug(slug: string): string {
   return `/join/${encodeURIComponent(slug.trim())}`;
 }

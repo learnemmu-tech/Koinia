@@ -1,4 +1,6 @@
+import AppBooksPage from "@/app/(root)/books/page";
 import { generateChurchWebsiteMetadata } from "@/lib/templates/church-page-metadata";
+import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
 import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { listPublishedCatalogBooks } from "@/lib/postgres/books";
 import { HeritageBooksPage } from "@/templates/heritage/pages/catalog";
@@ -21,6 +23,8 @@ export default async function ChurchBooksPage({
 }) {
   const { slug } = await params;
   const { model } = await requireChurchWebsite(slug);
+  if (usesSignatureAppExperience(model.templateId)) return <AppBooksPage />;
+
   const books = await listPublishedCatalogBooks({
     churchId: model.church.id,
     includeMembersOnlyForChurchIds: model.viewer.isMember
@@ -28,18 +32,5 @@ export default async function ChurchBooksPage({
       : undefined,
   });
 
-  if (model.templateId === "heritage") {
-    return <HeritageBooksPage model={model} books={books} />;
-  }
-
-  return (
-    <section className="mx-auto max-w-4xl px-4 py-16">
-      <h1 className="font-heading text-4xl">Books</h1>
-      <ul className="mt-8 space-y-3">
-        {books.map((book) => (
-          <li key={book.id}>{book.title}</li>
-        ))}
-      </ul>
-    </section>
-  );
+  return <HeritageBooksPage model={model} books={books} />;
 }
