@@ -8,7 +8,7 @@ export async function generateChurchWebsiteMetadata(
   slug: string,
   pageTitle?: string
 ): Promise<Metadata> {
-  const model = await loadChurchWebsiteBySlug(slug);
+  const model = await loadChurchWebsiteBySlug(slug, { includeContent: false });
   if (!model) return { title: "Church not found" };
 
   const churchName = model.church.name;

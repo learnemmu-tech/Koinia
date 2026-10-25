@@ -13,7 +13,7 @@ export default async function ChurchAuthLayout({
   params,
 }: LayoutProps) {
   const { slug } = await params;
-  const model = await loadChurchWebsiteBySlug(slug);
+  const model = await loadChurchWebsiteBySlug(slug, { includeContent: false });
   if (!model) notFound();
 
   if (model.templateId !== "heritage") {

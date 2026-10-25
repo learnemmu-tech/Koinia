@@ -164,30 +164,105 @@ export function getNotificationTypeLabel(type: NotificationContentType): string 
   return (NOTIFICATION_PRESETS[type] ?? NOTIFICATION_PRESETS.song).title;
 }
 
+type NotificationListener = {
+  onChange: (notifications: FirebaseNotification[]) => void;
+  onError?: (error: Error) => void;
+};
+
+type NotificationBus = {
+  listeners: Set<NotificationListener>;
+  timer?: ReturnType<typeof setInterval>;
+  inFlight?: Promise<void>;
+  idleHandle?: number;
+  lastItems?: FirebaseNotification[];
+  lastFetchedAt?: number;
+};
+
+const NOTIFICATION_FRESH_MS = 20_000;
+
+const notificationBuses = new Map<string, NotificationBus>();
+
+function publishNotifications(userId: string) {
+  const bus = notificationBuses.get(userId);
+  if (!bus || bus.inFlight) return bus?.inFlight;
+
+  bus.inFlight = (async () => {
+    try {
+      const items = await fetchUserNotifications(userId);
+      bus.lastItems = items;
+      bus.lastFetchedAt = Date.now();
+      for (const listener of bus.listeners) listener.onChange(items);
+    } catch (error) {
+      const failure =
+        error instanceof Error ? error : new Error("Failed to load notifications");
+      for (const listener of bus.listeners) listener.onError?.(failure);
+    } finally {
+      bus.inFlight = undefined;
+    }
+  })();
+
+  return bus.inFlight;
+}
+
 export function subscribeToNotifications(
   userId: string,
   onChange: (notifications: FirebaseNotification[]) => void,
   onError?: (error: Error) => void
 ): () => void {
-  let cancelled = false;
+  let bus = notificationBuses.get(userId);
+  if (!bus) {
+    bus = { listeners: new Set() };
+    notificationBuses.set(userId, bus);
+    bus.timer = setInterval(() => {
+      const current = notificationBuses.get(userId);
+      if (
+        current?.lastFetchedAt &&
+        Date.now() - current.lastFetchedAt < NOTIFICATION_FRESH_MS
+      ) {
+        return;
+      }
+      void publishNotifications(userId);
+    }, 20_000);
+  }
 
-  const tick = async () => {
-    try {
-      const items = await fetchUserNotifications(userId);
-      if (!cancelled) onChange(items);
-    } catch (error) {
-      if (!cancelled) onError?.(error instanceof Error ? error : new Error("Failed to load notifications"));
+  const listener = { onChange, onError };
+  bus.listeners.add(listener);
+  const fresh =
+    bus.lastItems &&
+    bus.lastFetchedAt &&
+    Date.now() - bus.lastFetchedAt < NOTIFICATION_FRESH_MS;
+  if (fresh && bus.lastItems) {
+    onChange(bus.lastItems);
+  } else if (!bus.inFlight && bus.idleHandle == null) {
+    const start = () => {
+      const current = notificationBuses.get(userId);
+      if (!current) return;
+      current.idleHandle = undefined;
+      void publishNotifications(userId);
+    };
+    // The bell and the sidebar both subscribe during hydration. Waiting
+    // until the browser is idle keeps that server action off the click.
+    if (typeof window.requestIdleCallback === "function") {
+      bus.idleHandle = window.requestIdleCallback(start, { timeout: 2_000 });
+    } else {
+      bus.idleHandle = window.setTimeout(start, 1_500);
     }
-  };
-
-  void tick();
-  const interval = setInterval(() => {
-    void tick();
-  }, 20_000);
+  }
 
   return () => {
-    cancelled = true;
-    clearInterval(interval);
+    const current = notificationBuses.get(userId);
+    current?.listeners.delete(listener);
+    if (current && current.listeners.size === 0) {
+      if (current.timer) clearInterval(current.timer);
+      if (current.idleHandle != null) {
+        if (typeof window.cancelIdleCallback === "function") {
+          window.cancelIdleCallback(current.idleHandle);
+        } else {
+          window.clearTimeout(current.idleHandle);
+        }
+      }
+      notificationBuses.delete(userId);
+    }
   };
 }
 

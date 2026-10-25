@@ -1,6 +1,5 @@
 import { ClientRedirect } from "@/components/auth/client-redirect";
 import { RequireWorkspaceAccess } from "@/components/auth/require-admin";
-import { resolvePlatformSuperAdminWorkspaceRedirect } from "@/lib/auth/redirect-platform-super-admin-from-workspace";
 import { resolveDashboardLayoutDestination } from "@/lib/auth/require-onboarding-complete-server";
 import { buildNoIndexMetadata } from "@/lib/seo";
 
@@ -14,9 +13,9 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const gateRedirect =
-    (await resolvePlatformSuperAdminWorkspaceRedirect()) ??
-    (await resolveDashboardLayoutDestination());
+  // Super-admin redirect is already decided inside this function. A separate
+  // lookup here waited on the same user row before the rest of the gate.
+  const gateRedirect = await resolveDashboardLayoutDestination();
   if (gateRedirect) {
     return <ClientRedirect to={gateRedirect} />;
   }

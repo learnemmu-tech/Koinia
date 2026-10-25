@@ -65,17 +65,71 @@ async function resolveViewer(churchId: string) {
   return { isAuthenticated: true, isMember };
 }
 
-export const loadChurchWebsiteBySlug = cache(async (
-  slug: string,
-  options?: { templateOverride?: TemplateId }
-): Promise<ChurchWebsiteViewModel | null> => {
+type LoadChurchWebsiteOptions = {
+  templateOverride?: TemplateId;
+  /**
+   * Layouts and Signature routes only need identity, template, and viewer.
+   * Content lists are loaded for Heritage pages that render them.
+   */
+  includeContent?: boolean;
+};
+
+const loadChurchCore = cache(async (slug: string) => {
   const church = await getChurchBySlug(slug);
   if (!church || !church.isActive || !church.organizationId) return null;
+  const [website, viewer] = await Promise.all([
+    getChurchWebsiteConfig(church),
+    resolveViewer(church.id),
+  ]);
+  const templateId = resolvePublicTemplateId(website.activeTemplate);
+  return { church, website, templateId, viewer };
+});
+
+function shellModel(
+  core: NonNullable<Awaited<ReturnType<typeof loadChurchCore>>>,
+  publicSlug: string,
+  templateId: TemplateId
+): ChurchWebsiteViewModel {
+  return {
+    church: {
+      ...toChurchWebsiteIdentity(core.church),
+      slug: publicSlug || core.church.slug,
+    },
+    website: { ...core.website, activeTemplate: templateId },
+    templateId,
+    sermons: [],
+    events: [],
+    articles: [],
+    videos: [],
+    campaigns: [],
+    ministries: [],
+    viewer: core.viewer,
+    isDemo: false,
+  };
+}
+
+export const loadChurchWebsiteBySlug = cache(async (
+  slug: string,
+  options?: LoadChurchWebsiteOptions
+): Promise<ChurchWebsiteViewModel | null> => {
+  const core = await loadChurchCore(slug);
+  if (!core) return null;
+  const templateId = resolvePublicTemplateId(
+    options?.templateOverride ?? core.templateId
+  );
+  const publicSlug = slug.trim().toLowerCase();
+  if (options?.includeContent === false) {
+    return shellModel(core, publicSlug, templateId);
+  }
   const model = await withConnectionRetry(() =>
-    loadChurchWebsite(church, options)
+    loadChurchWebsite(core.church, {
+      ...options,
+      templateId,
+      viewer: core.viewer,
+      website: core.website,
+    })
   );
   if (!model) return null;
-  const publicSlug = slug.trim().toLowerCase();
   return {
     ...model,
     church: { ...model.church, slug: publicSlug || model.church.slug },
@@ -84,15 +138,22 @@ export const loadChurchWebsiteBySlug = cache(async (
 
 export async function loadChurchWebsite(
   church: FirebaseChurch,
-  options?: { templateOverride?: TemplateId }
+  options?: {
+    templateOverride?: TemplateId;
+    templateId?: TemplateId;
+    viewer?: ChurchWebsiteViewModel["viewer"];
+    website?: ChurchWebsiteViewModel["website"];
+  }
 ): Promise<ChurchWebsiteViewModel | null> {
   const organizationId = church.organizationId?.trim();
   if (!organizationId || !church.isActive) return null;
 
-  const website = await getChurchWebsiteConfig(church);
-  const templateId = resolvePublicTemplateId(
-    options?.templateOverride ?? website.activeTemplate
-  );
+  const website = options?.website ?? (await getChurchWebsiteConfig(church));
+  const templateId =
+    options?.templateId ??
+    resolvePublicTemplateId(
+      options?.templateOverride ?? website.activeTemplate
+    );
   const scope = tenantContentQuery({
     organizationId,
     churchId: church.id,
@@ -110,7 +171,9 @@ export async function loadChurchWebsite(
         organizationId,
         limit: 8,
       }),
-      resolveViewer(church.id),
+      options?.viewer
+        ? Promise.resolve(options.viewer)
+        : resolveViewer(church.id),
     ]);
 
   return {

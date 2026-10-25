@@ -16,7 +16,7 @@ export default async function ChurchLoginPage({
 }) {
   const { slug } = await params;
   const { callbackUrl } = await searchParams;
-  const model = await loadChurchWebsiteBySlug(slug);
+  const model = await loadChurchWebsiteBySlug(slug, { includeContent: false });
   const fallback = churchWebsitePath(slug);
   const redirectTo = sanitizeCallbackUrl(callbackUrl, fallback);
 

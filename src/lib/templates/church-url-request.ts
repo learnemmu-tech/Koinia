@@ -17,7 +17,7 @@ export function churchUrlPathnameHeader(): string {
  * Null on every other route, so the existing app queries stay unchanged.
  */
 export async function getRequestChurchUrlScope(): Promise<
-  (TenantScope & { name: string }) | null
+  (TenantScope & { name: string; slug: string }) | null
 > {
   const headerStore = await headers();
   const slug = parseChurchWebsiteSlugFromPath(
@@ -33,5 +33,6 @@ export async function getRequestChurchUrlScope(): Promise<
     organizationId,
     churchId: church.id,
     name: church.name,
+    slug,
   };
 }

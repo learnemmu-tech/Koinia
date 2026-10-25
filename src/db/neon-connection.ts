@@ -52,6 +52,9 @@ resolver.resolve4(process.argv[1],(error,addresses)=>{
  */
 export function neonConnectionConfig(connectionString: string): NeonConnectionConfig {
   const normalized = normalizeDatabaseUrl(connectionString);
+  // Vercel resolves Neon. The public-DNS detour is only for local resolvers
+  // that refuse *.neon.tech, and it spawns a process on every cold start.
+  if (process.env.VERCEL) return { connectionString: normalized };
   const hostname = neonHostname(normalized);
   if (!hostname) return { connectionString: normalized };
 

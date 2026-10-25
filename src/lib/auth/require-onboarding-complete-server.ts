@@ -42,20 +42,18 @@ export async function resolveDashboardLayoutDestination(): Promise<string | null
     return CREATE_WORKSPACE_PATH;
   }
 
-  const allowed = await organizationAllowsWorkspaceAccess(
-    appUser.organizationId,
-    appUser.platformRole
-  );
-  if (!allowed) {
-    return ORGANIZATION_SUSPENDED_PATH;
-  }
-
   // Server-side role gate: the dashboard is for church/organization
   // administrators only. Ordinary members are sent to their member experience
   // (Heritage church site, or "/" for Signature) — they have no dashboard.
+  // Access and role checks share one round-trip wave. They used to run
+  // one after another, so every dashboard click paid an extra Neon trip.
   const email =
     typeof sessionClaims?.email === "string" ? sessionClaims.email : undefined;
-  const [canManageChurch, canManageOrg] = await Promise.all([
+  const [allowed, canManageChurch, canManageOrg] = await Promise.all([
+    organizationAllowsWorkspaceAccess(
+      appUser.organizationId,
+      appUser.platformRole
+    ),
     appUser.activeChurchId
       ? userCanManageChurch(userId, email, appUser.activeChurchId)
       : Promise.resolve(false),
@@ -63,6 +61,9 @@ export async function resolveDashboardLayoutDestination(): Promise<string | null
       ? userCanManageOrganization(userId, appUser.organizationId)
       : Promise.resolve(false),
   ]);
+  if (!allowed) {
+    return ORGANIZATION_SUSPENDED_PATH;
+  }
   if (!canManageChurch && !canManageOrg) {
     const routing = await resolveUserMembershipRouting(userId);
     return routing.destination === WORKSPACE_BASE ||

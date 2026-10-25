@@ -34,10 +34,13 @@ const OrganizationContext =
   React.createContext<OrganizationContextValue | null>(null);
 
 export function OrganizationProvider({ children }: React.PropsWithChildren) {
-  const { authUser, profile } = useFirebaseAuth();
+  const { authUser, profile, profileReady } = useFirebaseAuth();
+  const organizationId = profile?.organizationId?.trim() || undefined;
+  // Wait until the profile is known. Fetching once with no id and again
+  // with the id made every signed-in load hit /api/organization twice.
   const { data, isLoading, error, refetch } = useOrganizationQuery(
-    authUser ? profile?.organizationId ?? undefined : null,
-    Boolean(authUser)
+    organizationId,
+    Boolean(authUser) && profileReady
   );
 
   const churches = React.useMemo(() => {
@@ -77,7 +80,7 @@ export function OrganizationProvider({ children }: React.PropsWithChildren) {
       branchMemberships: data?.branchMemberships ?? [],
       churches,
       branchesByChurch: data?.branchesByChurch ?? {},
-      loading: Boolean(authUser) && isLoading,
+      loading: Boolean(authUser) && (!profileReady || isLoading),
       error: error instanceof Error ? error.message : null,
       showChurchSwitcher,
       refetch: () => refetch(),
@@ -87,6 +90,7 @@ export function OrganizationProvider({ children }: React.PropsWithChildren) {
       data,
       churches,
       authUser,
+      profileReady,
       isLoading,
       error,
       showChurchSwitcher,

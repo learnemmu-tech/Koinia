@@ -16,7 +16,8 @@ import { LOCALE_COOKIE, parseLocale } from "@/i18n/config";
 import { POST_AUTH_CONTINUE_HOME, CREATE_WORKSPACE_PATH } from "@/lib/auth/auth-paths";
 import { env } from "@/lib/env";
 import { SEO_KEYWORDS } from "@/lib/seo";
-import { getActiveChurchIdFromCookies, resolveActiveChurchId } from "@/lib/church-server";
+import { ACTIVE_CHURCH_COOKIE_NAME, readActiveChurchIdFromCookieValue } from "@/lib/church-cookies";
+import { resolveActiveChurchId } from "@/lib/church-server";
 import * as fonts from "@/lib/fonts";
 import { absoluteUrl, cn } from "@/lib/utils";
 import { Noto_Sans, Noto_Sans_Telugu } from "next/font/google";
@@ -45,9 +46,14 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
     themeConfig?.value ?? '{"theme":"default","radius":"default"}'
   ) as ThemeConfig;
 
-  const resolvedChurchId = await resolveActiveChurchId();
-  const cookieChurchId = await getActiveChurchIdFromCookies();
-  const initialActiveChurchId = resolvedChurchId || cookieChurchId;
+  // The active-church cookie is only the client shell's initial id. Resolving
+  // it from Postgres on every navigation added several sequential Neon
+  // round trips before any page could render. Pages still authorize for real.
+  const cookieChurchId = readActiveChurchIdFromCookieValue(
+    cookieStore.get(ACTIVE_CHURCH_COOKIE_NAME)?.value
+  );
+  const initialActiveChurchId =
+    cookieChurchId || (await resolveActiveChurchId()) || null;
   const locale = parseLocale(cookieStore.get(LOCALE_COOKIE)?.value);
 
   return (

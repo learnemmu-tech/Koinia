@@ -19,7 +19,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const model = await loadChurchWebsiteBySlug(slug);
+  const model = await loadChurchWebsiteBySlug(slug, { includeContent: false });
   if (!model) return { title: "Church not found" };
 
   const title = model.website.siteTitle || model.church.name;
@@ -61,7 +61,7 @@ export async function generateViewport({
   params: Promise<{ slug: string }>;
 }): Promise<Viewport> {
   const { slug } = await params;
-  const model = await loadChurchWebsiteBySlug(slug);
+  const model = await loadChurchWebsiteBySlug(slug, { includeContent: false });
   if (model?.templateId === "heritage") {
     return { themeColor: "#F5F1E8" };
   }
@@ -73,7 +73,7 @@ export default async function ChurchWebsiteLayout({
   params,
 }: LayoutProps) {
   const { slug } = await params;
-  const model = await loadChurchWebsiteBySlug(slug);
+  const model = await loadChurchWebsiteBySlug(slug, { includeContent: false });
   if (!model) notFound();
 
   const fontClass =

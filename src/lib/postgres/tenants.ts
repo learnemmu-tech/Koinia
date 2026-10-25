@@ -194,7 +194,7 @@ export async function getAllChurches(): Promise<FirebaseChurch[]> {
   return rows.map(mapChurch);
 }
 
-export async function getChurchBySlug(
+export const getChurchBySlug = cache(async function getChurchBySlug(
   slug: string
 ): Promise<FirebaseChurch | null> {
   const trimmed = slug.trim().toLowerCase();
@@ -207,7 +207,7 @@ export async function getChurchBySlug(
       .limit(1);
     return row ? mapChurch(row) : null;
   });
-}
+});
 
 export async function getChurchIdsForOrganization(
   organizationId: string

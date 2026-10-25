@@ -1415,7 +1415,7 @@ export async function listUserNotifications(
 ): Promise<FirebaseNotification[]> {
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return [];
-  const [orgMemberships, churchMembershipRows] = await Promise.all([
+  const [orgMemberships, churchMembershipRows, reads] = await Promise.all([
     db
       .select({ organizationId: organizationMemberships.organizationId })
       .from(organizationMemberships)
@@ -1434,6 +1434,10 @@ export async function listUserNotifications(
           eq(churchMemberships.status, "active")
         )
       ),
+    db
+      .select()
+      .from(notificationReads)
+      .where(eq(notificationReads.userId, appUser.id)),
   ]);
   const organizationIds = [
     ...new Set(
@@ -1454,10 +1458,6 @@ export async function listUserNotifications(
     )
     .orderBy(desc(notifications.createdAt))
     .limit(50);
-  const reads = await db
-    .select()
-    .from(notificationReads)
-    .where(eq(notificationReads.userId, appUser.id));
   const readIds = new Set(reads.map((row) => row.notificationId));
   const churchIds = [
     ...new Set(

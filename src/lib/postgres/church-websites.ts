@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { unstable_noStore as noStore } from "next/cache";
 import { and, eq } from "drizzle-orm";
 
@@ -168,7 +169,7 @@ export async function isWebsiteSetupCompleted(
   return row.websiteSetupCompletedAt != null;
 }
 
-export async function getChurchWebsiteRow(
+export const getChurchWebsiteRow = cache(async function getChurchWebsiteRow(
   churchId: string,
   organizationId: string
 ) {
@@ -188,7 +189,7 @@ export async function getChurchWebsiteRow(
     .limit(1);
 
   return row ?? null;
-}
+});
 
 export async function getChurchWebsiteConfig(
   church: FirebaseChurch

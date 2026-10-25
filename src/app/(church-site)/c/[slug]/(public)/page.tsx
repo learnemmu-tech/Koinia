@@ -1,8 +1,6 @@
 import AppHomePage from "@/app/(root)/page";
-import { loadChurchWebsiteBySlug } from "@/lib/templates/load-church-website";
-import { getTemplatePages } from "@/lib/templates/pages";
+import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
-import { notFound } from "next/navigation";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -12,11 +10,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ChurchHomePage({ params }: PageProps) {
   const { slug } = await params;
-  const model = await loadChurchWebsiteBySlug(slug);
-  if (!model) notFound();
+  const { model, pages } = await requireChurchWebsite(slug);
   if (usesSignatureAppExperience(model.templateId)) {
     return <AppHomePage />;
   }
-  const pages = getTemplatePages(model.templateId);
   return <pages.Home model={model} />;
 }

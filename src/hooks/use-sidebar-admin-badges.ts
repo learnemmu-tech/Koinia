@@ -29,13 +29,19 @@ export function useSidebarAdminBadges(): SidebarAdminBadges {
   // After first paint only — never block soft-nav RSC / org for Neon connections.
   const [afterPaint, setAfterPaint] = useState(false);
   useEffect(() => {
-    let innerId = 0;
-    const outerId = window.requestAnimationFrame(() => {
-      innerId = window.requestAnimationFrame(() => setAfterPaint(true));
-    });
+    let timeoutId = 0;
+    let idleId = 0;
+    const start = () => setAfterPaint(true);
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(start, { timeout: 2_500 });
+    } else {
+      timeoutId = window.setTimeout(start, 1_500);
+    }
     return () => {
-      window.cancelAnimationFrame(outerId);
-      if (innerId) window.cancelAnimationFrame(innerId);
+      if (idleId && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId) window.clearTimeout(timeoutId);
     };
   }, []);
 
@@ -49,11 +55,11 @@ export function useSidebarAdminBadges(): SidebarAdminBadges {
   const { data: badges = EMPTY_BADGES } = useQuery({
     queryKey: ["sidebar-admin-badges", churchId, scope.organizationId],
     enabled,
-    refetchInterval: 15_000,
-    staleTime: 10_000,
+    refetchInterval: 60_000,
+    staleTime: 60_000,
     gcTime: QUERY_GC_TIME,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     queryFn: async () => {
       const orgId = scope.organizationId ?? "";
       const [prayersRes, membersRes] = await Promise.all([

@@ -39,6 +39,6 @@ export function useSubscriptionQuery(organizationId: string | null | undefined) 
     enabled,
     staleTime: QUERY_STALE_TIME,
     refetchOnWindowFocus: false,
-    refetchOnMount: true,
+    refetchOnMount: false,
   });
 }
