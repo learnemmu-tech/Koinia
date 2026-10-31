@@ -7,6 +7,8 @@ import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { getSuperAdminBootstrapEmail } from "@/lib/auth/platform-role";
 import { getAppUserByClerkId, mapAppUserToProfileWithWebsite } from "@/lib/postgres/app-user";
 import { upsertAppUserFromClerk } from "@/lib/postgres/upsert-app-user";
+import { recordClientConnection } from "@/lib/audit/record-client-connection";
+import { rateLimitAuthSync } from "@/lib/rate-limit";
 import { timed } from "@/lib/perf";
 
 type SyncProfileBody = {
@@ -37,6 +39,10 @@ export async function POST(request: Request) {
   }
 
   const uid = verified.uid;
+  const syncLimit = await rateLimitAuthSync(uid);
+  if (!syncLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+  }
   let clerkEmail: string | undefined;
   let firstNameFromClerk = "";
   let lastNameFromClerk = "";
@@ -87,6 +93,7 @@ export async function POST(request: Request) {
   }
 
   if (existing && !mayNeedBootstrap && !needsClerkRefresh) {
+    void recordClientConnection(request, existing).catch(() => undefined);
     return NextResponse.json(await mapAppUserToProfileWithWebsite(existing));
   }
 
@@ -143,6 +150,9 @@ export async function POST(request: Request) {
   }
 
   const latest = await getAppUserByClerkId(uid);
+  if (latest) {
+    void recordClientConnection(request, latest).catch(() => undefined);
+  }
   return NextResponse.json(
     latest
       ? await mapAppUserToProfileWithWebsite(latest)

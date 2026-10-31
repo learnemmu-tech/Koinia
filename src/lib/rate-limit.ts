@@ -135,3 +135,48 @@ export async function rateLimitUploadRequest(
 ): Promise<{ allowed: boolean; retryAfterMs?: number }> {
   return rateLimitByKey(`upload:${identifier}`, "fch-upload", limit, windowMs);
 }
+
+export async function rateLimitAuthSync(
+  identifier: string,
+  limit = 30,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(`auth-sync:${identifier}`, "fch-auth-sync", limit, windowMs);
+}
+
+export async function rateLimitEmailSend(
+  identifier: string,
+  limit = 20,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(`email:${identifier}`, "fch-email", limit, windowMs);
+}
+
+export async function rateLimitChatMessage(
+  identifier: string,
+  limit = 60,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(`chat:${identifier}`, "fch-chat", limit, windowMs);
+}
+
+export async function rateLimitLike(
+  identifier: string,
+  limit = 120,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(`like:${identifier}`, "fch-like", limit, windowMs);
+}
+
+export async function rateLimitPaymentVerify(
+  identifier: string,
+  limit = 30,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(
+    `payment-verify:${identifier}`,
+    "fch-payment-verify",
+    limit,
+    windowMs
+  );
+}

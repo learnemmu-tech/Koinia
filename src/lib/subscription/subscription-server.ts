@@ -1,9 +1,11 @@
 import "server-only";
 
+import { cache } from "react";
 import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { organizations, subscriptions } from "@/db/schema";
+import { logRequestStage } from "@/lib/nav-trace-server";
 import { resolveTenantScopeForChurch } from "@/lib/organization/resolve-tenant-scope";
 import {
   getChurchById,
@@ -128,15 +130,22 @@ export async function getSubscriptionByChurchId(
   return buildDefaultSubscription(churchId);
 }
 
-export async function getSubscriptionSnapshot(
+export const getSubscriptionSnapshot = cache(async function getSubscriptionSnapshot(
   organizationId: string,
   preloadedSubscription?: ChurchSubscription
 ): Promise<SubscriptionSnapshot> {
+  const snapshotStarted = Date.now();
   const orgId = organizationId.trim();
-  const createdAt = orgId ? await getOrganizationCreatedAt(orgId) : null;
-  const loaded =
-    preloadedSubscription ??
-    (orgId ? await getSubscriptionByOrganizationId(orgId) : buildDefaultSubscription("default"));
+  const usageOrganizationId = orgId || preloadedSubscription?.organizationId || "";
+  const [createdAt, loaded, usage] = await Promise.all([
+    orgId ? getOrganizationCreatedAt(orgId) : Promise.resolve(null),
+    preloadedSubscription
+      ? Promise.resolve(preloadedSubscription)
+      : orgId
+        ? getSubscriptionByOrganizationId(orgId)
+        : Promise.resolve(buildDefaultSubscription("default")),
+    computeOrganizationUsage(usageOrganizationId),
+  ]);
   const window = resolveTrialWindow(loaded, createdAt);
   if (
     orgId &&
@@ -162,9 +171,9 @@ export async function getSubscriptionSnapshot(
   );
   const limits = resolved.limits;
   const features = resolved.features;
-  const usage = await computeOrganizationUsage(orgId || subscription.organizationId);
   const usageChecks = buildUsageChecks(usage, limits);
 
+  await logRequestStage("subscription.snapshot", snapshotStarted);
   return {
     subscription,
     plan: getPlan(subscription.planId),
@@ -174,7 +183,7 @@ export async function getSubscriptionSnapshot(
     usageChecks,
     trial,
   };
-}
+});
 
 export async function getSubscriptionSnapshotForChurch(
   churchId: string

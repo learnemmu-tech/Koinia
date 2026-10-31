@@ -5,6 +5,7 @@ import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { verifyChurchContentPublisher } from "@/lib/auth/verify-church-content-publisher";
 import { triggerEventAnnouncementEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { rateLimitEmailSend } from "@/lib/rate-limit";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { getEventById } from "@/lib/postgres/features";
 import { userCanManageChurch } from "@/lib/postgres/session";
@@ -17,6 +18,10 @@ export async function POST(request: Request) {
   const authUser = await verifyBearerToken(request);
   if (!authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const emailLimit = await rateLimitEmailSend(authUser.uid);
+  if (!emailLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
   const appUser = await getAppUserByClerkId(authUser.uid);

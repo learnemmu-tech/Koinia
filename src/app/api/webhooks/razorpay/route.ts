@@ -15,6 +15,7 @@ import {
 } from "@/lib/subscription/razorpay-subscription-server";
 
 export async function POST(request: Request) {
+  // PUBLIC_MUTATION: Razorpay signature is verified before any state change.
   try {
     if (!process.env.RAZORPAY_WEBHOOK_SECRET?.trim()) {
       console.error(
@@ -74,7 +75,9 @@ export async function POST(request: Request) {
           eventType: subscriptionEvent.event,
           subscriptionId: paymentSubscriptionId,
         });
-        if (!claimed) return NextResponse.json({ received: true });
+        if (claimed === "already_processed") {
+          return NextResponse.json({ received: true });
+        }
         await failSubscriptionCheckoutByProviderId(paymentSubscriptionId);
         await markRazorpayWebhookEventProcessed(eventId);
         return NextResponse.json({ received: true });
@@ -93,9 +96,20 @@ export async function POST(request: Request) {
         eventType: subscriptionEvent.event,
         subscriptionId: subscription.id,
       });
-      if (!claimed) return NextResponse.json({ received: true });
+      if (claimed === "already_processed") {
+        return NextResponse.json({ received: true });
+      }
 
-      await applyRazorpaySubscriptionEvent(subscription, subscriptionEvent.event);
+      const applied = await applyRazorpaySubscriptionEvent(
+        subscription,
+        subscriptionEvent.event
+      );
+      if (!applied) {
+        return NextResponse.json(
+          { error: "Subscription event could not be applied." },
+          { status: 500 }
+        );
+      }
       await markRazorpayWebhookEventProcessed(eventId);
       return NextResponse.json({ received: true });
     }
@@ -119,10 +133,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("[webhooks/razorpay]", error);
+    console.error(
+      "[webhooks/razorpay]",
+      error instanceof Error ? error.message : "processing failed"
+    );
     return NextResponse.json(
-      { error: "Webhook verification failed." },
-      { status: 400 }
+      { error: "Webhook processing failed." },
+      { status: 500 }
     );
   }
 }

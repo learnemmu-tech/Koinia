@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  Bookmark,
   CalendarDays,
   Clapperboard,
   Cog,
@@ -333,7 +334,7 @@ export function MobileHeader() {
               <NavRow
                 href="/favorites"
                 label="My Favorites"
-                icon={HeartHandshake}
+                icon={Bookmark}
                 active={pathname.startsWith("/favorites")}
               />
               <NavRow

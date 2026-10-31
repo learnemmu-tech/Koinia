@@ -13,6 +13,7 @@ function clientIp(request: Request): string {
 }
 
 export async function POST(request: Request) {
+  // PUBLIC_MUTATION: contact form is intentionally unauthenticated and rate limited.
   const rate = await rateLimitContactRequest(clientIp(request));
   if (!rate.allowed) {
     return NextResponse.json(

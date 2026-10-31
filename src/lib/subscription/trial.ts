@@ -62,16 +62,11 @@ export function hasActivePaidEntitlement(
   now = Date.now()
 ): boolean {
   if (subscription.planId === "free") return false;
-  const periodOpen =
-    subscription.currentPeriodEnd == null ||
-    subscription.currentPeriodEnd > now;
-  if (!periodOpen) return false;
+  if (subscription.currentPeriodEnd == null) return false;
+  if (subscription.currentPeriodEnd <= now) return false;
   if (subscription.status === "active") return true;
   if (subscription.status === "past_due") return true;
-  if (
-    subscription.status === "canceled" &&
-    (subscription.cancelAtPeriodEnd || periodOpen)
-  ) {
+  if (subscription.status === "canceled" && subscription.cancelAtPeriodEnd) {
     return true;
   }
   return false;

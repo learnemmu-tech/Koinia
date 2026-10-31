@@ -61,20 +61,12 @@ function emailFromClaims(claims: unknown): string | undefined {
   return undefined;
 }
 
-const verifiedTokenCache = new Map<
-  string,
-  { user: VerifiedAuthUser; expiresAt: number }
->();
 const verifiedTokenInflight = new Map<string, Promise<VerifiedAuthUser | null>>();
 
 async function userFromJwt(
   token: string,
   secretKey: string
 ): Promise<VerifiedAuthUser | null> {
-  const now = Date.now();
-  const cached = verifiedTokenCache.get(token);
-  if (cached && cached.expiresAt > now) return cached.user;
-
   const pending = verifiedTokenInflight.get(token);
   if (pending) return pending;
 
@@ -83,13 +75,7 @@ async function userFromJwt(
       const payload = await verifyToken(token, { secretKey });
       const uid = payload.sub;
       if (!uid) return null;
-      const user = { uid, email: emailFromClaims(payload) };
-      verifiedTokenCache.set(token, { user, expiresAt: Date.now() + 60_000 });
-      if (verifiedTokenCache.size > 200) {
-        const oldest = verifiedTokenCache.keys().next().value;
-        if (oldest) verifiedTokenCache.delete(oldest);
-      }
-      return user;
+      return { uid, email: emailFromClaims(payload) };
     } catch {
       return null;
     } finally {

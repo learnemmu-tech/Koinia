@@ -1,12 +1,17 @@
 "use client";
 
-import { getYouTubeEmbedUrl } from "@/lib/media-url-validation";
+import { Play } from "lucide-react";
+
+import {
+  getYouTubeThumbnailUrl,
+  getYouTubeWatchUrl,
+} from "@/lib/media-url-validation";
 import { cn } from "@/lib/utils";
 
 type YouTubeEmbedProps = {
   title: string;
   youtubeUrl?: string;
-  /** When false, render only the iframe (parent supplies frame/aspect). */
+  /** Kept so existing call sites compile. Playback stays on YouTube. */
   framed?: boolean;
   autoPlay?: boolean;
   className?: string;
@@ -15,35 +20,35 @@ type YouTubeEmbedProps = {
 export function YouTubeEmbed({
   title,
   youtubeUrl,
-  framed = true,
-  autoPlay = false,
   className,
 }: YouTubeEmbedProps) {
-  const embedSrc = youtubeUrl ? getYouTubeEmbedUrl(youtubeUrl, { autoplay: autoPlay }) : null;
-  if (!embedSrc) return null;
-
-  const iframe = (
-    <iframe
-      src={embedSrc}
-      title={`YouTube video for ${title}`}
-      className="h-full w-full"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-    />
-  );
-
-  if (!framed) {
-    return <div className={cn("h-full w-full", className)}>{iframe}</div>;
-  }
+  const watchUrl = youtubeUrl ? getYouTubeWatchUrl(youtubeUrl) : null;
+  if (!watchUrl) return null;
+  const thumbnail = youtubeUrl ? getYouTubeThumbnailUrl(youtubeUrl) : null;
 
   return (
-    <div
+    <a
+      href={watchUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Play ${title} on YouTube`}
       className={cn(
-        "overflow-hidden rounded-xl border border-border/50 bg-card/40",
+        "group relative block h-full min-h-40 w-full cursor-pointer overflow-hidden bg-muted",
         className
       )}
     >
-      <div className="aspect-video w-full">{iframe}</div>
-    </div>
+      {thumbnail ?
+        <span
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${thumbnail})` }}
+          role="img"
+          aria-hidden
+        />
+      : null}
+      <span className="absolute inset-0 bg-black/10 transition-colors duration-150 group-hover:bg-black/25" />
+      <span className="absolute left-1/2 top-1/2 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md transition-transform duration-150 group-hover:scale-105">
+        <Play className="ml-0.5 size-6 fill-[#EF4444] text-[#EF4444]" aria-hidden />
+      </span>
+    </a>
   );
 }

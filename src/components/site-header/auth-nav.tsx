@@ -9,7 +9,7 @@ import {
 
   Cog,
 
-  Heart,
+  Bookmark,
   HeartHandshake,
 
   Home,
@@ -399,7 +399,7 @@ export function AuthNav() {
 
         <DropdownMenuItem asChild>
           <Link href="/favorites">
-            <Heart className="mr-2 size-4 fill-current text-red-500" />
+            <Bookmark className="mr-2 size-4" />
             My Favorites
           </Link>
         </DropdownMenuItem>

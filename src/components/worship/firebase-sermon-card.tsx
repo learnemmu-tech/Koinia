@@ -2,7 +2,7 @@ import React from "react";
 
 import { ProtectedContentLink } from "@/components/auth/protected-content-link";
 import { PlatformContentQuickEdit } from "@/components/admin/inline/platform-content-quick-edit";
-import { FavoriteButton } from "@/components/favorites/favorite-button";
+import { ContentActions } from "@/components/engagement/content-actions";
 import type { FirebaseSermon } from "@/types/firebase-sermon";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ export const FirebaseSermonCard = React.memo(function FirebaseSermonCard({
       )}
     >
       <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
-        <ProtectedContentLink href={href} className="block size-full">
+        <ProtectedContentLink href={href} className="relative z-0 block size-full">
           <ImageWithFallback
             src={coverUrl}
             fallback={DEFAULT_SONG_COVER}
@@ -51,17 +51,13 @@ export const FirebaseSermonCard = React.memo(function FirebaseSermonCard({
         {scripture ?
           <Badge
             variant="secondary"
-            className="pointer-events-none absolute left-3 top-3 rounded-md border-0 bg-background/85 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-sm"
+            className="pointer-events-none absolute left-3 top-3 z-20 rounded-md border-0 bg-background/95 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-sm"
           >
             {scripture}
           </Badge>
         : null}
 
-        <FavoriteButton
-          itemType="sermon"
-          itemId={sermon.id}
-          className="absolute right-3 top-3 z-10"
-        />
+        <ContentActions likeType="sermon" itemId={sermon.id} saveType="sermon" />
 
         <PlatformContentQuickEdit
           kind="sermon"

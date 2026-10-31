@@ -41,7 +41,7 @@ test("favorite writes and reads bind to the Clerk session, not a client userId",
 
 test("Razorpay client verify is rate-limited and refuses non-pending donations", () => {
   const route = src("app/api/donations/verify-razorpay/route.ts");
-  assert.match(route, /rateLimitDonationCheckout/);
+  assert.match(route, /rateLimitPaymentVerify/);
   assert.match(route, /status: 429/);
   assert.match(route, /paymentStatus === "completed"/);
   assert.match(route, /paymentStatus !== "pending"/);

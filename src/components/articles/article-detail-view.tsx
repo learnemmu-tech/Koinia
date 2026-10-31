@@ -10,7 +10,7 @@ import {
   formatDetailDate,
   type ContentDetailSidebarItem,
 } from "@/components/content-detail-layout";
-import { FavoriteButton } from "@/components/favorites/favorite-button";
+import { ContentActions } from "@/components/engagement/content-actions";
 import { YouTubeEmbed } from "@/components/media/youtube-embed";
 import { ShareContentButton } from "@/components/share-content-button";
 import { DEFAULT_SONG_COVER } from "@/config/site";
@@ -103,10 +103,11 @@ export function ArticleDetailView({
         />
       }
       heroActions={
-        <FavoriteButton
-          itemType="article"
+        <ContentActions
+          likeType="article"
           itemId={article.id}
-          appearance="button"
+          saveType="article"
+          layout="detail"
         />
       }
       media={

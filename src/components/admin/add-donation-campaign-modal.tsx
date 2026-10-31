@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload, X } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 
 import { siteConfig } from "@/config/site";
@@ -93,7 +93,9 @@ export function AddDonationCampaignModal({
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const form = useForm<DonationCampaignFormValues>({
-    resolver: zodResolver(donationCampaignFormSchema),
+    resolver: zodResolver(
+      donationCampaignFormSchema
+    ) as Resolver<DonationCampaignFormValues>,
     defaultValues: {
       title: "",
       description: "",

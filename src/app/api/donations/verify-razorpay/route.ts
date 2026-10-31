@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 import { completeDonationPayment } from "@/lib/donation-server";
 import { getDonationById } from "@/lib/postgres/features";
-import { rateLimitDonationCheckout } from "@/lib/rate-limit";
+import { rateLimitPaymentVerify } from "@/lib/rate-limit";
 
 function verifyRazorpaySignature(
   orderId: string,
@@ -39,8 +39,9 @@ function clientIp(request: Request): string {
 }
 
 export async function POST(request: Request) {
+  // PUBLIC_MUTATION: completion requires a Razorpay signature, not a session.
   try {
-    const rate = await rateLimitDonationCheckout(clientIp(request));
+    const rate = await rateLimitPaymentVerify(clientIp(request));
     if (!rate.allowed) {
       return NextResponse.json(
         { error: "Too many donation attempts. Please try again later." },

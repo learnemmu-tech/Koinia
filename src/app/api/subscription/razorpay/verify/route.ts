@@ -42,6 +42,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: authError.error }, { status: authError.status });
     }
     console.error("[api/subscription/razorpay/verify]", error instanceof Error ? error.message : "request failed");
+    const message = error instanceof Error ? error.message : "";
+    if (
+      message === "Subscription is not in a paid state." ||
+      message === "Unable to confirm the subscription with Razorpay." ||
+      message === "Subscription checkout attempt not found."
+    ) {
+      return NextResponse.json({ error: "Subscription is not active." }, { status: 409 });
+    }
     return NextResponse.json({ error: "Unable to verify subscription." }, { status: 500 });
   }
 }

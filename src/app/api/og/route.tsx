@@ -4,13 +4,36 @@
 import { ImageResponse } from "next/og";
 
 import { siteConfig } from "@/config/site";
+import { evaluateRemoteFetchUrl } from "@/lib/security/remote-fetch-policy";
 import { cn } from "@/lib/utils";
 
 export const runtime = "edge";
 
-async function fetchImage(url: string) {
-  const res = await fetch(url);
-  const buffer = await res.arrayBuffer();
+const MAX_IMAGE_BYTES = 1_500_000;
+
+async function fetchAllowedImage(url: string, allowedHosts: string[]) {
+  const decision = evaluateRemoteFetchUrl(url, allowedHosts);
+  if (!decision.ok) {
+    throw new Error("Image host is not allowed.");
+  }
+  const response = await fetch(decision.url, {
+    redirect: "manual",
+    signal: AbortSignal.timeout(4000),
+  });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error("Image redirects are not allowed.");
+  }
+  if (!response.ok) {
+    throw new Error("Image could not be loaded.");
+  }
+  const length = Number(response.headers.get("content-length") ?? "0");
+  if (length > MAX_IMAGE_BYTES) {
+    throw new Error("Image is too large.");
+  }
+  const buffer = await response.arrayBuffer();
+  if (buffer.byteLength > MAX_IMAGE_BYTES) {
+    throw new Error("Image is too large.");
+  }
   return buffer;
 }
 
@@ -30,13 +53,11 @@ export async function GET(request: Request) {
   const description =
     searchParams.get("description")?.slice(0, 300) ?? siteConfig.description;
 
-  const defaultImage = new URL(siteConfig.image, siteConfig.url).toString();
-  const imageUrl = searchParams.get("image") ?? defaultImage;
-  const resolvedImageUrl = new URL(imageUrl, siteConfig.url).toString();
-
+  const site = new URL(siteConfig.url);
+  const defaultImage = new URL(siteConfig.image, site).toString();
+  const allowedHosts = [site.hostname];
   const isSquaredImage = searchParams.get("square") === "true";
-
-  const image = await fetchImage(resolvedImageUrl);
+  const image = await fetchAllowedImage(defaultImage, allowedHosts);
   const font = await fetchFonts();
 
   try {
@@ -116,7 +137,7 @@ export async function GET(request: Request) {
         ],
       }
     );
-  } catch (e) {
+  } catch {
     return new Response(`Failed to generate the image`, {
       status: 500,
     });

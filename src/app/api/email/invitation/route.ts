@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email/send-email";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { getMembershipForUser } from "@/lib/organization/organization-server";
 import { getInvitationByToken } from "@/lib/postgres/invitations";
+import { rateLimitEmailSend } from "@/lib/rate-limit";
 import { roleMeetsMinimum } from "@/types/membership";
 
 function invitationTokenFromLink(inviteLink: string): string | null {
@@ -21,6 +22,10 @@ export async function POST(request: Request) {
   const authUser = await verifyBearerToken(request);
   if (!authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const emailLimit = await rateLimitEmailSend(authUser.uid);
+  if (!emailLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
   try {
@@ -49,6 +54,14 @@ export async function POST(request: Request) {
     const invitation = await getInvitationByToken(token);
     if (!invitation || invitation.status !== "pending") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const storedEmail = invitation.email?.trim().toLowerCase();
+    if (!storedEmail || email.toLowerCase() !== storedEmail) {
+      return NextResponse.json(
+        { error: "Invitation recipient cannot be changed." },
+        { status: 400 }
+      );
     }
 
     const membership = await getMembershipForUser(

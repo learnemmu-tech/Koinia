@@ -4,6 +4,7 @@ import { completeDonationPayment } from "@/lib/donation-server";
 import { getPaymentProvider } from "@/lib/payments";
 
 export async function POST(request: Request) {
+  // PUBLIC_MUTATION: Stripe signature is verified before any state change.
   try {
     if (!process.env.STRIPE_WEBHOOK_SECRET?.trim()) {
       console.error("[webhooks/stripe] STRIPE_WEBHOOK_SECRET is not configured");

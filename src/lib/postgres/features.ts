@@ -23,6 +23,7 @@ import {
   songs,
   users,
 } from "@/db/schema";
+import { isUniqueViolation } from "@/lib/postgres/with-connection-retry";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import {
   mapArticle,
@@ -1270,29 +1271,60 @@ export async function listDonationsByEmail(email: string): Promise<FirebaseDonat
   return rows.map(mapDonation);
 }
 
-export async function createPendingDonation(input: PendingDonationInput): Promise<string> {
+export type PendingDonationResult = {
+  id: string;
+  /** Provider order id already bound to this idempotency key, if any. */
+  checkoutReference: string | null;
+};
+
+function checkoutReferenceFromTransaction(transactionId: string): string | null {
+  return transactionId.startsWith("pending_") ? null : transactionId;
+}
+
+export async function createPendingDonation(
+  input: PendingDonationInput
+): Promise<PendingDonationResult> {
   const campaign = await getDonationCampaignById(input.campaignId);
   if (!campaign) throw new Error("Campaign not found");
 
-  const idempotencyKey = input.idempotencyKey?.trim();
+  const idempotencyKey = input.idempotencyKey?.trim() || null;
   if (idempotencyKey) {
-    const [existing] = await db
-      .select({ id: donations.id, paymentStatus: donations.paymentStatus })
-      .from(donations)
-      .where(eq(donations.transactionId, idempotencyKey))
-      .limit(1);
-    if (existing) {
-      return existing.id;
-    }
+    const existing = await findDonationByIdempotencyKey(idempotencyKey);
+    if (existing) return assertSameDonationIntent(existing, input);
   }
 
-  if (campaign.contentScope === "platform_public") {
+  const transactionId = `pending_${crypto.randomUUID()}`;
+  try {
+    if (campaign.contentScope === "platform_public") {
+      const [row] = await db
+        .insert(donations)
+        .values({
+          contentScope: "platform_public",
+          organizationId: null,
+          churchId: null,
+          campaignId: campaign.id,
+          donorName: input.donorName.trim(),
+          donorEmail: input.donorEmail.trim().toLowerCase(),
+          amount: String(input.amount),
+          currency: input.currency,
+          paymentStatus: "pending",
+          paymentProvider: input.paymentProvider,
+          transactionId,
+          idempotencyKey,
+          isAnonymous: input.isAnonymous,
+        })
+        .returning({ id: donations.id });
+      if (!row) throw new Error("Failed to create donation");
+      return { id: row.id, checkoutReference: null };
+    }
+
+    const church = await requireChurch(campaign.churchId);
     const [row] = await db
       .insert(donations)
       .values({
-        contentScope: "platform_public",
-        organizationId: null,
-        churchId: null,
+        contentScope: "organization",
+        organizationId: church.organizationId,
+        churchId: church.id,
         campaignId: campaign.id,
         donorName: input.donorName.trim(),
         donorEmail: input.donorEmail.trim().toLowerCase(),
@@ -1300,34 +1332,69 @@ export async function createPendingDonation(input: PendingDonationInput): Promis
         currency: input.currency,
         paymentStatus: "pending",
         paymentProvider: input.paymentProvider,
-        transactionId: idempotencyKey || `pending_${Date.now()}`,
+        transactionId,
+        idempotencyKey,
         isAnonymous: input.isAnonymous,
       })
       .returning({ id: donations.id });
     if (!row) throw new Error("Failed to create donation");
-    return row.id;
+    return { id: row.id, checkoutReference: null };
+  } catch (error) {
+    if (idempotencyKey && isUniqueViolation(error)) {
+      const existing = await findDonationByIdempotencyKey(idempotencyKey);
+      if (existing) return assertSameDonationIntent(existing, input);
+    }
+    throw error;
   }
+}
 
-  const church = await requireChurch(campaign.churchId);
-  const [row] = await db
-    .insert(donations)
-    .values({
-      contentScope: "organization",
-      organizationId: church.organizationId,
-      churchId: church.id,
-      campaignId: campaign.id,
-      donorName: input.donorName.trim(),
-      donorEmail: input.donorEmail.trim().toLowerCase(),
-      amount: String(input.amount),
-      currency: input.currency,
-      paymentStatus: "pending",
-      paymentProvider: input.paymentProvider,
-      transactionId: idempotencyKey || `pending_${Date.now()}`,
-      isAnonymous: input.isAnonymous,
+async function findDonationByIdempotencyKey(idempotencyKey: string) {
+  const [existing] = await db
+    .select({
+      id: donations.id,
+      amount: donations.amount,
+      currency: donations.currency,
+      campaignId: donations.campaignId,
+      donorEmail: donations.donorEmail,
+      transactionId: donations.transactionId,
+      paymentStatus: donations.paymentStatus,
     })
-    .returning({ id: donations.id });
-  if (!row) throw new Error("Failed to create donation");
-  return row.id;
+    .from(donations)
+    .where(eq(donations.idempotencyKey, idempotencyKey))
+    .limit(1);
+  return existing ?? null;
+}
+
+function assertSameDonationIntent(
+  existing: {
+    id: string;
+    amount: string;
+    currency: string;
+    campaignId: string;
+    donorEmail: string;
+    transactionId: string;
+    paymentStatus: string;
+  },
+  input: PendingDonationInput
+) {
+  const same =
+    existing.campaignId === input.campaignId &&
+    existing.currency === input.currency &&
+    Number(existing.amount) === input.amount &&
+    existing.donorEmail === input.donorEmail.trim().toLowerCase();
+  if (!same) {
+    throw new Error("Idempotency key was already used.");
+  }
+  if (existing.paymentStatus === "completed") {
+    return {
+      id: existing.id,
+      checkoutReference: checkoutReferenceFromTransaction(existing.transactionId),
+    };
+  }
+  return {
+    id: existing.id,
+    checkoutReference: checkoutReferenceFromTransaction(existing.transactionId),
+  };
 }
 
 export async function setDonationCheckoutReference(input: {

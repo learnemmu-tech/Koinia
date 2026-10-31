@@ -38,20 +38,14 @@ const EMPTY_TENANT_QUERY = tenantContentQuery({
   churchId: "",
 });
 
-const PERF_TIMING = process.env.PERF_TIMING === "1";
-
-function perfLog(label: string, startedAt: number) {
-  if (!PERF_TIMING) return;
-  console.info(`[perf] ${label}: ${Math.round(performance.now() - startedAt)}ms`);
-}
+import { logRequestStage, traceRequestStage } from "@/lib/nav-trace-server";
 
 async function resolveAuthenticatedTenantScope(
   userId: string
 ): Promise<TenantScope | null> {
-  const scopeStarted = performance.now();
-  const scope = await resolveAuthenticatedChurchScope(userId);
-  perfLog("tenant.total", scopeStarted);
-  return scope;
+  return traceRequestStage("tenant.scope", () =>
+    resolveAuthenticatedChurchScope(userId)
+  );
 }
 
 /**
@@ -67,14 +61,12 @@ export const resolvePageContentQuery = cache(
   async (
     options: ResolvePageContentQueryOptions = {}
   ): Promise<PageContentContext> => {
-    const totalStarted = performance.now();
-    const authStarted = performance.now();
-    const { userId } = await auth();
-    perfLog("resolve.clerkAuth", authStarted);
+    const totalStarted = Date.now();
+    const { userId } = await traceRequestStage("resolve.auth", () => auth());
 
     const urlChurch = await getRequestChurchUrlScope();
     if (urlChurch) {
-      perfLog("resolve.total", totalStarted);
+      await logRequestStage("resolve.content", totalStarted, { source: "url" });
       return {
         contentQuery: tenantContentQuery(urlChurch),
         isPlatformPublic: false,
@@ -86,6 +78,9 @@ export const resolvePageContentQuery = cache(
     }
 
     if (!userId) {
+      await logRequestStage("resolve.content", totalStarted, {
+        source: options.tenantOnly ? "anonymous-empty" : "platform-public",
+      });
       if (options.tenantOnly) {
         return {
           contentQuery: EMPTY_TENANT_QUERY,
@@ -107,7 +102,7 @@ export const resolvePageContentQuery = cache(
       // getAppUserByClerkId is React-cached for this request.
       const appUser = await getAppUserByClerkId(userId);
       if (isPlatformSuperAdmin(appUser?.platformRole) && !options.tenantOnly) {
-        perfLog("resolve.total", totalStarted);
+        await logRequestStage("resolve.content", totalStarted, { source: "super-admin" });
         return {
           contentQuery: PUBLIC_PLATFORM_CONTENT_QUERY,
           isPlatformPublic: true,
@@ -115,7 +110,7 @@ export const resolvePageContentQuery = cache(
         };
       }
 
-      perfLog("resolve.total", totalStarted);
+      await logRequestStage("resolve.content", totalStarted, { source: "empty-tenant" });
       return {
         contentQuery: EMPTY_TENANT_QUERY,
         isPlatformPublic: false,
@@ -123,7 +118,7 @@ export const resolvePageContentQuery = cache(
       };
     }
 
-    perfLog("resolve.total", totalStarted);
+    await logRequestStage("resolve.content", totalStarted, { source: "tenant" });
     return {
       contentQuery: tenantContentQuery(tenantScope),
       isPlatformPublic: false,

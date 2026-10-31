@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 
@@ -17,6 +18,31 @@ type TilePlayPauseButtonProps = {
 };
 
 export function TilePlayPauseButton(props: TilePlayPauseButtonProps) {
+  const [audioReady, setAudioReady] = useState(false);
+
+  useEffect(() => {
+    if (window.__fchAudioReady) setAudioReady(true);
+    const markReady = () => setAudioReady(true);
+    window.addEventListener("fch-audio-ready", markReady);
+    return () => window.removeEventListener("fch-audio-ready", markReady);
+  }, []);
+
+  if (!audioReady) {
+    return (
+      <button
+        type="button"
+        aria-label="Play"
+        className="absolute inset-0 z-10 w-full bg-black/40 text-secondary dark:bg-black/75"
+      >
+        <Play strokeWidth={9} className="m-auto size-6 fill-secondary" />
+      </button>
+    );
+  }
+
+  return <TilePlayPauseReady {...props} />;
+}
+
+function TilePlayPauseReady(props: TilePlayPauseButtonProps) {
   const { id } = props;
   const [queue] = useQueue();
   const [currentIndex, setCurrentIndex] = useCurrentSongIndex();

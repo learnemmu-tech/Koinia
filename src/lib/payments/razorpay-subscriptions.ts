@@ -262,4 +262,40 @@ export function mapRazorpayPeriodDate(value?: number | null): Date | undefined {
   return typeof value === "number" && value > 0 ? new Date(value * 1000) : undefined;
 }
 
+export async function fetchRazorpayPayment(paymentId: string): Promise<{
+  id: string;
+  order_id: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+}> {
+  const response = await fetch(
+    `https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`,
+    {
+      headers: { Authorization: getAuthHeader() },
+      cache: "no-store",
+    }
+  );
+  if (!response.ok) {
+    throw new Error("Unable to confirm the payment with Razorpay.");
+  }
+  const body = (await response.json()) as {
+    id?: string;
+    order_id?: string | null;
+    amount?: number;
+    currency?: string;
+    status?: string;
+  };
+  if (!body.id || typeof body.amount !== "number" || !body.currency || !body.status) {
+    throw new Error("Unable to confirm the payment with Razorpay.");
+  }
+  return {
+    id: body.id,
+    order_id: body.order_id ?? null,
+    amount: body.amount,
+    currency: body.currency,
+    status: body.status,
+  };
+}
+
 export type { RazorpayCustomerResponse, RazorpaySubscriptionResponse };

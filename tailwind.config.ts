@@ -141,7 +141,11 @@ const config = {
         "accordion-up": "accordion-up 0.2s ease-out",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "var(--font-telugu)", ...fontFamily.sans],
+        sans: [
+          "var(--font-sans, ui-sans-serif)",
+          "var(--font-telugu, ui-sans-serif)",
+          ...fontFamily.sans,
+        ],
         reading: [
           "var(--font-geist-sans)",
           "var(--font-sans)",

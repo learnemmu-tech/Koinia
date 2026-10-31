@@ -1,6 +1,7 @@
 import { ClientRedirect } from "@/components/auth/client-redirect";
 import { RequireWorkspaceAccess } from "@/components/auth/require-admin";
 import { resolveDashboardLayoutDestination } from "@/lib/auth/require-onboarding-complete-server";
+import { traceRequestStage } from "@/lib/nav-trace-server";
 import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const metadata = buildNoIndexMetadata(
@@ -15,7 +16,10 @@ export default async function DashboardLayout({
 }) {
   // Super-admin redirect is already decided inside this function. A separate
   // lookup here waited on the same user row before the rest of the gate.
-  const gateRedirect = await resolveDashboardLayoutDestination();
+  const gateRedirect = await traceRequestStage(
+    "dashboard.gate",
+    () => resolveDashboardLayoutDestination()
+  );
   if (gateRedirect) {
     return <ClientRedirect to={gateRedirect} />;
   }

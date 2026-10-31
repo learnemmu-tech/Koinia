@@ -40,15 +40,51 @@ import type {
   WebsiteVisibilityKey,
 } from "@/lib/templates/types";
 import { adminSectionClass } from "@/lib/responsive-classes";
+import { FieldHelp } from "@/components/admin/field-help";
 
 const IMAGE_FIELDS = [
-  { key: "logoUrl", label: "Logo", slot: "logo" },
-  { key: "faviconUrl", label: "Favicon", slot: "favicon" },
-  { key: "heroImageUrl", label: "Hero image", slot: "hero" },
-  { key: "aboutImageUrl", label: "About image", slot: "about" },
-  { key: "featuredMinistryImageUrl", label: "Featured ministry image", slot: "featuredMinistry" },
-  { key: "worshipImageUrl", label: "Worship image", slot: "worship" },
-  { key: "socialPreviewImageUrl", label: "Social / OG image", slot: "socialPreview" },
+  {
+    key: "logoUrl",
+    label: "Logo",
+    slot: "logo",
+    help: "Your church logo is displayed in the website header and other branded areas.",
+  },
+  {
+    key: "faviconUrl",
+    label: "Favicon",
+    slot: "favicon",
+    help: "This small icon appears in the browser tab for your public church website.",
+  },
+  {
+    key: "heroImageUrl",
+    label: "Hero image",
+    slot: "hero",
+    help: "This image is displayed in the main hero section at the top of your public church website. Use a high-quality landscape image.",
+  },
+  {
+    key: "aboutImageUrl",
+    label: "About image",
+    slot: "about",
+    help: "This image is displayed in the About section of your public church website.",
+  },
+  {
+    key: "featuredMinistryImageUrl",
+    label: "Featured ministry image",
+    slot: "featuredMinistry",
+    help: "This image is displayed with the featured ministry on your public church website.",
+  },
+  {
+    key: "worshipImageUrl",
+    label: "Worship image",
+    slot: "worship",
+    help: "This image is displayed in the worship area of your public church website.",
+  },
+  {
+    key: "socialPreviewImageUrl",
+    label: "Social / OG image",
+    slot: "socialPreview",
+    help: "This image is used when your church website is shared on supported social platforms and messaging apps.",
+  },
 ] as const;
 
 const SOCIAL_LABELS: Record<SocialPlatform, string> = {
@@ -469,7 +505,11 @@ function WebsiteSettingsContent() {
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="hero-headline">Hero headline</Label>
+              <FieldHelp
+                htmlFor="hero-headline"
+                label="Hero headline"
+                help="The main headline in the hero at the top of your public church website. Use a short welcome, such as the church name or a service invitation."
+              />
               <Textarea
                 id="hero-headline"
                 value={branding.heroHeadline}
@@ -486,7 +526,11 @@ function WebsiteSettingsContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="hero-sub">Supporting text</Label>
+              <FieldHelp
+                htmlFor="hero-sub"
+                label="Supporting text"
+                help="The sentence under the hero headline on your public church website. Use it to say who you are or who is welcome."
+              />
               <Textarea
                 id="hero-sub"
                 value={branding.heroSubheadline}
@@ -504,7 +548,11 @@ function WebsiteSettingsContent() {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="service-label">Service label</Label>
+                <FieldHelp
+                  htmlFor="service-label"
+                  label="Service label"
+                  help="The short name of the gathering shown in the hero, such as Sunday Worship. It appears with the service time and location on your public website."
+                />
                 <Input
                   id="service-label"
                   value={branding.serviceLabel}
@@ -521,7 +569,11 @@ function WebsiteSettingsContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-time">Service time</Label>
+                <FieldHelp
+                  htmlFor="service-time"
+                  label="Service time"
+                  help="When the gathering meets. This appears next to the service label in the hero on your public church website."
+                />
                 <Input
                   id="service-time"
                   value={branding.serviceTime}
@@ -538,7 +590,11 @@ function WebsiteSettingsContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-location">Service location</Label>
+                <FieldHelp
+                  htmlFor="service-location"
+                  label="Service location"
+                  help="Where people should come. This appears with the service details in the hero on your public church website."
+                />
                 <Input
                   id="service-location"
                   value={branding.serviceLocation}
@@ -557,7 +613,11 @@ function WebsiteSettingsContent() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="scripture-ref">Scripture reference</Label>
+                <FieldHelp
+                  htmlFor="scripture-ref"
+                  label="Scripture reference"
+                  help="A short Bible reference shown with the hero on your public church website, such as John 3:16."
+                />
                 <Input
                   id="scripture-ref"
                   value={branding.scriptureReference}
@@ -574,7 +634,11 @@ function WebsiteSettingsContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="scripture-text">Scripture text</Label>
+                <FieldHelp
+                  htmlFor="scripture-text"
+                  label="Scripture text"
+                  help="The verse text shown with the scripture reference in the hero on your public church website."
+                />
                 <Input
                   id="scripture-text"
                   value={branding.scriptureText}
@@ -604,7 +668,7 @@ function WebsiteSettingsContent() {
               const compact = field.slot === "logo" || field.slot === "favicon";
               return (
                 <div key={field.key} className="space-y-2">
-                  <Label>{field.label}</Label>
+                  <FieldHelp label={field.label} help={field.help} />
                   {current ? (
                     <div
                       className={
@@ -651,7 +715,11 @@ function WebsiteSettingsContent() {
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="about-headline">Heading</Label>
+              <FieldHelp
+                htmlFor="about-headline"
+                label="Heading"
+                help="The title of the About section on your public church website."
+              />
               <Input
                 id="about-headline"
                 value={branding.aboutHeadline}
@@ -669,7 +737,11 @@ function WebsiteSettingsContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="about-intro">Introduction</Label>
+              <FieldHelp
+                htmlFor="about-intro"
+                label="Introduction"
+                help="The opening paragraph of the About section on your public church website."
+              />
               <Textarea
                 id="about-intro"
                 value={branding.aboutIntro}
@@ -689,7 +761,11 @@ function WebsiteSettingsContent() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="about-mission">Mission</Label>
+                <FieldHelp
+                  htmlFor="about-mission"
+                  label="Mission"
+                  help="Your church mission statement. It appears in the About section of your public church website."
+                />
                 <Textarea
                   id="about-mission"
                   value={branding.aboutMission}
@@ -708,7 +784,11 @@ function WebsiteSettingsContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="about-vision">Vision</Label>
+                <FieldHelp
+                  htmlFor="about-vision"
+                  label="Vision"
+                  help="Your church vision statement. It appears in the About section of your public church website."
+                />
                 <Textarea
                   id="about-vision"
                   value={branding.aboutVision}
@@ -727,7 +807,11 @@ function WebsiteSettingsContent() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="about-community">Community</Label>
+              <FieldHelp
+                htmlFor="about-community"
+                label="Community"
+                help="A short description of church community life. It appears in the About section of your public church website."
+              />
               <Textarea
                 id="about-community"
                 value={branding.aboutCommunity}
@@ -767,7 +851,10 @@ function WebsiteSettingsContent() {
               const current = imageUrlForSlot(website, aboutField.slot);
               return (
                 <div className="space-y-2">
-                  <Label>About image</Label>
+                  <FieldHelp
+                    label="About image"
+                    help="This image is displayed in the About section of your public church website. Use a landscape photo of the congregation, building, or ministry."
+                  />
                   {current ? (
                     <div className="relative aspect-video max-w-md overflow-hidden rounded-md border bg-muted">
                       <Image
@@ -807,7 +894,11 @@ function WebsiteSettingsContent() {
           <CardContent className="grid gap-4">
             {SOCIAL_PLATFORMS.map((platform) => (
               <div key={platform} className="space-y-2">
-                <Label htmlFor={`social-${platform}`}>{SOCIAL_LABELS[platform]}</Label>
+                <FieldHelp
+                  htmlFor={`social-${platform}`}
+                  label={SOCIAL_LABELS[platform]}
+                  help="A link to this profile. It appears with your church social links on the public website."
+                />
                 <Input
                   id={`social-${platform}`}
                   value={socialDraft[platform]}
@@ -840,7 +931,11 @@ function WebsiteSettingsContent() {
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="site-title">Site title</Label>
+              <FieldHelp
+                htmlFor="site-title"
+                label="Site title"
+                help="The title used in the browser tab and search results for your public church website."
+              />
               <Input
                 id="site-title"
                 value={branding.siteTitle}
@@ -855,7 +950,11 @@ function WebsiteSettingsContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="meta-description">Meta description</Label>
+              <FieldHelp
+                htmlFor="meta-description"
+                label="Meta description"
+                help="The short summary search engines and link previews can show for your public church website."
+              />
               <Textarea
                 id="meta-description"
                 value={branding.metaDescription}

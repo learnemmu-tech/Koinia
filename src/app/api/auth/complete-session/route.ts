@@ -9,6 +9,7 @@ import { triggerWelcomeEmails } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { getAppUserByClerkId, mapAppUserToProfileWithWebsite } from "@/lib/postgres/app-user";
 import { upsertAppUserFromClerk } from "@/lib/postgres/upsert-app-user";
+import { rateLimitAuthSync } from "@/lib/rate-limit";
 import { timed } from "@/lib/perf";
 
 type CompleteSessionBody = {
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
   }
 
   const uid = verified.uid;
+  const syncLimit = await rateLimitAuthSync(uid);
+  if (!syncLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+  }
   let body: CompleteSessionBody = {};
   try {
     body = (await request.json()) as CompleteSessionBody;

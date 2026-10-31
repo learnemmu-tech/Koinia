@@ -18,6 +18,8 @@ import { listPublicChurchMinistries } from "@/lib/postgres/public-ministries";
 import { userIsActiveChurchMember } from "@/lib/postgres/session";
 import { getChurchBySlug } from "@/lib/postgres/tenants";
 import { withConnectionRetry } from "@/lib/postgres/with-connection-retry";
+import { logNavStage } from "@/lib/nav-trace";
+import { readNavTraceId } from "@/lib/nav-trace-server";
 import { resolvePublicTemplateId } from "@/lib/templates/resolver";
 import type {
   ChurchWebsiteIdentity,
@@ -112,28 +114,36 @@ export const loadChurchWebsiteBySlug = cache(async (
   slug: string,
   options?: LoadChurchWebsiteOptions
 ): Promise<ChurchWebsiteViewModel | null> => {
-  const core = await loadChurchCore(slug);
-  if (!core) return null;
-  const templateId = resolvePublicTemplateId(
-    options?.templateOverride ?? core.templateId
-  );
-  const publicSlug = slug.trim().toLowerCase();
-  if (options?.includeContent === false) {
-    return shellModel(core, publicSlug, templateId);
+  const traceId = await readNavTraceId();
+  const startedAt = Date.now();
+  let includeContent = true;
+  try {
+    const core = await loadChurchCore(slug);
+    if (!core) return null;
+    const templateId = resolvePublicTemplateId(
+      options?.templateOverride ?? core.templateId
+    );
+    const publicSlug = slug.trim().toLowerCase();
+    includeContent = options?.includeContent !== false;
+    if (!includeContent) {
+      return shellModel(core, publicSlug, templateId);
+    }
+    const model = await withConnectionRetry(() =>
+      loadChurchWebsite(core.church, {
+        ...options,
+        templateId,
+        viewer: core.viewer,
+        website: core.website,
+      })
+    );
+    if (!model) return null;
+    return {
+      ...model,
+      church: { ...model.church, slug: publicSlug || model.church.slug },
+    };
+  } finally {
+    logNavStage(traceId, "church.website", startedAt, { includeContent });
   }
-  const model = await withConnectionRetry(() =>
-    loadChurchWebsite(core.church, {
-      ...options,
-      templateId,
-      viewer: core.viewer,
-      website: core.website,
-    })
-  );
-  if (!model) return null;
-  return {
-    ...model,
-    church: { ...model.church, slug: publicSlug || model.church.slug },
-  };
 });
 
 export async function loadChurchWebsite(

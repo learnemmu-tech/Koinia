@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { groupChatErrorResponse } from "@/app/api/groups/[id]/messages/chat-http";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { rateLimitChatMessage } from "@/lib/rate-limit";
 import { createGroupMessage, listGroupMessages } from "@/lib/postgres/group-chat";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -35,6 +36,10 @@ export async function POST(request: Request, context: RouteContext) {
   const verified = await verifyBearerToken(request);
   if (!verified) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const chatLimit = await rateLimitChatMessage(verified.uid);
+  if (!chatLimit.allowed) {
+    return NextResponse.json({ error: "Too many messages." }, { status: 429 });
   }
 
   const { id: groupId } = await context.params;

@@ -3,9 +3,9 @@
 import type { ReactNode } from "react";
 import {
   BookOpen,
+  Bookmark,
   DollarSign,
   HandHeart,
-  Heart,
   Music2,
   Video,
 } from "lucide-react";
@@ -112,11 +112,11 @@ export function DashboardStatsCards() {
           accentClassName="bg-emerald-500/10"
         />
         <StatCard
-          label="Total Favorites"
+          label="Library"
           value={favorites.length}
           loading={favoritesLoading}
-          icon={<Heart className="size-5 fill-current text-red-500" />}
-          accentClassName="bg-red-500/10"
+          icon={<Bookmark className="size-5" />}
+          accentClassName="bg-muted"
         />
       </div>
     </section>

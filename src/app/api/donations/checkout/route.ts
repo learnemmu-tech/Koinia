@@ -30,6 +30,7 @@ function clientIp(request: Request): string {
 }
 
 export async function POST(request: Request) {
+  // PUBLIC_MUTATION: donor checkout is unauthenticated and rate limited.
   try {
     const rate = await rateLimitDonationCheckout(clientIp(request));
     if (!rate.allowed) {
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
     const provider = getConfiguredPaymentProvider();
     const baseUrl = getBaseUrl();
 
-    const donationId = await createPendingDonation({
+    const created = await createPendingDonation({
       campaignId: campaign.id,
       donorName: parsed.data.donorName,
       donorEmail: parsed.data.donorEmail,
@@ -73,6 +74,20 @@ export async function POST(request: Request) {
       paymentProvider: provider.id,
       idempotencyKey: parsed.data.idempotencyKey,
     });
+    const donationId = created.id;
+
+    if (created.checkoutReference) {
+      return NextResponse.json({
+        donationId,
+        provider: provider.id,
+        orderId: created.checkoutReference,
+        sessionId: created.checkoutReference,
+        amount: parsed.data.amount,
+        currency: campaign.currency,
+        campaignTitle: campaign.title,
+        reused: true,
+      });
+    }
 
     const checkout = await provider.createCheckoutSession({
       donationId,

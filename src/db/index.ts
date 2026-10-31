@@ -29,7 +29,9 @@ function getPool(): Pool {
     // Keep serverless pools tiny. Locally allow more concurrency so Next.js
     // compile + RSC fan-out does not exhaust the pool.
     max: process.env.VERCEL ? 1 : 20,
-    idleTimeoutMillis: 20_000,
+    // A new Neon connection from this network measured 2.3–3.8s.
+    // Keep the warm socket across normal gaps between clicks.
+    idleTimeoutMillis: process.env.VERCEL ? 20_000 : 300_000,
     // Wait for a free pooled client instead of failing while a sibling
     // request (pricing, dashboard compile) still holds connections.
     connectionTimeoutMillis: 30_000,

@@ -75,7 +75,7 @@ export function TrialLifecycleBanner() {
   if (!trial) return null;
   if (trial.access === "paid") return null;
   if (!expired && !showReminder) return null;
-  if (expired && dismissed) return null;
+  if (dismissed) return null;
 
   let title = "";
   let message = "";
@@ -123,23 +123,18 @@ export function TrialLifecycleBanner() {
       role="status"
     >
       {expired ?
-        <BannerLeafDecal className="pointer-events-none absolute right-8 top-1/2 h-[7.25rem] w-[9.5rem] -translate-y-[58%] text-primary sm:right-10" />
+        <BannerLeafDecal className="pointer-events-none absolute right-72 top-1/2 hidden h-[7.25rem] w-[9.5rem] -translate-y-[58%] text-primary md:block" />
       : null}
 
-      <div
-        className={cn(
-          "relative z-[1] flex w-full flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5",
-          !expired && "sm:justify-center"
-        )}
-      >
-        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+      <div className="relative z-[1] box-border flex w-full flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-8">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5 pr-10 sm:items-center sm:gap-3 sm:pr-0">
           <div
             className={cn(
-              "relative flex size-10 shrink-0 items-center justify-center rounded-full",
+              "relative flex size-9 shrink-0 items-center justify-center rounded-full sm:size-10",
               expired ? "bg-primary/10 text-primary" : "bg-background/70"
             )}
           >
-            <FileText className="size-5" aria-hidden />
+            <FileText className="size-4 sm:size-5" aria-hidden />
             {expired ?
               <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
                 <Lock className="size-2.5" aria-hidden />
@@ -147,7 +142,7 @@ export function TrialLifecycleBanner() {
             : null}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-5 text-foreground">
+            <p className="text-[15px] font-semibold leading-5 text-foreground sm:text-sm">
               {title}
             </p>
             <p className="mt-0.5 text-sm leading-5 text-muted-foreground">
@@ -156,40 +151,38 @@ export function TrialLifecycleBanner() {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div className="contents sm:flex sm:w-auto sm:shrink-0 sm:items-center sm:justify-end sm:gap-5">
           {canManageBilling ?
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 pl-[46px] sm:pl-0">
               {expired ?
                 <Button
                   variant="outline"
                   size="sm"
                   asChild
-                  className="h-9 rounded-lg bg-background"
+                  className="h-11 min-h-11 rounded-lg bg-background px-3 sm:h-9"
                 >
                   <Link href="/pricing">Learn More</Link>
                 </Button>
               : null}
-              <Button size="sm" asChild className="h-9 rounded-lg">
+              <Button
+                size="sm"
+                asChild
+                className="h-11 min-h-11 rounded-lg px-3 sm:h-9"
+              >
                 <Link href={expired ? "/pricing" : "/dashboard/billing"}>
                   Upgrade Plan
                 </Link>
               </Button>
             </div>
           : null}
-
-          {expired ?
-            <>
-              <span className="hidden h-10 w-16 shrink-0 sm:block" aria-hidden />
-              <button
-                type="button"
-                onClick={dismissBanner}
-                className="relative z-[2] -mr-1 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
-                aria-label="Dismiss trial ended banner"
-              >
-                <X className="size-4" strokeWidth={1.75} />
-              </button>
-            </>
-          : null}
+          <button
+            type="button"
+            onClick={dismissBanner}
+            className="absolute right-1 top-1 z-[2] flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:static"
+            aria-label="Dismiss trial notification"
+          >
+            <X className="size-4" strokeWidth={1.75} />
+          </button>
         </div>
       </div>
     </div>

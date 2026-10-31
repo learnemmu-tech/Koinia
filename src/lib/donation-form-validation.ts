@@ -14,7 +14,7 @@ export const donationCampaignFormSchema = z.object({
     .min(3, "Campaign title must be at least 3 characters."),
   description: z.string().trim().min(1, "Description is required."),
   targetAmount: z.coerce
-    .number({ invalid_type_error: "Target amount must be a number." })
+    .number({ error: "Target amount must be a number." })
     .positive("Target amount must be greater than zero."),
   currency: z.enum(DONATION_CURRENCIES),
   status: z.enum(DONATION_CAMPAIGN_STATUSES),
@@ -32,7 +32,7 @@ export const donationCheckoutFormSchema = z
       .trim()
       .email("Please enter a valid email address."),
     amount: z.coerce
-      .number({ invalid_type_error: "Amount must be a number." })
+      .number({ error: "Amount must be a number." })
       .positive("Donation amount must be greater than zero.")
       .max(1_000_000, "Donation amount is too large."),
     isAnonymous: z.boolean(),
@@ -40,7 +40,7 @@ export const donationCheckoutFormSchema = z
   .superRefine((values, ctx) => {
     if (!values.isAnonymous && values.donorName.length < 2) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Name is required unless donating anonymously.",
         path: ["donorName"],
       });
@@ -60,7 +60,7 @@ export const donationCheckoutApiSchema = z
       .trim()
       .email("Please enter a valid email address."),
     amount: z.coerce
-      .number({ invalid_type_error: "Amount must be a number." })
+      .number({ error: "Amount must be a number." })
       .positive("Donation amount must be greater than zero.")
       .max(1_000_000, "Donation amount is too large."),
     isAnonymous: z.boolean(),
@@ -69,7 +69,7 @@ export const donationCheckoutApiSchema = z
   .superRefine((values, ctx) => {
     if (!values.isAnonymous && values.donorName.length < 2) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Name is required unless donating anonymously.",
         path: ["donorName"],
       });

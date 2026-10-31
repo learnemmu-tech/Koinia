@@ -19,6 +19,12 @@ export function getYouTubeVideoId(url: string): string | null {
   return match?.[1] ?? null;
 }
 
+export function getYouTubeWatchUrl(url: string): string | null {
+  if (!isValidYouTubeUrl(url)) return null;
+  const id = getYouTubeVideoId(url);
+  return id ? `https://www.youtube.com/watch?v=${id}` : null;
+}
+
 export function getYouTubeEmbedUrl(
   url: string,
   options?: { autoplay?: boolean }

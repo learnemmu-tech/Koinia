@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { rateLimitChatMessage } from "@/lib/rate-limit";
 import { churchIdFromRequest } from "@/lib/tenant-request-church";
 import {
   createCommunityMessage,
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
   const verified = await verifyBearerToken(request);
   if (!verified) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const chatLimit = await rateLimitChatMessage(verified.uid);
+  if (!chatLimit.allowed) {
+    return NextResponse.json({ error: "Too many messages." }, { status: 429 });
   }
 
   let body: Record<string, unknown> = {};

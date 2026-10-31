@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
@@ -236,15 +236,19 @@ export async function POST(request: Request) {
       }
       marks.mutate = Date.now() - mutateStarted;
       const createdRecord = await loadRecord(collection, id);
-      await dispatchChurchContentPublishEmails({
-        collection,
-        contentId: id,
-        excludeClerkId: decoded.uid,
-        isNewlyPublished:
-          !isPlatformCreate &&
-          isStoredContentPublished(collection, createdRecord),
+      const publishChurchId = churchId || createdRecord?.churchId;
+      const newlyPublished =
+        !isPlatformCreate &&
+        isStoredContentPublished(collection, createdRecord);
+      after(() => {
+        void dispatchChurchContentPublishEmails({
+          collection,
+          contentId: id,
+          excludeClerkId: decoded.uid,
+          isNewlyPublished: newlyPublished,
+        });
       });
-      await revalidateChurchPublicSite(churchId || createdRecord?.churchId);
+      await revalidateChurchPublicSite(publishChurchId);
       if (process.env.NODE_ENV !== "production") {
         console.info(
           `[PERF] POST /api/content create/${collection} auth=${marks.auth}ms authz=${marks.authz}ms mutate=${marks.mutate}ms total=${Date.now() - totalStarted}ms`
@@ -298,13 +302,16 @@ export async function POST(request: Request) {
         break;
     }
     marks.mutate = Date.now() - mutateStarted;
-    await dispatchChurchContentPublishEmails({
-      collection,
-      contentId: recordId,
-      excludeClerkId: decoded.uid,
-      isNewlyPublished:
-        existingRecord?.contentScope !== "platform_public" &&
-        willUpdatePublishContent(collection, data, existingRecord),
+    const newlyPublished =
+      existingRecord?.contentScope !== "platform_public" &&
+      willUpdatePublishContent(collection, data, existingRecord);
+    after(() => {
+      void dispatchChurchContentPublishEmails({
+        collection,
+        contentId: recordId,
+        excludeClerkId: decoded.uid,
+        isNewlyPublished: newlyPublished,
+      });
     });
     await revalidateChurchPublicSite(existingRecord?.churchId);
     if (process.env.NODE_ENV !== "production") {

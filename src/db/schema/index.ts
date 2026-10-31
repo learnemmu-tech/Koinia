@@ -8,6 +8,7 @@ export * from "./prayer";
 export * from "./donations";
 export * from "./notifications";
 export * from "./user-library";
+export * from "./content-likes";
 export * from "./audit-logs";
 export * from "./shorts";
 export * from "./church-videos";

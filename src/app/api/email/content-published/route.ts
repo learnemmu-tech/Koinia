@@ -7,6 +7,7 @@ import {
   type ContentPublishEmailType,
 } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { rateLimitEmailSend } from "@/lib/rate-limit";
 import {
   getArticleById,
   getDonationCampaignById,
@@ -50,6 +51,10 @@ export async function POST(request: Request) {
   const authUser = await verifyBearerToken(request);
   if (!authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const emailLimit = await rateLimitEmailSend(authUser.uid);
+  if (!emailLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
   const canPublish = await verifyChurchContentPublisher(

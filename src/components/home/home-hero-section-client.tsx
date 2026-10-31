@@ -296,12 +296,12 @@ export function HomeHeroSectionClient({
 
             <h1
               id="home-hero-heading"
-              className="mt-3 min-h-[3.9rem] max-w-[460px] text-[26px] font-bold leading-[1.18] text-foreground md:min-h-[4.8rem] md:text-[33px]"
+              className="mt-3 min-h-[3.9rem] max-w-[460px] font-heading text-2xl font-bold leading-tight text-foreground sm:text-3xl md:min-h-[4.8rem] lg:text-4xl"
             >
               {slide.heading}
             </h1>
 
-            <p className="mt-2.5 min-h-[3.3rem] max-w-[420px] text-[14px] leading-[1.7] text-muted-foreground md:text-[15px]">
+            <p className="mt-2.5 min-h-[3.3rem] max-w-[420px] text-sm leading-relaxed text-muted-foreground sm:text-base">
               {slide.description}
             </p>
 

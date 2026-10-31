@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, LayoutDashboard, Settings } from "lucide-react";
+import { Bookmark, LayoutDashboard, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { PlanBadgeFromContext } from "@/components/subscription/plan-badge-from-context";
@@ -70,11 +70,11 @@ export function ProfilePageClient() {
           className="flex min-h-touch items-center justify-between gap-3 rounded-xl border border-border/50 bg-card px-4 py-3 shadow-sm transition-colors hover:bg-muted/30 sm:py-4"
         >
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500">
-              <Heart className="size-5 fill-current" />
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
+              <Bookmark className="size-5" />
             </div>
             <div className="min-w-0">
-              <p className="font-medium">My Favorites</p>
+              <p className="font-medium">Library</p>
               <p className="text-sm text-muted-foreground">
                 Saved songs, sermons, and articles
               </p>

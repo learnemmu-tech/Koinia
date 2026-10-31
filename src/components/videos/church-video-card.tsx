@@ -5,9 +5,13 @@ import { ExternalLink, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import type { ChurchVideo } from "@/types/church-video";
-import { getVimeoEmbedUrl, getYouTubeEmbedUrl } from "@/lib/media-url-validation";
+import {
+  getVimeoEmbedUrl,
+  getYouTubeWatchUrl,
+} from "@/lib/media-url-validation";
 import { deleteChurchVideo, updateChurchVideo } from "@/lib/videos-client";
 import { useAllowTrialWrite } from "@/context/subscription-context";
+import { ContentActions } from "@/components/engagement/content-actions";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { DEFAULT_SONG_COVER } from "@/config/site";
 import { Button } from "@/components/ui/button";
@@ -27,9 +31,13 @@ type ChurchVideoCardProps = {
 };
 
 function embedSrc(video: ChurchVideo): string | null {
-  if (video.provider === "youtube") return getYouTubeEmbedUrl(video.externalUrl);
   if (video.provider === "vimeo") return getVimeoEmbedUrl(video.externalUrl);
   return null;
+}
+
+function youtubeWatchUrl(video: ChurchVideo): string | null {
+  if (video.provider !== "youtube") return null;
+  return getYouTubeWatchUrl(video.externalUrl);
 }
 
 export function ChurchVideoCard({
@@ -41,6 +49,7 @@ export function ChurchVideoCard({
   const [open, setOpen] = useState(false);
   const allowWrite = useAllowTrialWrite();
   const src = embedSrc(video);
+  const youtubeUrl = youtubeWatchUrl(video);
   const poster = video.thumbnailUrl || DEFAULT_SONG_COVER;
 
   async function handleDelete() {
@@ -79,17 +88,21 @@ export function ChurchVideoCard({
 
   return (
     <>
-      <article className="app-interactive group overflow-hidden rounded-xl border border-border/50 bg-card/40">
+      <article className="app-interactive group relative overflow-hidden rounded-xl border border-border/50 bg-card/40">
         <button
           type="button"
           onClick={() => {
+            if (youtubeUrl) {
+              window.open(youtubeUrl, "_blank", "noopener,noreferrer");
+              return;
+            }
             if (src) {
               setOpen(true);
               return;
             }
             window.open(video.externalUrl, "_blank", "noopener,noreferrer");
           }}
-          className="block w-full text-left"
+          className="relative z-0 block w-full text-left"
         >
           <div className="relative aspect-video overflow-hidden bg-muted">
             <ImageWithFallback
@@ -100,8 +113,15 @@ export function ChurchVideoCard({
               alt={video.title}
               className="object-cover"
             />
-            <span className="absolute left-1/2 top-1/2 flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-background/50 text-foreground backdrop-blur-sm">
-              {src ? <Play className="ml-0.5 size-4 fill-current" /> : <ExternalLink className="size-4" />}
+            {youtubeUrl ?
+              <span className="absolute inset-0 bg-black/10 transition-colors duration-150 group-hover:bg-black/25" />
+            : null}
+            <span className="absolute left-1/2 top-1/2 z-10 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md transition-transform duration-150 group-hover:scale-105">
+              {youtubeUrl ?
+                <Play className="ml-0.5 size-6 fill-[#EF4444] text-[#EF4444]" />
+              : src ?
+                <Play className="ml-0.5 size-5 fill-current text-foreground" />
+              : <ExternalLink className="size-4 text-foreground" />}
             </span>
             {!video.published ?
               <span className="absolute left-2 top-2 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium">
@@ -123,6 +143,7 @@ export function ChurchVideoCard({
             </p>
           </div>
         </button>
+        <ContentActions likeType="video" itemId={video.id} />
         {canManage ?
           <div className="flex gap-2 border-t border-border/50 px-3 py-2">
             <Button
@@ -166,7 +187,7 @@ export function ChurchVideoCard({
           : null}
           <div className={cn("flex justify-end px-4 pb-4", src && "pt-0")}>
             <Button asChild variant="outline" size="sm">
-              <a href={video.externalUrl} target="_blank" rel="noreferrer">
+              <a href={video.externalUrl} target="_blank" rel="noopener noreferrer">
                 Open original
               </a>
             </Button>

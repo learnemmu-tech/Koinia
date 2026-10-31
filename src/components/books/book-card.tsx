@@ -6,6 +6,7 @@ import { ArrowRight, BookOpen, MoreHorizontal, Smartphone, Sparkles } from "luci
 import { useTranslations } from "next-intl";
 
 import { ImageWithFallback } from "@/components/image-with-fallback";
+import { ContentActions } from "@/components/engagement/content-actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,7 +91,7 @@ export function BookCard({
       <div className="relative px-3 pt-3">
         <Link
           href={href}
-          className="relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="relative z-0 block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <ImageWithFallback
             src={book.coverImageUrl || DEFAULT_SONG_COVER}
@@ -102,6 +103,8 @@ export function BookCard({
           />
         </Link>
 
+        <ContentActions likeType="book" itemId={book.id} className="right-1 top-1" />
+
         {canManage ?
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -109,7 +112,7 @@ export function BookCard({
                 type="button"
                 aria-label="Book actions"
                 className={cn(
-                  "absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-md border border-border/70 bg-card/95 text-foreground shadow-sm",
+                  "absolute left-4 top-4 z-10 flex size-8 items-center justify-center rounded-md border border-border/70 bg-card/95 text-foreground shadow-sm",
                   "opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
                   "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 )}

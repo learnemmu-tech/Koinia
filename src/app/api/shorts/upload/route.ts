@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { rateLimitUploadRequest } from "@/lib/rate-limit";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import {
   getShortById,
@@ -110,7 +111,7 @@ async function authorizeUpload(request: NextRequest, shortId: string) {
     }
   }
 
-  return { short };
+  return { short, clerkId: verified.uid };
 }
 
 function storagePathPrefixForShort(short: Awaited<ReturnType<typeof getShortById>>) {
@@ -174,6 +175,10 @@ export async function POST(request: NextRequest) {
 
     const auth = await authorizeUpload(request, shortId);
     if ("error" in auth) return auth.error;
+    const uploadLimit = await rateLimitUploadRequest(auth.clerkId);
+    if (!uploadLimit.allowed) {
+      return NextResponse.json({ error: "Too many uploads." }, { status: 429 });
+    }
     const { short } = auth;
 
     const contentType = request.headers.get("content-type") ?? "";

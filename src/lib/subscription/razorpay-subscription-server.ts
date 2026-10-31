@@ -11,6 +11,7 @@ import {
 import { sql } from "drizzle-orm";
 import type { PlanId } from "@/types/subscription";
 import type { RazorpaySubscriptionResponse } from "@/lib/payments/razorpay-subscriptions";
+import { webhookDeliveryAction } from "@/lib/security/webhook-delivery";
 import {
   fetchRazorpaySubscription,
   getPlanIdFromRazorpayPlanId,
@@ -38,14 +39,29 @@ function isPaidPlan(value: string): value is Extract<PlanId, "starter" | "profes
   return PAID_PLAN_IDS.has(value as PlanId);
 }
 
+function paidPeriodEnd(subscription: RazorpaySubscriptionResponse): Date | null {
+  const end = mapRazorpayPeriodDate(subscription.current_end);
+  if (!end || end.getTime() <= Date.now()) return null;
+  return end;
+}
+
+/** Paid access requires Razorpay status active and a period end still in the future. */
+export function isBillableRazorpaySubscription(
+  subscription: RazorpaySubscriptionResponse
+): boolean {
+  return subscription.status.toLowerCase() === "active" && paidPeriodEnd(subscription) !== null;
+}
+
 function mapLocalStatus(
   providerStatus: string,
   currentEnd?: Date,
   endedAt?: Date
 ): "active" | "past_due" | "canceled" | "incomplete" {
-  if (providerStatus === "active" || providerStatus === "authenticated") {
+  if (providerStatus === "active") {
+    if (!currentEnd || currentEnd.getTime() <= Date.now()) return "incomplete";
     return "active";
   }
+  if (providerStatus === "authenticated") return "incomplete";
   if (providerStatus === "pending" || providerStatus === "halted" || providerStatus === "paused") {
     return "past_due";
   }
@@ -296,6 +312,9 @@ async function activateCheckoutAttempt({
   attempt: typeof subscriptionCheckoutAttempts.$inferSelect;
   subscription: RazorpaySubscriptionResponse;
 }) {
+  if (!isBillableRazorpaySubscription(subscription)) {
+    throw new Error("Subscription is not in a paid state.");
+  }
   await db
     .update(subscriptions)
     .set({
@@ -369,12 +388,7 @@ export async function markRazorpayCheckoutAuthorized({
     throw new Error("Subscription checkout attempt not found.");
   }
 
-  let subscription: RazorpaySubscriptionResponse = {
-    id: subscriptionId,
-    plan_id: getRazorpayPlanId(attempt.planId),
-    status: "authenticated",
-    customer_id: current?.razorpayCustomerId ?? null,
-  };
+  let subscription: RazorpaySubscriptionResponse;
   try {
     const fetched = await fetchRazorpaySubscription(subscriptionId);
     subscription = {
@@ -386,6 +400,11 @@ export async function markRazorpayCheckoutAuthorized({
       organizationId,
       error: error instanceof Error ? error.message : "unknown",
     });
+    throw new Error("Unable to confirm the subscription with Razorpay.");
+  }
+
+  if (!isBillableRazorpaySubscription(subscription)) {
+    throw new Error("Subscription is not in a paid state.");
   }
 
   await activateCheckoutAttempt({
@@ -410,8 +429,7 @@ export async function applyRazorpaySubscriptionEvent(
         : null);
     if (!attempt) return false;
     const providerStatus = subscription.status.toLowerCase();
-    const isSuccessful =
-      providerStatus === "authenticated" || providerStatus === "active";
+    const isSuccessful = isBillableRazorpaySubscription(subscription);
     if (
       TERMINAL_CHECKOUT_ATTEMPT_STATUSES.has(attempt.status.toLowerCase()) &&
       !isSuccessful
@@ -444,7 +462,11 @@ export async function applyRazorpaySubscriptionEvent(
     (isPaidPlan(notesPlan ?? "")
       ? (notesPlan as Extract<PlanId, "starter" | "professional">)
       : row.planId);
-  const localStatus = mapLocalStatus(subscription.status, currentEnd, endedAt);
+  const localStatus = mapLocalStatus(
+    subscription.status.toLowerCase(),
+    currentEnd,
+    endedAt
+  );
   if (
     row.providerStatus &&
     TERMINAL_PROVIDER_STATUSES.has(row.providerStatus.toLowerCase()) &&
@@ -492,7 +514,7 @@ export async function claimRazorpayWebhookEvent({
   eventId: string;
   eventType: string;
   subscriptionId?: string;
-}): Promise<boolean> {
+}): Promise<"process" | "already_processed"> {
   const inserted = await db
     .insert(subscriptionWebhookEvents)
     .values({
@@ -509,7 +531,20 @@ export async function claimRazorpayWebhookEvent({
     })
     .returning({ id: subscriptionWebhookEvents.id });
 
-  return inserted.length > 0;
+  if (inserted.length > 0) return webhookDeliveryAction(true, null);
+
+  const [existing] = await db
+    .select({ processedAt: subscriptionWebhookEvents.processedAt })
+    .from(subscriptionWebhookEvents)
+    .where(
+      and(
+        eq(subscriptionWebhookEvents.provider, "razorpay"),
+        eq(subscriptionWebhookEvents.eventId, eventId)
+      )
+    )
+    .limit(1);
+
+  return webhookDeliveryAction(false, existing?.processedAt ?? null);
 }
 
 export async function markRazorpayWebhookEventProcessed(eventId: string) {

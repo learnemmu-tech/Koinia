@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  ChevronDown,
   Download,
   Loader2,
   Pause,
@@ -30,6 +29,8 @@ import {
 import { getSongLyricsContent } from "@/lib/song-lyrics";
 import { getSongCoverUrl, cn } from "@/lib/utils";
 import { DEFAULT_SONG_COVER } from "@/config/site";
+import { YouTubeEmbed } from "@/components/media/youtube-embed";
+import { getYouTubeWatchUrl } from "@/lib/media-url-validation";
 import { incrementPlayCount } from "@/lib/song-play-count";
 import {
   getSongAlternateTitle,
@@ -40,6 +41,7 @@ import {
   subscribePlaybackPlaying,
   togglePlayback,
 } from "@/lib/playback-bridge";
+import { ContentActions } from "@/components/engagement/content-actions";
 import { ShareSongButton } from "./share-song";
 
 type SongDetailClientProps = {
@@ -60,31 +62,6 @@ function downloadBlob(content: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 150);
 }
 
-function RedPlayCircleIcon({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn(
-        "relative inline-flex size-[18px] shrink-0 items-center justify-center",
-        className
-      )}
-      aria-hidden
-    >
-      <svg viewBox="0 0 24 24" className="size-[18px]" fill="none">
-        <circle cx="12" cy="12" r="9.25" stroke="#FF0000" strokeWidth="1.5" />
-        <path d="M10.2 8.4v7.2l5.4-3.6-5.4-3.6z" fill="#FF0000" />
-      </svg>
-    </span>
-  );
-}
-
-function YouTubeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-    </svg>
-  );
-}
-
 export function SongDetailClient({
   song,
   listHref = "/songs",
@@ -94,7 +71,6 @@ export function SongDetailClient({
   const [queue] = useQueue();
   const [currentIndex] = useCurrentSongIndex();
   const { playSong } = usePlaySong();
-  const [showVideo, setShowVideo] = React.useState(false);
   const [downloadingLyrics, setDownloadingLyrics] = React.useState(false);
   const playing = React.useSyncExternalStore(
     subscribePlaybackPlaying,
@@ -107,19 +83,10 @@ export function SongDetailClient({
   const audioUrl = song.audioUrl?.trim() ?? "";
   const coverUrl = getSongCoverUrl(song.imageUrl);
   const youtubeUrl = song.youtubeUrl?.trim() ?? "";
-
   const displayTitle = getSongDisplayTitle(song);
   const alternateTitle = getSongAlternateTitle(song) ?? "";
   const artistName = song.artist?.trim() ?? "";
   const playCount = song.playCount ?? 0;
-
-  function getYouTubeEmbedUrl(url: string) {
-    if (!url) return null;
-    const idMatch = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);
-    const id = idMatch ? idMatch[1] : null;
-    return id ? `https://www.youtube.com/embed/${id}` : null;
-  }
-  const embedSrc = getYouTubeEmbedUrl(youtubeUrl);
   const songIndex = queue.findIndex((entry) => entry.id === song.id);
   const isCurrentSong = songIndex === currentIndex && songIndex !== -1;
   const isPlaying = isCurrentSong && playing;
@@ -247,20 +214,12 @@ export function SongDetailClient({
                 </button>
               : null}
 
-              {youtubeUrl ?
-                <a
-                  href={youtubeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cn(
-                    actionBtn,
-                    "border border-[#7F1D1D] bg-[#2D1212] text-[#F87171] hover:bg-[#3a1818] dark:border-[#7F1D1D] dark:bg-[#2D1212] dark:text-[#F87171]"
-                  )}
-                >
-                  <YouTubeIcon className="size-3.5 shrink-0" />
-                  YouTube
-                </a>
-              : null}
+              <ContentActions
+                likeType="song"
+                itemId={song.id}
+                saveType="song"
+                layout="detail"
+              />
 
               <ShareSongButton
                 songId={song.id}
@@ -275,47 +234,15 @@ export function SongDetailClient({
             </div>
           </div>
         </div>
-
-        {embedSrc ?
-          <>
-            <button
-              type="button"
-              onClick={() => setShowVideo((value) => !value)}
-              className={cn(
-                "flex h-16 w-full items-center justify-between gap-3 border-t px-7 text-sm transition-colors duration-200",
-                "border-border/60 hover:bg-accent/30",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                "dark:border-white/[0.06] dark:hover:bg-white/[0.03]"
-              )}
-            >
-              <span className="flex items-center gap-2.5 text-muted-foreground dark:text-[#A1A1A1]">
-                <RedPlayCircleIcon />
-                Watch song video
-              </span>
-              <ChevronDown
-                className={cn(
-                  "size-4 shrink-0 text-muted-foreground transition-transform duration-200 dark:text-[#737373]",
-                  showVideo && "rotate-180"
-                )}
-                aria-hidden
-              />
-            </button>
-            {showVideo ?
-              <div className="border-t border-border/60 dark:border-white/[0.06]">
-                <div className="relative aspect-video w-full">
-                  <iframe
-                    src={embedSrc}
-                    title={`YouTube video for ${displayTitle}`}
-                    className="absolute inset-0 size-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              </div>
-            : null}
-          </>
-        : null}
       </article>
+
+      {getYouTubeWatchUrl(youtubeUrl) ?
+        <div className="mt-6 overflow-hidden rounded-2xl">
+          <div className="aspect-video w-full">
+            <YouTubeEmbed title={displayTitle} youtubeUrl={youtubeUrl} framed={false} />
+          </div>
+        </div>
+      : null}
 
       {/* Lyrics card */}
       <section id="song-lyrics" className="mt-8 scroll-mt-24">

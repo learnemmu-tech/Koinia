@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Heart, Loader2, Lock } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 
 import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
@@ -67,7 +67,9 @@ export function DonateForm({ campaign }: DonateFormProps) {
   const currencyPrefix = campaign.currency === "INR" ? "₹" : "$";
 
   const form = useForm<DonationCheckoutFormValues>({
-    resolver: zodResolver(donationCheckoutFormSchema),
+    resolver: zodResolver(
+      donationCheckoutFormSchema
+    ) as Resolver<DonationCheckoutFormValues>,
     defaultValues: {
       donorName: "",
       donorEmail: "",

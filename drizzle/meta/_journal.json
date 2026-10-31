@@ -162,6 +162,13 @@
       "when": 1789596000000,
       "tag": "0022_website_about_sections",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789600000000,
+      "tag": "0023_donation_idempotency_key",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidateTag } from "next/cache";
+import { after } from "next/server";
 
 import {
   createDonationCampaign as insertCampaign,
@@ -53,17 +54,7 @@ export async function createDonationCampaign(
   const id = await insertCampaign(input);
   await refreshDonationSurfaces(input.churchId, id);
   if (input.status === "active") {
-    try {
-      const { triggerContentAnnouncementEmails } = await import(
-        "@/lib/email/triggers"
-      );
-      await triggerContentAnnouncementEmails("donation_campaign", id);
-    } catch (error) {
-      console.error("[notifications] donation campaign email failed", {
-        campaignId: id,
-        error: error instanceof Error ? error.message : "unknown",
-      });
-    }
+    scheduleDonationAnnouncement(id);
   }
   return id;
 }
@@ -77,17 +68,7 @@ export async function updateDonationCampaign(
   await refreshDonationSurfaces(existing?.churchId, campaignId);
   const nextStatus = input.status ?? existing?.status;
   if (nextStatus === "active" && existing?.status !== "active") {
-    try {
-      const { triggerContentAnnouncementEmails } = await import(
-        "@/lib/email/triggers"
-      );
-      await triggerContentAnnouncementEmails("donation_campaign", campaignId);
-    } catch (error) {
-      console.error("[notifications] donation campaign email failed", {
-        campaignId,
-        error: error instanceof Error ? error.message : "unknown",
-      });
-    }
+    scheduleDonationAnnouncement(campaignId);
   }
 }
 
@@ -99,18 +80,23 @@ export async function setDonationCampaignStatus(
   await saveCampaign(campaignId, { status });
   await refreshDonationSurfaces(existing?.churchId, campaignId);
   if (status === "active" && existing?.status !== "active") {
-    try {
-      const { triggerContentAnnouncementEmails } = await import(
-        "@/lib/email/triggers"
-      );
-      await triggerContentAnnouncementEmails("donation_campaign", campaignId);
-    } catch (error) {
-      console.error("[notifications] donation campaign email failed", {
-        campaignId,
-        error: error instanceof Error ? error.message : "unknown",
-      });
-    }
+    scheduleDonationAnnouncement(campaignId);
   }
+}
+
+function scheduleDonationAnnouncement(campaignId: string) {
+  after(() => {
+    void import("@/lib/email/triggers")
+      .then(({ triggerContentAnnouncementEmails }) =>
+        triggerContentAnnouncementEmails("donation_campaign", campaignId)
+      )
+      .catch((error: unknown) => {
+        console.error("[notifications] donation campaign email failed", {
+          campaignId,
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      });
+  });
 }
 
 export async function deleteDonationCampaign(campaignId: string): Promise<void> {

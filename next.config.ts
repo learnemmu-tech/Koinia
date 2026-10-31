@@ -82,8 +82,17 @@ const config: NextConfig = {
   },
   output: isDocker ? "standalone" : undefined,
   async headers() {
-    // Intentionally no CSP yet — must be tuned for Clerk, Supabase, Google OAuth,
-    // and inline/bootstrap scripts before enabling in production.
+    // script-src-elem lists the external <script> hosts the app actually loads:
+    // Clerk, Cloudflare challenges, Umami, Vercel Web Analytics, and Razorpay
+    // checkout. unsafe-inline stays because Next.js and Clerk inject bootstrap
+    // scripts. unsafe-eval stays on script-src in development only, for the
+    // Next dev server, and is not copied onto script-src-elem or production.
+    // worker-src allows Clerk's same-origin blob workers. connect-src and
+    // img-src allow https because songs, logos, and banners can be stored on
+    // the church's own HTTPS host. That already covers Umami and Vercel
+    // analytics beacons. frame-src stays limited to Clerk, YouTube, Vimeo, and
+    // the payment frames already referenced. blob: and data: stay on img/media
+    // because uploads and downloads use object URLs.
     return [
       {
         source: "/:path*",
@@ -94,6 +103,26 @@ const config: NextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
+          },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "base-uri 'self'",
+              "object-src 'none'",
+              "frame-ancestors 'self'",
+              "form-action 'self'",
+              `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"} https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://us.umami.is https://cloud.umami.is https://va.vercel-scripts.com https://checkout.razorpay.com`,
+              `script-src-elem 'self' 'unsafe-inline' https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://us.umami.is https://cloud.umami.is https://va.vercel-scripts.com https://checkout.razorpay.com`,
+              "worker-src 'self' blob:",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https:",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              "media-src 'self' blob: https:",
+              "connect-src 'self' https: wss:",
+              "frame-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://api.razorpay.com https://checkout.razorpay.com https://js.stripe.com https://hooks.stripe.com",
+            ].join("; "),
           },
           ...(isProd
             ? [

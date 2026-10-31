@@ -1,13 +1,14 @@
 import "@/styles/globals.css";
 
 import React from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import Script from "next/script";
 
 import type { Metadata, Viewport } from "next";
 import type { ThemeConfig } from "@/types";
 
 import { ClerkProvider } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { Analytics } from "@vercel/analytics/react";
 
 import { RootClientShell } from "@/components/root-client-shell";
@@ -16,16 +17,12 @@ import { LOCALE_COOKIE, parseLocale } from "@/i18n/config";
 import { POST_AUTH_CONTINUE_HOME, CREATE_WORKSPACE_PATH } from "@/lib/auth/auth-paths";
 import { env } from "@/lib/env";
 import { SEO_KEYWORDS } from "@/lib/seo";
-import { ACTIVE_CHURCH_COOKIE_NAME, readActiveChurchIdFromCookieValue } from "@/lib/church-cookies";
+import { readActiveChurchIdFromCookieValue, ACTIVE_CHURCH_COOKIE_NAME } from "@/lib/church-cookies";
 import { resolveActiveChurchId } from "@/lib/church-server";
+import { logNavStage } from "@/lib/nav-trace";
 import * as fonts from "@/lib/fonts";
 import { absoluteUrl, cn } from "@/lib/utils";
-import { Noto_Sans, Noto_Sans_Telugu } from "next/font/google";
-
-const notoSans = Noto_Sans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
+import { Noto_Sans_Telugu } from "next/font/google";
 
 const notoSansTelugu = Noto_Sans_Telugu({
   subsets: ["telugu"],
@@ -39,6 +36,9 @@ type RootLayoutProps = {
 };
 
 export default async function RootLayout({ children, modal }: RootLayoutProps) {
+  const layoutStarted = Date.now();
+  const headerStore = await headers();
+  const traceId = headerStore.get("x-fch-trace") || "no-trace";
   const cookieStore = await cookies();
   const themeConfig = cookieStore.get("theme-config");
 
@@ -46,19 +46,39 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
     themeConfig?.value ?? '{"theme":"default","radius":"default"}'
   ) as ThemeConfig;
 
-  // The active-church cookie is only the client shell's initial id. Resolving
-  // it from Postgres on every navigation added several sequential Neon
-  // round trips before any page could render. Pages still authorize for real.
+  // The cookie is only a client hint. A database lookup runs when a signed-in
+  // session has no cookie. Anonymous pages, including sign-in, skip Neon.
   const cookieChurchId = readActiveChurchIdFromCookieValue(
     cookieStore.get(ACTIVE_CHURCH_COOKIE_NAME)?.value
   );
-  const initialActiveChurchId =
-    cookieChurchId || (await resolveActiveChurchId()) || null;
+  let initialActiveChurchId = cookieChurchId;
+  let signedIn = false;
+  if (!initialActiveChurchId) {
+    const authStarted = Date.now();
+    const { userId } = await auth();
+    logNavStage(traceId, "root.auth", authStarted, { signedIn: Boolean(userId) });
+    signedIn = Boolean(userId);
+    if (userId) {
+      const churchStarted = Date.now();
+      initialActiveChurchId = (await resolveActiveChurchId()) || null;
+      logNavStage(traceId, "root.church", churchStarted, {
+        resolved: Boolean(initialActiveChurchId),
+      });
+    }
+  }
+  logNavStage(traceId, "root.layout", layoutStarted, {
+    sessionLookup: cookieChurchId ? "skipped-cookie" : signedIn ? "signed-in" : "signed-out",
+    churchFromCookie: Boolean(cookieChurchId),
+  });
   const locale = parseLocale(cookieStore.get(LOCALE_COOKIE)?.value);
 
   return (
     <React.StrictMode>
-      <html lang={locale} suppressHydrationWarning className={cn("font-sans", notoSans.variable, notoSansTelugu.variable)}>
+      <html
+        lang={locale}
+        suppressHydrationWarning
+        className={cn(fonts.fontSans.variable, notoSansTelugu.variable)}
+      >
         <body
           className={cn(
             Object.values(fonts).map((font) => font.variable),

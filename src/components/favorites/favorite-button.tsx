@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Bookmark, Heart, Loader2 } from "lucide-react";
+import { Bookmark, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTranslations } from "next-intl";
@@ -11,6 +11,7 @@ import type { FavoriteItemType } from "@/types/firebase-favorite";
 import { useFavoritesOptional } from "@/context/favorites-context";
 import { useAuthGuard } from "@/hooks/use-auth-guard";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type FavoriteButtonProps = {
   itemType: FavoriteItemType;
@@ -18,7 +19,7 @@ type FavoriteButtonProps = {
   className?: string;
   label?: string;
   /** Icon-only control (cards) vs labeled Save button (detail). */
-  appearance?: "icon" | "button";
+  appearance?: "icon" | "bare" | "button";
 };
 
 export function FavoriteButton({
@@ -41,7 +42,7 @@ export function FavoriteButton({
   const ariaLabel =
     label ??
     (favorited ? t("removeFromLibrary") : t("saveToLibrary"));
-  const buttonText = favorited ? t("saved") : tCommon("save");
+  const buttonText = tCommon("save");
 
   async function handleClick(event: React.MouseEvent) {
     event.preventDefault();
@@ -73,7 +74,7 @@ export function FavoriteButton({
         disabled={pending}
         onClick={handleClick}
         className={cn(
-          "inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border/70 bg-card px-5 text-sm font-semibold text-foreground sm:w-auto sm:min-w-[8.5rem]",
+          "inline-flex h-9 w-auto items-center justify-center gap-1.5 rounded-xl border border-border/70 bg-card px-3 text-sm font-medium text-foreground",
           "transition-colors hover:bg-muted/40",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           favorited && "border-primary/30 text-primary",
@@ -92,32 +93,39 @@ export function FavoriteButton({
     );
   }
 
-  return (
+  const icon = (
     <button
       type="button"
       aria-label={ariaLabel}
-      title={ariaLabel}
       aria-pressed={favorited}
       disabled={pending}
       onClick={handleClick}
       className={cn(
-        "flex size-8 items-center justify-center rounded-full",
-        "border border-border/50 bg-background/85 shadow-sm backdrop-blur-sm",
-        "transition-colors hover:bg-background",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        favorited ?
-          "text-red-500 hover:text-red-600"
-        : "text-muted-foreground hover:text-foreground",
+        "flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        favorited && "text-foreground",
+        appearance === "icon" &&
+          "size-8 border border-border/50 bg-background/85 shadow-sm backdrop-blur-sm",
+        appearance === "bare" && "size-7",
         className
       )}
     >
       {pending ?
         <Loader2 className="size-3.5 animate-spin" aria-hidden />
-      : <Heart
+      : <Bookmark
           className={cn("size-3.5", favorited && "fill-current")}
           aria-hidden
         />
       }
     </button>
+  );
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{icon}</TooltipTrigger>
+      <TooltipContent side="bottom" align="end">
+        {ariaLabel}
+      </TooltipContent>
+    </Tooltip>
   );
 }

@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -90,6 +91,7 @@ export const donations = pgTable(
       .default("pending"),
     paymentProvider: paymentProviderEnum("payment_provider").notNull(),
     transactionId: text("transaction_id").notNull(),
+    idempotencyKey: text("idempotency_key"),
     isAnonymous: boolean("is_anonymous").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()
@@ -116,6 +118,7 @@ export const donations = pgTable(
     ),
     index("donations_campaign_id_idx").on(table.campaignId),
     index("donations_transaction_id_idx").on(table.transactionId),
+    uniqueIndex("donations_idempotency_key_unique").on(table.idempotencyKey),
     index("donations_organization_id_church_id_idx").on(
       table.organizationId,
       table.churchId

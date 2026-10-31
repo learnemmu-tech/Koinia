@@ -1,6 +1,8 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { createNavTraceId, logNavStage } from "@/lib/nav-trace";
+
 import {
   isOnboardingPath,
   isSuperAdminPath,
@@ -65,15 +67,48 @@ function requestCallbackPath(req: NextRequest) {
  * PostgreSQL (`users.needs_church_onboarding`) via /auth/continue, OnboardingGuard,
  * and dashboard/onboarding layouts. Clerk session is identity only.
  */
-function continueRequest(req: NextRequest) {
+function traceIdFor(req: NextRequest): string {
+  return req.headers.get("x-fch-trace")?.slice(0, 16) || createNavTraceId();
+}
+
+function withTrace(
+  response: NextResponse,
+  traceId: string,
+  req: NextRequest,
+  startedAt: number,
+  outcome: string
+) {
+  response.headers.set("x-fch-trace", traceId);
+  logNavStage(traceId, "middleware", startedAt, {
+    path: req.nextUrl.pathname,
+    rsc: req.headers.get("rsc") === "1",
+    outcome,
+  });
+  return response;
+}
+
+function continueRequest(
+  req: NextRequest,
+  traceId: string,
+  startedAt: number,
+  outcome: string
+) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-koinia-pathname", req.nextUrl.pathname);
+  requestHeaders.set("x-fch-trace", traceId);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("x-fch-trace", traceId);
+  logNavStage(traceId, "middleware", startedAt, {
+    path: req.nextUrl.pathname,
+    rsc: req.headers.get("rsc") === "1",
+    outcome,
+  });
   const joinSlug = joinIntentSlugFromPath(req.nextUrl.pathname);
   if (joinSlug) {
     response.cookies.set("fc_join_slug", joinSlug, {
       httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 45 * 60,
     });
@@ -82,6 +117,8 @@ function continueRequest(req: NextRequest) {
 }
 
 export default clerkMiddleware(async (auth, req) => {
+  const startedAt = Date.now();
+  const traceId = traceIdFor(req);
   const { pathname } = req.nextUrl;
 
   // Church `/groups` is an alias of Ministries. Redirect before layouts render
@@ -90,35 +127,67 @@ export default clerkMiddleware(async (auth, req) => {
   if (groupsDestination) {
     const url = req.nextUrl.clone();
     url.pathname = groupsDestination;
-    return NextResponse.redirect(url);
+    return withTrace(NextResponse.redirect(url), traceId, req, startedAt, "groups-redirect");
   }
 
   // API handlers authenticate with the Clerk Bearer token. Calling auth() here
   // can handshake-redirect the request to Clerk's origin, which makes browser
   // fetch() throw TypeError: Failed to fetch.
   if (pathname.startsWith("/api/") || pathname.startsWith("/trpc/")) {
-    return continueRequest(req);
+    const isFileUpload =
+      pathname.startsWith("/api/upload") ||
+      pathname.startsWith("/api/shorts/upload") ||
+      pathname.includes("/cover") ||
+      pathname.includes("/file");
+    const contentType = req.headers.get("content-type") ?? "";
+    const contentLength = Number(req.headers.get("content-length") ?? "0");
+    if (
+      !isFileUpload &&
+      contentType.includes("application/json") &&
+      contentLength > 2 * 1024 * 1024
+    ) {
+      return NextResponse.json({ error: "Request is too large." }, { status: 413 });
+    }
+    return continueRequest(req, traceId, startedAt, "api-skip-auth");
   }
 
+  const authStarted = Date.now();
   const { userId } = await auth();
+  logNavStage(traceId, "middleware.auth", authStarted, {
+    path: pathname,
+    rsc: req.headers.get("rsc") === "1",
+    signedIn: Boolean(userId),
+  });
   const isAuthenticated = Boolean(userId);
 
   if (isOnboardingPath(pathname)) {
     if (!isAuthenticated) {
-      return NextResponse.redirect(buildSignInUrl(req, requestCallbackPath(req)));
+      return withTrace(
+        NextResponse.redirect(buildSignInUrl(req, requestCallbackPath(req))),
+        traceId,
+        req,
+        startedAt,
+        "signin-redirect"
+      );
     }
-    return continueRequest(req);
+    return continueRequest(req, traceId, startedAt, "next");
   }
 
   if (pathname === POST_AUTH_CONTINUE_PATH || pathname.startsWith(`${POST_AUTH_CONTINUE_PATH}/`)) {
     if (!isAuthenticated) {
-      return NextResponse.redirect(buildSignInUrl(req, requestCallbackPath(req)));
+      return withTrace(
+        NextResponse.redirect(buildSignInUrl(req, requestCallbackPath(req))),
+        traceId,
+        req,
+        startedAt,
+        "signin-redirect"
+      );
     }
-    return continueRequest(req);
+    return continueRequest(req, traceId, startedAt, "next");
   }
 
   if (AUTH_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
-    return continueRequest(req);
+    return continueRequest(req, traceId, startedAt, "next");
   }
 
   // Legacy obscure admin UI — never leave it publicly reachable.
@@ -127,30 +196,54 @@ export default clerkMiddleware(async (auth, req) => {
     pathname.startsWith("/admin-secret-xyz789/")
   ) {
     if (!isAuthenticated) {
-      return NextResponse.redirect(buildSignInUrl(req, "/dashboard"));
+      return withTrace(
+        NextResponse.redirect(buildSignInUrl(req, "/dashboard")),
+        traceId,
+        req,
+        startedAt,
+        "signin-redirect"
+      );
     }
-    return NextResponse.redirect(new URL("/dashboard/content?tab=songs", req.url));
+    return withTrace(
+      NextResponse.redirect(new URL("/dashboard/content?tab=songs", req.url)),
+      traceId,
+      req,
+      startedAt,
+      "legacy-admin-redirect"
+    );
   }
 
   if (isWorkspaceRoute(pathname) || isSuperAdminPath(pathname)) {
     if (!isAuthenticated) {
-      return NextResponse.redirect(
-        buildSignInUrl(req, `${pathname}${req.nextUrl.search}`)
+      return withTrace(
+        NextResponse.redirect(
+          buildSignInUrl(req, `${pathname}${req.nextUrl.search}`)
+        ),
+        traceId,
+        req,
+        startedAt,
+        "signin-redirect"
       );
     }
-    return continueRequest(req);
+    return continueRequest(req, traceId, startedAt, "next");
   }
 
   if (isProtectedPath(pathname)) {
     if (!isAuthenticated) {
-      return NextResponse.redirect(
-        buildSignInUrl(req, `${pathname}${req.nextUrl.search}`)
+      return withTrace(
+        NextResponse.redirect(
+          buildSignInUrl(req, `${pathname}${req.nextUrl.search}`)
+        ),
+        traceId,
+        req,
+        startedAt,
+        "signin-redirect"
       );
     }
-    return continueRequest(req);
+    return continueRequest(req, traceId, startedAt, "next");
   }
 
-  return continueRequest(req);
+  return continueRequest(req, traceId, startedAt, "next");
 });
 
 export const config = {

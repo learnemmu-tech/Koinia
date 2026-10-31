@@ -23,6 +23,8 @@ import {
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { ContentActions } from "@/components/engagement/content-actions";
+
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { ShareContentButton } from "@/components/share-content-button";
 import { Button } from "@/components/ui/button";
@@ -292,6 +294,7 @@ export function BookDetail({
             <h1 className="font-heading text-[1.875rem] font-semibold leading-[1.1] tracking-tight text-foreground sm:text-[2.125rem] lg:text-[2.5rem]">
               {book.title}
             </h1>
+            <ContentActions likeType="book" itemId={book.id} layout="detail" />
 
             <div className="flex w-fit max-w-full flex-wrap items-center justify-start gap-x-5 gap-y-2 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5 text-foreground/85">

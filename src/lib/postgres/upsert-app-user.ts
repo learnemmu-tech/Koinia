@@ -65,17 +65,23 @@ function toResult(row: AppUserRow, created: boolean): AppUserSyncResult {
  * Clerk-verified primary email matching SUPER_ADMIN_EMAIL. Existing
  * `super_admin` rows are never demoted.
  */
-function superAdminBootstrapFields(
+async function superAdminBootstrapFields(
   email: string,
   emailVerified: boolean,
   existingRole?: AppUserRow["platformRole"]
-): {
+): Promise<{
   platformRole?: "super_admin";
   needsChurchOnboarding?: false;
   onboardingCompletedAt?: Date;
-} {
+}> {
   if (existingRole === "super_admin") return {};
   if (!shouldBootstrapPlatformSuperAdmin(email, emailVerified)) return {};
+  const [already] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.platformRole, "super_admin"))
+    .limit(1);
+  if (already) return {};
   return {
     platformRole: "super_admin",
     needsChurchOnboarding: false,
@@ -104,6 +110,11 @@ export async function upsertAppUserFromClerk(
       (await loadByClerkId(clerkId)) ?? (await loadByEmail(email));
 
     if (existing) {
+      const bootstrap = await superAdminBootstrapFields(
+        email,
+        input.emailVerified,
+        existing.platformRole
+      );
       const [updated] = await db
         .update(users)
         .set({
@@ -113,11 +124,7 @@ export async function upsertAppUserFromClerk(
           lastName: input.lastName,
           emailVerifiedAt: verifiedAt ?? existing.emailVerifiedAt,
           updatedAt: now,
-          ...superAdminBootstrapFields(
-            email,
-            input.emailVerified,
-            existing.platformRole
-          ),
+          ...bootstrap,
         })
         .where(eq(users.id, existing.id))
         .returning();
@@ -127,6 +134,7 @@ export async function upsertAppUserFromClerk(
     }
 
     try {
+      const bootstrap = await superAdminBootstrapFields(email, input.emailVerified);
       const [inserted] = await db
         .insert(users)
         .values({
@@ -136,7 +144,7 @@ export async function upsertAppUserFromClerk(
           lastName: input.lastName,
           emailVerifiedAt: verifiedAt,
           needsChurchOnboarding: true,
-          ...superAdminBootstrapFields(email, input.emailVerified),
+          ...bootstrap,
         })
         .returning();
 
@@ -151,6 +159,11 @@ export async function upsertAppUserFromClerk(
         (isUniqueViolation(error) ? await loadByEmail(email) : undefined);
 
       if (concurrent) {
+        const bootstrap = await superAdminBootstrapFields(
+          email,
+          input.emailVerified,
+          concurrent.platformRole
+        );
         const [updated] = await db
           .update(users)
           .set({
@@ -160,11 +173,7 @@ export async function upsertAppUserFromClerk(
             lastName: input.lastName,
             emailVerifiedAt: verifiedAt ?? concurrent.emailVerifiedAt,
             updatedAt: now,
-            ...superAdminBootstrapFields(
-              email,
-              input.emailVerified,
-              concurrent.platformRole
-            ),
+            ...bootstrap,
           })
           .where(eq(users.id, concurrent.id))
           .returning();

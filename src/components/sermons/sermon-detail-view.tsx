@@ -6,7 +6,7 @@ import {
   formatDetailDate,
   type ContentDetailSidebarItem,
 } from "@/components/content-detail-layout";
-import { FavoriteButton } from "@/components/favorites/favorite-button";
+import { ContentActions } from "@/components/engagement/content-actions";
 import { SermonMediaSection } from "@/components/sermons/sermon-media-section";
 import { ShareContentButton } from "@/components/share-content-button";
 import { contentItemHref } from "@/lib/content/item-href";
@@ -82,10 +82,11 @@ export function SermonDetailView({
       heroActions={
         <>
           {hasMedia ? <ContentListenWatchLink label={listenLabel} /> : null}
-          <FavoriteButton
-            itemType="sermon"
+          <ContentActions
+            likeType="sermon"
             itemId={sermon.id}
-            appearance="button"
+            saveType="sermon"
+            layout="detail"
           />
         </>
       }

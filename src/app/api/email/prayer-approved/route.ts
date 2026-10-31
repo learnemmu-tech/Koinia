@@ -7,6 +7,7 @@ import {
   triggerPrayerApprovedMemberNotifications,
 } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
+import { rateLimitEmailSend } from "@/lib/rate-limit";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { getPrayerRequestById } from "@/lib/postgres/features";
@@ -20,6 +21,10 @@ export async function POST(request: Request) {
   const authUser = await verifyBearerToken(request);
   if (!authUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const emailLimit = await rateLimitEmailSend(authUser.uid);
+  if (!emailLimit.allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
   let body: z.infer<typeof bodySchema>;

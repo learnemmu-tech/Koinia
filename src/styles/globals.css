@@ -8,6 +8,8 @@
   :root,
   .light {
     /* FaithConnectHub light theme — warm cream canvas, navy text, terracotta action */
+    --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-heading: "fontHeading", "fontHeading Fallback", "Inter", sans-serif;
     --background: 40 45.5% 93.5%;
     --foreground: 210 34.9% 16.9%;
 
@@ -175,6 +177,10 @@
   body {
     @apply min-h-screen overflow-x-hidden bg-background text-foreground antialiased scroll-smooth;
     font-size: var(--text-base);
+  }
+
+  h1 {
+    font-family: var(--font-heading), var(--font-telugu), var(--font-sans), sans-serif;
   }
 
   /*

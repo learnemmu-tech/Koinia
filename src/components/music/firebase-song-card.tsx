@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 
 import { ProtectedContentLink } from "@/components/auth/protected-content-link";
 import { PlatformContentQuickEdit } from "@/components/admin/inline/platform-content-quick-edit";
-import { FavoriteButton } from "@/components/favorites/favorite-button";
+import { ContentActions } from "@/components/engagement/content-actions";
 import type { FirebaseSong } from "@/types/firebase-song";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { DEFAULT_SONG_COVER } from "@/config/site";
@@ -132,7 +132,7 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
         <ProtectedContentLink
           href={songHref}
           aria-label={linkLabel}
-          className="block size-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+          className="relative z-0 block size-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
         >
           <ImageWithFallback
             src={coverUrl}
@@ -153,18 +153,14 @@ export const FirebaseSongCard = React.memo(function FirebaseSongCard({
           />
         : null}
 
-        <FavoriteButton
-          itemType="song"
-          itemId={song.id}
-          className="absolute left-2 top-2 z-20"
-        />
+        <ContentActions likeType="song" itemId={song.id} saveType="song" />
 
         <PlatformContentQuickEdit
           kind="song"
           record={song}
           tenantEditHref={`/dashboard/content?tab=songs&edit=${encodeURIComponent(song.id)}`}
           label="Edit song"
-          className="absolute right-2 top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          className="absolute bottom-2 right-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
         />
       </div>
 

@@ -4,7 +4,7 @@ import type { FirebaseArticle } from "@/types/firebase-article";
 
 import { ProtectedContentLink } from "@/components/auth/protected-content-link";
 import { PlatformContentQuickEdit } from "@/components/admin/inline/platform-content-quick-edit";
-import { FavoriteButton } from "@/components/favorites/favorite-button";
+import { ContentActions } from "@/components/engagement/content-actions";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_SONG_COVER } from "@/config/site";
@@ -43,7 +43,7 @@ export const FirebaseArticleCard = React.memo(function FirebaseArticleCard({
       )}
     >
       <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
-        <ProtectedContentLink href={href} className="block size-full">
+        <ProtectedContentLink href={href} className="relative z-0 block size-full">
           <ImageWithFallback
             src={coverUrl}
             fallback={DEFAULT_SONG_COVER}
@@ -54,11 +54,11 @@ export const FirebaseArticleCard = React.memo(function FirebaseArticleCard({
           />
         </ProtectedContentLink>
 
-        <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5">
+        <div className="pointer-events-none absolute left-3 top-3 z-20 flex flex-wrap gap-1.5">
           {category ?
             <Badge
               variant="secondary"
-              className="rounded-md border-0 bg-background/85 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-sm"
+              className="rounded-md border-0 bg-background/95 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-sm"
             >
               {category}
             </Badge>
@@ -70,11 +70,7 @@ export const FirebaseArticleCard = React.memo(function FirebaseArticleCard({
           : null}
         </div>
 
-        <FavoriteButton
-          itemType="article"
-          itemId={article.id}
-          className="absolute right-3 top-3 z-10"
-        />
+        <ContentActions likeType="article" itemId={article.id} saveType="article" />
 
         <PlatformContentQuickEdit
           kind="article"

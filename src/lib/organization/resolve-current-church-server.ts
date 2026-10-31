@@ -4,6 +4,17 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 
+import { and, eq } from "drizzle-orm";
+
+import { db } from "@/db";
+import {
+  churchMemberships,
+  churches,
+  organizationMemberships,
+  organizations,
+  users,
+} from "@/db/schema";
+import { canAccessOrganizationWorkspace } from "@/lib/auth/organization-workspace-access";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
 import {
@@ -83,6 +94,83 @@ async function scopeFromChurch(
 }
 
 /**
+ * One round trip for the common case: the profile already points at a church
+ * the member can access. Returns done:false when the caller must try the
+ * cookie and membership list.
+ */
+async function profileChurchScope(userId: string): Promise<
+  | { done: true; scope: TenantScope | null }
+  | { done: false }
+> {
+  const [selection, rows] = await Promise.all([
+    readChurchSelectionCookies(),
+    db
+      .select({
+        platformRole: users.platformRole,
+        needsChurchOnboarding: users.needsChurchOnboarding,
+        profileOrganizationId: users.organizationId,
+        churchId: churches.id,
+        churchOrganizationId: churches.organizationId,
+        churchIsActive: churches.isActive,
+        organizationStatus: organizations.status,
+        orgMembershipStatus: organizationMemberships.status,
+        churchMembershipStatus: churchMemberships.status,
+      })
+      .from(users)
+      .leftJoin(churches, eq(churches.id, users.activeChurchId))
+      .leftJoin(organizations, eq(organizations.id, churches.organizationId))
+      .leftJoin(
+        organizationMemberships,
+        and(
+          eq(organizationMemberships.userId, users.id),
+          eq(organizationMemberships.organizationId, churches.organizationId)
+        )
+      )
+      .leftJoin(
+        churchMemberships,
+        and(
+          eq(churchMemberships.userId, users.id),
+          eq(churchMemberships.churchId, churches.id)
+        )
+      )
+      .where(eq(users.clerkId, userId))
+      .limit(1),
+  ]);
+
+  const row = rows[0];
+  if (!row) return { done: true, scope: null };
+  if (isPlatformSuperAdmin(row.platformRole)) return { done: true, scope: null };
+  if (row.needsChurchOnboarding) return { done: true, scope: null };
+
+  // Same rule as canAccessResolvedChurch: the church row must own an
+  // organization. A profile organization id is not a substitute.
+  const organizationId = row.churchOrganizationId?.trim() || "";
+  const churchAllowed =
+    Boolean(row.churchId) &&
+    row.churchIsActive === true &&
+    Boolean(organizationId) &&
+    canAccessOrganizationWorkspace({
+      platformRole: row.platformRole,
+      organizationStatus: row.organizationStatus,
+    }) &&
+    (row.orgMembershipStatus === "active" ||
+      row.churchMembershipStatus === "active");
+
+  if (!churchAllowed || !row.churchId) return { done: false };
+
+  const branchId =
+    postgresUuidOrEmpty(selection.branchFromCookie) || row.churchId;
+  return {
+    done: true,
+    scope: {
+      organizationId,
+      churchId: row.churchId,
+      branchId,
+    },
+  };
+}
+
+/**
  * Authoritative current church for an authenticated member.
  * Source of truth: users.activeChurchId → membership → church.
  * Cookie is only a hint when the profile pointer is missing.
@@ -91,6 +179,9 @@ export const resolveAuthenticatedChurchScope = cache(
   async function resolveAuthenticatedChurchScope(
     userId: string
   ): Promise<TenantScope | null> {
+    const profileChurch = await profileChurchScope(userId);
+    if (profileChurch.done) return profileChurch.scope;
+
     const appUser = await getAppUserByClerkId(userId);
     if (!appUser) return null;
     if (isPlatformSuperAdmin(appUser.platformRole)) return null;
