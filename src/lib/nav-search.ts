@@ -70,9 +70,12 @@ export function flattenSidebarNavItems(
 
   for (const section of sections) {
     for (const item of section.items) {
-      if (seen.has(item.href)) continue;
-      seen.add(item.href);
-      items.push(item);
+      const nested = item.children?.length ? item.children : [item];
+      for (const entry of nested) {
+        if (seen.has(entry.href)) continue;
+        seen.add(entry.href);
+        items.push(entry);
+      }
     }
   }
 

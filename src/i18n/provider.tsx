@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { setCookie } from "cookies-next";
-import { NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 
 import {
   LOCALE_COOKIE,
@@ -20,7 +20,12 @@ import {
   parseLocale,
   type Locale,
 } from "@/i18n/config";
-import { getMessagesForLocale } from "@/i18n/messages";
+
+const localeMessages: Record<Locale, () => Promise<AbstractIntlMessages>> = {
+  en: () => import("../../messages/en.json").then((module) => module.default),
+  es: () => import("../../messages/es.json").then((module) => module.default),
+  te: () => import("../../messages/te.json").then((module) => module.default),
+};
 
 type LocaleSwitcherContextValue = {
   locale: Locale;
@@ -31,23 +36,20 @@ const LocaleSwitcherContext = createContext<LocaleSwitcherContextValue | null>(
   null
 );
 
-function readLocaleCookie(): string | undefined {
-  if (typeof document === "undefined") return undefined;
-  const prefix = `${LOCALE_COOKIE}=`;
-  const match = document.cookie
-    .split("; ")
-    .find((part) => part.startsWith(prefix));
-  return match ? decodeURIComponent(match.slice(prefix.length)) : undefined;
-}
-
 type I18nProviderProps = {
   initialLocale: Locale;
+  messages: AbstractIntlMessages;
   children: ReactNode;
 };
 
-export function I18nProvider({ initialLocale, children }: I18nProviderProps) {
+export function I18nProvider({
+  initialLocale,
+  messages: initialMessages,
+  children,
+}: I18nProviderProps) {
   const router = useRouter();
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const [messages, setMessages] = useState(initialMessages);
 
   const setLocale = useCallback((nextLocale: Locale) => {
     const resolved = parseLocale(nextLocale);
@@ -56,24 +58,23 @@ export function I18nProvider({ initialLocale, children }: I18nProviderProps) {
       maxAge: LOCALE_COOKIE_MAX_AGE,
       sameSite: "lax",
     });
-    startTransition(() => {
-      setLocaleState(resolved);
-      router.refresh();
+    void localeMessages[resolved]().then((nextMessages) => {
+      setMessages(nextMessages);
+      startTransition(() => {
+        setLocaleState(resolved);
+        router.refresh();
+      });
     });
   }, [router]);
 
   useEffect(() => {
-    const cookieLocale = parseLocale(readLocaleCookie());
-    if (cookieLocale === initialLocale) {
-      setLocaleState(initialLocale);
-    }
-  }, [initialLocale]);
+    setLocaleState(initialLocale);
+    setMessages(initialMessages);
+  }, [initialLocale, initialMessages]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
-
-  const messages = useMemo(() => getMessagesForLocale(locale), [locale]);
 
   const value = useMemo(
     () => ({ locale, setLocale }),

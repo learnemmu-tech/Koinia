@@ -32,6 +32,7 @@ type SongsTabContentProps = {
   isPlatformPublic?: boolean;
   hrefPrefix?: string;
   showCollectionHeader?: boolean;
+  clientSync?: boolean;
 };
 
 export function SongsTabContent({
@@ -39,10 +40,11 @@ export function SongsTabContent({
   isPlatformPublic = false,
   hrefPrefix,
   showCollectionHeader = true,
+  clientSync,
 }: SongsTabContentProps) {
   const scope = useContentTenantScope();
   const { data: songs, syncing, loadMore, hasMore, loadingMore } =
-    useRealtimeSongs(initialSongs, { clientSync: !isPlatformPublic });
+    useRealtimeSongs(initialSongs, { clientSync: clientSync ?? !isPlatformPublic });
   const visibleSongs = useMemo(() => filterPublishedSongs(songs), [songs]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");

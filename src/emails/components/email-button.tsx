@@ -3,23 +3,27 @@ import { Button } from "@react-email/components";
 type EmailButtonProps = {
   href: string;
   label: string;
+  accentColor?: string;
 };
 
-export function EmailButton({ href, label }: EmailButtonProps) {
+export function EmailButton({ href, label, accentColor }: EmailButtonProps) {
+  const background =
+    accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? accentColor : "#c26a3a";
   return (
     <Button
       href={href}
       style={{
-        backgroundColor: "#7c5c9a",
-        borderRadius: "10px",
-        color: "#ffffff",
+        backgroundColor: background,
+        borderRadius: "8px",
+        color: "#fffdfb",
         display: "inline-block",
-        fontSize: "14px",
-        fontWeight: 600,
+        fontFamily: "Arial, Helvetica, sans-serif",
+        fontSize: "15px",
+        fontWeight: 700,
         lineHeight: "1",
-        padding: "14px 24px",
+        padding: "14px 22px",
         textDecoration: "none",
-        marginTop: "8px",
+        textAlign: "center",
       }}
     >
       {label}

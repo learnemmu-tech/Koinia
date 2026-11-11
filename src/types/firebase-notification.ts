@@ -11,7 +11,8 @@ export type NotificationContentType =
   | "trial_lifecycle"
   | "short_pending_review"
   | "short_review_result"
-  | "group_invitation";
+  | "group_invitation"
+  | "subscription";
 
 export type FirebaseNotification = {
   id: string;

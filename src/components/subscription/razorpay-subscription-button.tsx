@@ -153,6 +153,7 @@ export function RazorpaySubscriptionButton({
 
       await new Promise<void>((resolve, reject) => {
         let cleanupStarted = false;
+        let authorizationStarted = false;
         const releaseCheckout = async ({
           endpoint,
           reason,
@@ -209,7 +210,7 @@ export function RazorpaySubscriptionButton({
           key: data.key,
           subscription_id: data.subscriptionId,
           name: "FaithConnectHub",
-          description: `${planId === "starter" ? "Starter" : "Professional"} subscription`,
+          description: `${planId === "starter" ? "Starter" : "Pro"} subscription`,
           prefill: {
             name: data.prefill?.name || user.displayName || undefined,
             email: data.prefill?.email || user.email || undefined,
@@ -224,11 +225,13 @@ export function RazorpaySubscriptionButton({
             razorpay_subscription_id: string;
             razorpay_signature: string;
           }) => {
+            authorizationStarted = true;
             try {
+              const verifyToken = await user.getIdToken();
               const verifyResponse = await fetch("/api/subscription/razorpay/verify", {
                 method: "POST",
                 headers: {
-                  Authorization: `Bearer ${token}`,
+                  Authorization: `Bearer ${verifyToken}`,
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
@@ -237,11 +240,23 @@ export function RazorpaySubscriptionButton({
                   signature: checkoutResponse.razorpay_signature,
                 }),
               });
-              const verifyData = (await verifyResponse.json()) as { error?: string };
+              const verifyData = (await verifyResponse.json()) as {
+                error?: string;
+                pending?: boolean;
+                scheduled?: boolean;
+                message?: string;
+              };
               if (!verifyResponse.ok) {
                 throw new Error(verifyData.error ?? "Subscription verification failed.");
               }
-              toast.success("Subscription authorization verified.");
+              toast.success(
+                verifyData.scheduled
+                  ? verifyData.message ??
+                    "Your current plan stays active until this period ends."
+                  : verifyData.pending
+                    ? "Payment received. Access updates when Razorpay confirms the charge."
+                    : "Subscription authorization verified."
+              );
               onComplete?.();
               resolve();
             } catch (error) {
@@ -250,6 +265,7 @@ export function RazorpaySubscriptionButton({
           },
           modal: {
             ondismiss: async () => {
+              if (authorizationStarted) return;
               await releaseCheckout({
                 endpoint: "/api/subscription/razorpay/abandon",
                 reason: "modal_dismissed",
@@ -260,6 +276,7 @@ export function RazorpaySubscriptionButton({
           },
         }) as RazorpayCheckout;
         razorpay.on?.("payment.failed", async (rawResponse) => {
+          authorizationStarted = true;
           const failureResponse = rawResponse as RazorpayPaymentFailedResponse;
           const error = failureResponse.error;
           const failedSubscriptionId =

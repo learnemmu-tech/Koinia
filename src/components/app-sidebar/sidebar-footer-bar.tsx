@@ -47,20 +47,23 @@ function getDisplayName(
 
 function ProfileAvatar({
   authUser,
+  photoUrl,
   displayName,
   initials,
   className,
 }: {
   authUser: AuthUser;
+  photoUrl?: string;
   displayName: string;
   initials: string;
   className?: string;
 }) {
+  const src = photoUrl || authUser.photoURL || undefined;
   return (
     <Avatar className={cn("shrink-0 rounded-md border border-border", className)}>
-      {authUser.photoURL ?
+      {src ?
         <AvatarImage
-          src={authUser.photoURL}
+          src={src}
           alt={displayName}
           referrerPolicy="no-referrer"
           className="rounded-md object-cover"
@@ -145,6 +148,7 @@ export function SidebarFooterBar() {
             >
               <ProfileAvatar
                 authUser={authUser}
+                photoUrl={profile?.photoUrl}
                 displayName={displayName}
                 initials={initials}
                 className="size-8"
@@ -179,6 +183,7 @@ export function SidebarFooterBar() {
           >
             <ProfileAvatar
               authUser={authUser}
+              photoUrl={profile?.photoUrl}
               displayName={displayName}
               initials={initials}
               className="size-8"

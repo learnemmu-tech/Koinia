@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 
 import { parseChurchWebsiteSlugFromPath } from "@/lib/auth/auth-paths";
 import type { TenantScope } from "@/lib/organization/tenant-scope";
-import { getChurchBySlug } from "@/lib/postgres/tenants";
+import { cachedPublicChurchCore } from "@/lib/templates/load-church-website";
 
 const PATHNAME_HEADER = "x-koinia-pathname";
 
@@ -25,14 +25,14 @@ export async function getRequestChurchUrlScope(): Promise<
   );
   if (!slug) return null;
 
-  const church = await getChurchBySlug(slug);
-  const organizationId = church?.organizationId?.trim() ?? "";
-  if (!church?.isActive || !organizationId) return null;
+  const core = await cachedPublicChurchCore(slug);
+  const organizationId = core?.church.organizationId?.trim() ?? "";
+  if (!core?.church.isActive || !organizationId) return null;
 
   return {
     organizationId,
-    churchId: church.id,
-    name: church.name,
+    churchId: core.church.id,
+    name: core.church.name,
     slug,
   };
 }

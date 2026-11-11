@@ -1,37 +1,35 @@
-import { Text } from "@react-email/components";
-
 import { EmailButton } from "@/emails/components/email-button";
+import { EmailFacts, EmailNote, EmailText } from "@/emails/components/email-copy";
 import { EmailLayout } from "@/emails/components/email-layout";
 import { emailConfig } from "@/lib/email/config";
-
-type OrganizationCreatedEmailProps = {
-  userName: string;
-  organizationName: string;
-  churchName?: string;
-  organizationId: string;
-};
 
 export function OrganizationCreatedEmail({
   userName,
   organizationName,
   churchName,
   organizationId,
-}: OrganizationCreatedEmailProps) {
+}: {
+  userName: string;
+  organizationName: string;
+  churchName?: string;
+  organizationId: string;
+}) {
   return (
     <EmailLayout
       preview={`${organizationName} is ready on ${emailConfig.appName}`}
+      eyebrow="Workspace ready"
       title="Your organization is ready"
     >
-      <Text className="email-text" style={{ fontSize: "15px", lineHeight: "1.6", color: "#3d3545", margin: "0 0 16px" }}>
-        Hi {userName}, your FaithConnectHub workspace has been created successfully.
-      </Text>
-      <Text className="email-text" style={{ fontSize: "14px", lineHeight: "1.7", color: "#3d3545", margin: "0 0 20px" }}>
-        <strong>Organization:</strong> {organizationName}
-        {churchName ? <><br /><strong>Church:</strong> {churchName}</> : null}
-      </Text>
-      <Text className="email-muted" style={{ fontSize: "14px", lineHeight: "1.6", color: "#6b5f75", margin: "0 0 20px" }}>
-        Your next step is to finish your workspace setup and invite the people who will help serve your community.
-      </Text>
+      <EmailText>Hi {userName}, {organizationName} has been created and is ready for you to set up.</EmailText>
+      <EmailFacts
+        rows={[
+          ["Organization", organizationName],
+          ["Church", churchName],
+        ]}
+      />
+      <EmailNote>
+        Finish your workspace, invite the people who will serve with you, and publish the first pieces your community should see.
+      </EmailNote>
       <EmailButton
         href={`${emailConfig.appUrl}/dashboard?organizationId=${encodeURIComponent(organizationId)}`}
         label="Open your workspace"

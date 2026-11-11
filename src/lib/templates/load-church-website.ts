@@ -1,12 +1,14 @@
 import "server-only";
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 
 import { tenantContentQuery } from "@/lib/content/content-scope";
 import { listPublishedChurchVideos } from "@/lib/postgres/church-videos";
 import {
-  getChurchWebsiteConfig,
+  readChurchWebsiteConfig,
 } from "@/lib/postgres/church-websites";
 import {
   listArticles,
@@ -58,13 +60,35 @@ export function toChurchWebsiteIdentity(
   };
 }
 
+const ANONYMOUS_VIEWER = { isAuthenticated: false, isMember: false };
+
 async function resolveViewer(churchId: string) {
+  const headerStore = await headers();
+  if (headerStore.get("x-koinia-session") === "0") {
+    return ANONYMOUS_VIEWER;
+  }
   const { userId } = await auth();
   if (!userId) {
-    return { isAuthenticated: false, isMember: false };
+    return ANONYMOUS_VIEWER;
   }
   const isMember = await userIsActiveChurchMember(userId, churchId);
   return { isAuthenticated: true, isMember };
+}
+
+async function loadPublicChurchCore(slug: string) {
+  const church = await getChurchBySlug(slug);
+  if (!church || !church.isActive || !church.organizationId) return null;
+  const website = await readChurchWebsiteConfig(church);
+  const templateId = resolvePublicTemplateId(website.activeTemplate);
+  return { church, website, templateId };
+}
+
+export function cachedPublicChurchCore(slug: string) {
+  return unstable_cache(
+    () => loadPublicChurchCore(slug),
+    ["church-public-core", slug],
+    { revalidate: 60, tags: [`church-public-${slug}`] }
+  )();
 }
 
 type LoadChurchWebsiteOptions = {
@@ -77,14 +101,10 @@ type LoadChurchWebsiteOptions = {
 };
 
 const loadChurchCore = cache(async (slug: string) => {
-  const church = await getChurchBySlug(slug);
-  if (!church || !church.isActive || !church.organizationId) return null;
-  const [website, viewer] = await Promise.all([
-    getChurchWebsiteConfig(church),
-    resolveViewer(church.id),
-  ]);
-  const templateId = resolvePublicTemplateId(website.activeTemplate);
-  return { church, website, templateId, viewer };
+  const core = await cachedPublicChurchCore(slug.trim().toLowerCase());
+  if (!core) return null;
+  const viewer = await resolveViewer(core.church.id);
+  return { ...core, viewer };
 });
 
 function shellModel(
@@ -158,7 +178,7 @@ export async function loadChurchWebsite(
   const organizationId = church.organizationId?.trim();
   if (!organizationId || !church.isActive) return null;
 
-  const website = options?.website ?? (await getChurchWebsiteConfig(church));
+  const website = options?.website ?? (await readChurchWebsiteConfig(church));
   const templateId =
     options?.templateId ??
     resolvePublicTemplateId(

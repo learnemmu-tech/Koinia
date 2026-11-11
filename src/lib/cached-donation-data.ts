@@ -30,13 +30,14 @@ function tenantCacheKey(scope: ContentQueryInput): string {
 
 export async function getActiveDonationCampaignsCached(
   scope: ContentQueryInput,
-  limit?: number
+  limit?: number,
+  offset?: number
 ) {
   const key = tenantCacheKey(scope);
 
   return unstable_cache(
-    async () => getActiveDonationCampaigns(scope, { limit }),
-    ["active-donation-campaigns", key, limit != null ? `limit-${limit}` : "all"],
+    async () => getActiveDonationCampaigns(scope, { limit, offset }),
+    ["active-donation-campaigns", key, limit != null ? `limit-${limit}` : "all", `offset-${offset ?? 0}`],
     { revalidate: REVALIDATE_SECONDS, tags: ["donations", `tenant-${key}`] }
   )();
 }

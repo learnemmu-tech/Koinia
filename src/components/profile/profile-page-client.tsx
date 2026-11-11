@@ -4,19 +4,13 @@ import Link from "next/link";
 import { Bookmark, LayoutDashboard, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ProfileAccountFields } from "@/components/profile/profile-account-fields";
 import { PlanBadgeFromContext } from "@/components/subscription/plan-badge-from-context";
-import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useFavorites } from "@/context/favorites-context";
 import { pageContentClass, typePageTitleClass } from "@/lib/responsive-classes";
 
 export function ProfilePageClient() {
-  const { authUser, profile } = useFirebaseAuth();
   const { favorites, loading } = useFavorites();
-
-  const displayName =
-    profile?.firstName || profile?.lastName ?
-      `${profile.firstName} ${profile.lastName}`.trim()
-    : (authUser?.displayName ?? "User");
 
   return (
     <div className={pageContentClass}>
@@ -28,15 +22,10 @@ export function ProfilePageClient() {
       </div>
 
       <section className="rounded-2xl border border-border/50 bg-card p-4 shadow-sm sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <p className="truncate text-lg font-semibold">{displayName}</p>
-            <p className="truncate text-sm text-muted-foreground">
-              {authUser?.email}
-            </p>
-          </div>
+        <div className="mb-4 flex justify-end">
           <PlanBadgeFromContext />
         </div>
+        <ProfileAccountFields />
       </section>
 
       <section className="space-y-3">

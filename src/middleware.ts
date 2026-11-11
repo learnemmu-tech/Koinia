@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createNavTraceId, logNavStage } from "@/lib/nav-trace";
 
 import {
+  isChurchWebsiteAuthPath,
   isOnboardingPath,
   isSuperAdminPath,
   joinIntentSlugFromPath,
@@ -87,16 +88,27 @@ function withTrace(
   return response;
 }
 
+function requestHasClerkSession(req: NextRequest): boolean {
+  if (req.cookies.get("__session")?.value) return true;
+  const clientUat = req.cookies.get("__client_uat")?.value;
+  return Boolean(clientUat && clientUat !== "0");
+}
+
 function continueRequest(
   req: NextRequest,
   traceId: string,
   startedAt: number,
   outcome: string
 ) {
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set("x-koinia-pathname", req.nextUrl.pathname);
-  requestHeaders.set("x-fch-trace", traceId);
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  const response = NextResponse.next();
+  // Set these on the response. Next copies them onto the forwarded request.
+  // Replacing `request.headers` makes Next delete every header that was not
+  // copied, including Clerk's auth status, so later auth() calls fail.
+  response.headers.set("x-koinia-pathname", req.nextUrl.pathname);
+  response.headers.set(
+    "x-koinia-session",
+    requestHasClerkSession(req) ? "1" : "0"
+  );
   response.headers.set("x-fch-trace", traceId);
   logNavStage(traceId, "middleware", startedAt, {
     path: req.nextUrl.pathname,
@@ -133,6 +145,16 @@ export default clerkMiddleware(async (auth, req) => {
   // API handlers authenticate with the Clerk Bearer token. Calling auth() here
   // can handshake-redirect the request to Clerk's origin, which makes browser
   // fetch() throw TypeError: Failed to fetch.
+  // Anonymous public church pages do not need a Clerk handshake. Signed-in
+  // visitors and church sign-in routes still resolve auth below.
+  if (
+    pathname.startsWith("/c/") &&
+    !requestHasClerkSession(req) &&
+    !isChurchWebsiteAuthPath(pathname)
+  ) {
+    return continueRequest(req, traceId, startedAt, "public-church");
+  }
+
   if (pathname.startsWith("/api/") || pathname.startsWith("/trpc/")) {
     const isFileUpload =
       pathname.startsWith("/api/upload") ||

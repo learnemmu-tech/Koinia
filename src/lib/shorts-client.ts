@@ -84,7 +84,6 @@ function putFileToSignedUrl(
       "Content-Type",
       file.type || "application/octet-stream"
     );
-    xhr.setRequestHeader("x-upsert", "true");
     xhr.upload.onprogress = (event) => {
       if (!event.lengthComputable) return;
       const percent = Math.round((event.loaded / event.total) * 80) + 15;
@@ -179,7 +178,11 @@ export async function uploadShortFile(
     const completed = await parseJson<{ url: string }>(completeResponse);
     onProgress?.(100);
     return completed.url;
-  } catch {
+  } catch (error) {
+    // Vercel rejects function bodies above about 4.5 MB. Larger files must
+    // stay on the presigned S3 PUT. Only small files may fall back through
+    // the route.
+    if (file.size > 4 * 1024 * 1024) throw error;
     return uploadShortFileViaProxy(shortId, slot, file, token, onProgress);
   }
 }

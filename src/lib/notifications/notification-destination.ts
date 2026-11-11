@@ -88,6 +88,7 @@ export function notificationDestination(input: {
     case "group_invitation":
       return id ? `/groups/${encodeURIComponent(id)}` : "/community?tab=groups";
     case "trial_lifecycle":
+    case "subscription":
       return "/dashboard/billing";
     case "song":
       return heritageOrAppPath(input, "/songs", id);

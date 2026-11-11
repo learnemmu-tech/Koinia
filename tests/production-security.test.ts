@@ -115,6 +115,7 @@ test("mutating API routes declare an auth boundary", () => {
     "CRON_SECRET",
     "verifyRazorpayWebhookSignature",
     "PUBLIC_MUTATION",
+    "NODE_ENV === \"production\"",
   ];
   const missing: string[] = [];
   for (const file of walk(join(root, "src", "app", "api"))) {

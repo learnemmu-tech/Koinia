@@ -5,8 +5,6 @@ import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { listPublishedCatalogBooks } from "@/lib/postgres/books";
 import { HeritageBooksPage } from "@/templates/heritage/pages/catalog";
 
-export const dynamic = "force-dynamic";
-
 export async function generateMetadata({
   params,
 }: {

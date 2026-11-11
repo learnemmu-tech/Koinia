@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -115,6 +116,51 @@ export const subscriptionCheckoutAttempts = pgTable(
     index("subscription_checkout_attempts_request_id_idx").on(
       table.requestId
     ),
+  ]
+);
+
+export const billingReceipts = pgTable(
+  "billing_receipts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull().default("razorpay"),
+    providerPaymentId: text("provider_payment_id").notNull(),
+    providerInvoiceId: text("provider_invoice_id"),
+    providerSubscriptionId: text("provider_subscription_id"),
+    receiptNumber: text("receipt_number").notNull(),
+    description: text("description").notNull(),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    status: text("status").notNull(),
+    paidAt: timestamp("paid_at", { withTimezone: true, mode: "date" }),
+    planId: planIdEnum("plan_id"),
+    periodStart: timestamp("period_start", { withTimezone: true, mode: "date" }),
+    periodEnd: timestamp("period_end", { withTimezone: true, mode: "date" }),
+    customerName: text("customer_name"),
+    customerEmail: text("customer_email"),
+    paymentMethodSummary: text("payment_method_summary"),
+    documentStatus: text("document_status").notNull().default("ready"),
+    confirmationSentAt: timestamp("confirmation_sent_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    unique("billing_receipts_provider_payment_unique").on(
+      table.provider,
+      table.providerPaymentId
+    ),
+    index("billing_receipts_organization_id_idx").on(table.organizationId),
   ]
 );
 

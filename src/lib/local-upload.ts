@@ -1,5 +1,6 @@
 /**
- * Client upload helper. Files are stored in Supabase Storage via /api/upload.
+ * Client upload helper. The browser receives a presigned PUT and writes
+ * the file directly to S3. The API route authorizes, then verifies the object.
  */
 
 import type { StorageUploadKind } from "@/lib/storage-upload-kind";
@@ -20,6 +21,32 @@ export type ClientUploadOptions = {
   kind?: StorageUploadKind;
   replaceUrl?: string;
 };
+
+function putFileToSignedUrl(
+  signedUrl: string,
+  file: Blob,
+  contentType: string,
+  onProgress?: (percent: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl);
+    if (contentType) xhr.setRequestHeader("Content-Type", contentType);
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      onProgress?.(30 + Math.round((event.loaded / event.total) * 50));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      reject(new Error(`Direct upload failed (${xhr.status}).`));
+    };
+    xhr.onerror = () => reject(new Error("Direct upload failed."));
+    xhr.send(file);
+  });
+}
 
 function buildUploadUrl(
   fileType: "cover" | "audio",
@@ -53,17 +80,52 @@ async function postUpload(
 
   onProgress?.(10);
 
-  const uploadFormData = new FormData();
-  uploadFormData.append("file", file);
-
+  const signedResponse = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: "sign",
+      contentType: file.type,
+      fileName: file instanceof File ? file.name : "upload",
+      size: file.size,
+    }),
+  });
+  if (!signedResponse.ok) {
+    let errorMessage = `Upload failed with status ${signedResponse.status}`;
+    try {
+      const errorJson = (await signedResponse.json()) as UploadError;
+      if (errorJson.error) errorMessage = errorJson.error;
+    } catch {
+      // ignore parse errors
+    }
+    throw new Error(errorMessage);
+  }
+  const signed = (await signedResponse.json()) as {
+    signedUrl: string;
+    objectKey: string;
+    contentType?: string;
+  };
   onProgress?.(30);
+  await putFileToSignedUrl(
+    signed.signedUrl,
+    file,
+    signed.contentType || file.type,
+    onProgress
+  );
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${idToken}`,
+      "Content-Type": "application/json",
     },
-    body: uploadFormData,
+    body: JSON.stringify({
+      action: "complete",
+      objectKey: signed.objectKey,
+    }),
   });
 
   onProgress?.(80);

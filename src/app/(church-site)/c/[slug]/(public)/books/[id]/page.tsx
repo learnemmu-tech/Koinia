@@ -9,8 +9,6 @@ import { churchWebsitePath } from "@/lib/templates/paths";
 import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { HeritageDetailFrame } from "@/templates/heritage/components/heritage-content-frame";
 
-export const dynamic = "force-dynamic";
-
 export default async function ChurchBookDetailPage({
   params,
 }: {

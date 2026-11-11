@@ -8,6 +8,7 @@ import {
   Clapperboard,
   CreditCard,
   FileText,
+  Gauge,
   Globe,
   HandHelping,
   Heart,
@@ -16,9 +17,11 @@ import {
   LayoutDashboard,
   Library,
   Music,
+  Receipt,
   Settings2,
   Shield,
   Users,
+  Wallet,
   MessageCircle,
 } from "lucide-react";
 
@@ -40,6 +43,8 @@ export type AppNavItem = {
   authOnly?: boolean;
   /** Extra keywords for global destination search (not shown in UI). */
   searchKeywords?: string[];
+  /** Nested links. Shown only while this item is expanded. */
+  children?: AppNavItem[];
 };
 
 export type SidebarNavSection = {
@@ -248,6 +253,47 @@ export const SHEPHERD_NAV_ITEM: AppNavItem = {
   searchKeywords: ["shepherd", "ai", "assistant", "bible help"],
 };
 
+function billingNavItem(): AppNavItem {
+  const base = `${ADMIN_BASE}/billing`;
+  return {
+    label: "Billing",
+    href: base,
+    icon: CreditCard,
+    match: startsWith(base),
+    searchKeywords: ["billing", "subscription", "plan", "payment"],
+    children: [
+      {
+        label: "Overview",
+        href: base,
+        icon: LayoutDashboard,
+        match: exact(base),
+        searchKeywords: ["billing overview", "current plan"],
+      },
+      {
+        label: "Plans & Usage",
+        href: `${base}/plans`,
+        icon: Gauge,
+        match: startsWith(`${base}/plans`),
+        searchKeywords: ["usage", "limits", "upgrade", "plans"],
+      },
+      {
+        label: "Spending",
+        href: `${base}/spending`,
+        icon: Wallet,
+        match: startsWith(`${base}/spending`),
+        searchKeywords: ["spending", "charges", "renewal"],
+      },
+      {
+        label: "Billing & Invoices",
+        href: `${base}/invoices`,
+        icon: Receipt,
+        match: startsWith(`${base}/invoices`),
+        searchKeywords: ["invoices", "receipts", "payments"],
+      },
+    ],
+  };
+}
+
 export const ADMIN_FOOTER_NAV_ITEMS: AppNavItem[] = [
   {
     label: "Website",
@@ -263,13 +309,7 @@ export const ADMIN_FOOTER_NAV_ITEMS: AppNavItem[] = [
     match: startsWith(`${ADMIN_BASE}/church-settings`),
     searchKeywords: ["church settings", "settings", "church"],
   },
-  {
-    label: "Billing",
-    href: `${ADMIN_BASE}/billing`,
-    icon: CreditCard,
-    match: startsWith(`${ADMIN_BASE}/billing`),
-    searchKeywords: ["billing", "subscription", "plan", "payment"],
-  },
+  billingNavItem(),
 ];
 
 export const MULTI_ORG_MANAGE_NAV_ITEMS: AppNavItem[] = [
@@ -314,13 +354,7 @@ export const MULTI_ORG_SETTINGS_NAV_ITEMS: AppNavItem[] = [
     match: startsWith(`${ADMIN_BASE}/website`),
     searchKeywords: ["website", "template", "heritage", "branding", "seo"],
   },
-  {
-    label: "Billing",
-    href: `${ADMIN_BASE}/billing`,
-    icon: CreditCard,
-    match: startsWith(`${ADMIN_BASE}/billing`),
-    searchKeywords: ["billing", "subscription", "plan", "payment"],
-  },
+  billingNavItem(),
 ];
 
 export function buildChurchNavItems(churches: FirebaseChurch[]): AppNavItem[] {

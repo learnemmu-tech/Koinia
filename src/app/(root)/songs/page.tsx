@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
+import { CatalogPager } from "@/components/worship/catalog-pager";
 import { SongsTabContent } from "@/components/worship/songs-tab-content";
 import { SongsAdminBar } from "@/components/admin/inline/songs-admin-bar";
 import { SongsPageHeading } from "@/components/worship/songs-page-heading";
+import { catalogPageQuery, sliceCatalogPage } from "@/lib/content/catalog-page";
 import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getPublishedSongsCached } from "@/lib/cached-worship-data";
 import { pageContentClass } from "@/lib/responsive-classes";
@@ -24,9 +27,17 @@ export const metadata: Metadata = buildPageMetadata({
   ],
 });
 
-export default async function SongsPage() {
+export default async function SongsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await (searchParams ?? Promise.resolve<{ page?: string }>({}));
+  const { page, offset, limit } = catalogPageQuery(pageParam);
   const { contentQuery, isPlatformPublic } = await resolvePageContentQuery();
-  const songs = await getPublishedSongsCached(contentQuery);
+  const loaded = await getPublishedSongsCached(contentQuery, limit, offset);
+  const { items: songs, hasMore } = sliceCatalogPage(loaded);
+  const signedIn = (await headers()).get("x-koinia-session") === "1";
 
   return (
     <section
@@ -43,7 +54,9 @@ export default async function SongsPage() {
       <SongsTabContent
         initialSongs={songs}
         isPlatformPublic={isPlatformPublic}
+        clientSync={signedIn}
       />
+      {signedIn ? null : <CatalogPager page={page} hasMore={hasMore} />}
     </section>
   );
 }

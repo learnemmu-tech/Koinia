@@ -6,8 +6,6 @@ import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
 import { isSectionVisible } from "@/lib/templates/visibility";
 
-export const dynamic = "force-dynamic";
-
 export default async function EventDetailPage({
   params,
 }: {

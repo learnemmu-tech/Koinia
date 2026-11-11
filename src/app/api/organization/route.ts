@@ -9,7 +9,6 @@ import {
   getOrganizationsForUser,
 } from "@/lib/organization/organization-server";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
-import { triggerOrganizationCreatedAdminEmail } from "@/lib/email/triggers";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { timed } from "@/lib/perf";
 
@@ -133,6 +132,9 @@ export async function POST(request: Request) {
       const appUser = await getAppUserByClerkId(decoded.uid);
       const creatorName =
         `${appUser?.firstName ?? ""} ${appUser?.lastName ?? ""}`.trim() || "—";
+      const { triggerOrganizationCreatedAdminEmail } = await import(
+        "@/lib/email/triggers"
+      );
       triggerOrganizationCreatedAdminEmail({
         organizationId: org.id,
         organizationName: org.name,

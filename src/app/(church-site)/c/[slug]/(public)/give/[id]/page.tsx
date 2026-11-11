@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 import { getActiveCampaignForChurch } from "@/lib/templates/public-content";
 import { requireVisibleChurchWebsite } from "@/lib/templates/require-church-website";
 
-export const dynamic = "force-dynamic";
-
 export default async function GiveDetailPage({
   params,
 }: {

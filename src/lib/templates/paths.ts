@@ -67,6 +67,51 @@ export function isChurchWebsitePath(pathname: string | null | undefined): boolea
   return pathname === "/c" || pathname.startsWith("/c/");
 }
 
+const CHURCH_PUBLIC_HREF_ALIASES: Record<string, string> = {
+  "/donations": "/give",
+  "/prayer-requests": "/prayer",
+  "/groups": "/ministries",
+};
+
+const CHURCH_PUBLIC_ROOTS = [
+  "/",
+  "/songs",
+  "/sermons",
+  "/articles",
+  "/videos",
+  "/shorts",
+  "/events",
+  "/books",
+  "/community",
+  "/give",
+  "/prayer",
+  "/shepherd",
+  "/ministries",
+  "/about",
+  "/contact",
+];
+
+function isChurchPublicPath(path: string): boolean {
+  return CHURCH_PUBLIC_ROOTS.some(
+    (root) => path === root || (root !== "/" && path.startsWith(`${root}/`))
+  );
+}
+
+/** Prefix a public app path with `/c/[slug]` when that church route already exists. */
+export function churchScopedPublicHref(slug: string, href: string): string {
+  const normalizedSlug = slug.trim().toLowerCase();
+  if (!normalizedSlug || !href.startsWith("/") || href.startsWith("/c/")) return href;
+  const hashIndex = href.indexOf("#");
+  const hash = hashIndex >= 0 ? href.slice(hashIndex) : "";
+  const withoutHash = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
+  const queryIndex = withoutHash.indexOf("?");
+  const query = queryIndex >= 0 ? withoutHash.slice(queryIndex) : "";
+  const path = queryIndex >= 0 ? withoutHash.slice(0, queryIndex) : withoutHash;
+  const mapped = CHURCH_PUBLIC_HREF_ALIASES[path] ?? path;
+  if (!isChurchPublicPath(mapped)) return href;
+  return `${churchWebsitePath(normalizedSlug, mapped === "/" ? "" : mapped)}${query}${hash}`;
+}
+
 export function isWebsitePreviewPath(pathname: string | null | undefined): boolean {
   if (!pathname?.trim()) return false;
   return (

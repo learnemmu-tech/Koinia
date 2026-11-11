@@ -46,6 +46,7 @@ export const users = pgTable(
     }),
     firstName: text("first_name").notNull().default(""),
     lastName: text("last_name").notNull().default(""),
+    photoUrl: text("photo_url"),
     platformRole: platformRoleEnum("platform_role").notNull().default("user"),
     organizationId: uuid("organization_id").references(
       (): AnyPgColumn => organizations.id,

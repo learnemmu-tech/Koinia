@@ -18,6 +18,7 @@ type ArticlesTabContentProps = {
   initialArticles: FirebaseArticle[];
   isPlatformPublic?: boolean;
   hrefPrefix?: string;
+  clientSync?: boolean;
   showCollectionHeader?: boolean;
 };
 
@@ -26,10 +27,11 @@ export function ArticlesTabContent({
   isPlatformPublic = false,
   hrefPrefix,
   showCollectionHeader = true,
+  clientSync,
 }: ArticlesTabContentProps) {
   const t = useTranslations("articles");
   const { data: liveArticles, syncing, loadMore, hasMore, loadingMore } =
-    useRealtimeArticles(initialArticles, { clientSync: !isPlatformPublic });
+    useRealtimeArticles(initialArticles, { clientSync: clientSync ?? !isPlatformPublic });
   const articles = useMemo(
     () => liveArticles.filter((article) => article.isPublished),
     [liveArticles]

@@ -17,9 +17,13 @@ export async function getEvents(scope: ContentQueryInput): Promise<FirebaseEvent
 
 export async function getPublishedEvents(
   scope: ContentQueryInput,
-  options?: { limit?: number }
+  options?: { limit?: number; offset?: number }
 ): Promise<FirebaseEvent[]> {
-  return listEvents(scope, { publishedOnly: true, limit: options?.limit });
+  return listEvents(scope, {
+    publishedOnly: true,
+    limit: options?.limit,
+    offset: options?.offset,
+  });
 }
 
 export async function getUpcomingPublishedEvents(

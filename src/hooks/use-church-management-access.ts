@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
-import { useOrganization } from "@/context/organization-context";
+import { useOrganizationOptional } from "@/context/organization-context";
 import { getWorkspaceType } from "@/lib/organization/workspace-type";
 import {
   canAccessChurchManagement,
@@ -14,14 +14,13 @@ import {
 
 export function useChurchManagementAccess() {
   const { profile, loading: authLoading } = useFirebaseAuth();
-  const {
-    membership,
-    branchMembership: contextBranchMembership,
-    branchMemberships,
-    churches,
-    organization,
-    loading: orgLoading,
-  } = useOrganization();
+  const organizationContext = useOrganizationOptional();
+  const membership = organizationContext?.membership ?? null;
+  const contextBranchMembership = organizationContext?.branchMembership ?? null;
+  const branchMemberships = organizationContext?.branchMemberships ?? [];
+  const churches = organizationContext?.churches ?? [];
+  const orgLoading = organizationContext?.loading ?? false;
+  const organization = organizationContext?.organization ?? null;
 
   const workspaceType = getWorkspaceType(organization);
 

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { cancelRazorpaySubscription } from "@/lib/payments/razorpay-subscriptions";
+import {
+  cancelRazorpaySubscription,
+  mapRazorpayPeriodDate,
+} from "@/lib/payments/razorpay-subscriptions";
+import { db } from "@/db";
+import { subscriptionCheckoutAttempts } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import {
   getOrganizationSubscription,
   applyRazorpaySubscriptionEvent,
@@ -21,6 +27,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No Razorpay subscription found." }, { status: 404 });
     }
 
+    const [scheduled] = await db
+      .select({
+        id: subscriptionCheckoutAttempts.id,
+        providerSubscriptionId: subscriptionCheckoutAttempts.providerSubscriptionId,
+        status: subscriptionCheckoutAttempts.status,
+      })
+      .from(subscriptionCheckoutAttempts)
+      .where(eq(subscriptionCheckoutAttempts.organizationId, auth.organizationId))
+      .limit(1);
+    if (
+      scheduled?.status === "scheduled" &&
+      scheduled.providerSubscriptionId &&
+      scheduled.providerSubscriptionId !== current.razorpaySubscriptionId
+    ) {
+      await cancelRazorpaySubscription(scheduled.providerSubscriptionId, {
+        atCycleEnd: false,
+      });
+      await db
+        .update(subscriptionCheckoutAttempts)
+        .set({ status: "cancelled", updatedAt: new Date() })
+        .where(eq(subscriptionCheckoutAttempts.id, scheduled.id));
+    }
+
     const subscription = await cancelRazorpaySubscription(current.razorpaySubscriptionId);
     await applyRazorpaySubscriptionEvent(subscription, "subscription.cancelled", {
       cancelAtPeriodEnd: true,
@@ -28,9 +57,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       canceled: true,
-      endsAt: subscription.current_end
-        ? new Date(subscription.current_end * 1000).toISOString()
-        : null,
+      endsAt: mapRazorpayPeriodDate(subscription.current_end)?.toISOString() ?? null,
     });
   } catch (error) {
     const authError = authErrorResponse(error);

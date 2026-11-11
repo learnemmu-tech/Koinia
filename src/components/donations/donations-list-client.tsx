@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
@@ -15,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSubscriptionOptional } from "@/context/subscription-context";
 import { useActiveDonationCampaigns } from "@/hooks/use-donation-campaigns";
 import { splitCampaignsByCompletion } from "@/lib/donation-firestore";
 import { contentCardGridClassName } from "@/lib/responsive-classes";
@@ -25,6 +27,8 @@ type DonationsListClientProps = {
   /** When false, skip client refetch so church-site listings stay on the server snapshot. */
   clientSync?: boolean;
   hrefPrefix?: string;
+  /** Donations page only. Public church give pages keep the generic empty state. */
+  applyDonationEntitlement?: boolean;
 };
 
 function matchesSearch(
@@ -44,8 +48,16 @@ export function DonationsListClient({
   isPlatformPublic = false,
   clientSync,
   hrefPrefix,
+  applyDonationEntitlement = false,
 }: DonationsListClientProps) {
   const t = useTranslations("donations");
+  const subscription = useSubscriptionOptional();
+  const donationsUnavailable =
+    applyDonationEntitlement &&
+    subscription != null &&
+    !subscription.loading &&
+    subscription.snapshot != null &&
+    !subscription.canUseFeature("canCreateDonations");
   const { campaigns, loading } = useActiveDonationCampaigns(initialCampaigns, {
     clientSync: clientSync ?? !isPlatformPublic,
   });
@@ -70,6 +82,40 @@ export function DonationsListClient({
   }
 
   if (!loading && active.length === 0 && completed.length === 0) {
+    if (donationsUnavailable) {
+      return (
+        <div className="-mt-4 mx-auto flex w-full max-w-3xl flex-col items-center px-4 text-center sm:-mt-6">
+          <img
+            src="/images/donation-empty-illustration.png"
+            alt=""
+            className="h-auto w-full max-w-[min(100%,360px)] object-contain"
+          />
+          <h2 className="mt-1 font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            No Donation Campaigns Yet
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+            Donation campaigns are not included in your current Free Trial.
+            <br className="hidden sm:block" />
+            Upgrade your plan to unlock church fundraising.
+          </p>
+          <div className="mt-4 flex w-full max-w-2xl items-center gap-4 rounded-2xl border border-border bg-surface-raised px-4 py-4 text-left sm:px-5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-primary text-primary">
+              <Info className="size-4" aria-hidden />
+            </span>
+            <span className="h-8 w-px shrink-0 bg-border" aria-hidden />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-primary">
+                Available with an eligible paid plan
+              </span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">
+                Upgrade your subscription to create and manage donation campaigns.
+              </span>
+            </span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-xl border border-dashed border-border/60 px-6 py-12 text-center">
         <p className="text-sm text-muted-foreground">

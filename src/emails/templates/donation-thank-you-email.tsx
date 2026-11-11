@@ -1,14 +1,5 @@
-import { Text } from "@react-email/components";
-
+import { EmailFacts, EmailNote, EmailText } from "@/emails/components/email-copy";
 import { EmailLayout } from "@/emails/components/email-layout";
-
-type DonationThankYouEmailProps = {
-  donorName: string;
-  amount: string;
-  donationId: string;
-  date: string;
-  campaignTitle: string;
-};
 
 export function DonationThankYouEmail({
   donorName,
@@ -16,26 +7,25 @@ export function DonationThankYouEmail({
   donationId,
   date,
   campaignTitle,
-}: DonationThankYouEmailProps) {
+}: {
+  donorName: string;
+  amount: string;
+  donationId: string;
+  date: string;
+  campaignTitle: string;
+}) {
   return (
-    <EmailLayout preview="Thank you for your generous gift" title="Thank you for your donation">
-      <Text className="email-text" style={{ fontSize: "15px", lineHeight: "1.6", color: "#3d3545", margin: "0 0 12px" }}>
-        Dear {donorName},
-      </Text>
-      <Text className="email-text" style={{ fontSize: "15px", lineHeight: "1.6", color: "#3d3545", margin: "0 0 16px" }}>
-        Thank you for your generous support of <strong>{campaignTitle}</strong>.
-        Your gift makes a meaningful difference in our ministry.
-      </Text>
-      <Text className="email-text" style={{ fontSize: "14px", lineHeight: "1.8", color: "#3d3545", margin: "0 0 8px" }}>
-        <strong>Amount:</strong> {amount}
-        <br />
-        <strong>Donation ID:</strong> {donationId}
-        <br />
-        <strong>Date:</strong> {date}
-      </Text>
-      <Text className="email-muted" style={{ fontSize: "14px", lineHeight: "1.6", color: "#6b5f75", margin: "16px 0 0" }}>
-        May God bless you abundantly for your faithfulness and generosity.
-      </Text>
+    <EmailLayout preview="Thank you for your gift" eyebrow="Giving" title="Thank you for your gift">
+      <EmailText>Dear {donorName}, your gift to {campaignTitle} has been received.</EmailText>
+      <EmailFacts
+        rows={[
+          ["Amount", amount],
+          ["Campaign", campaignTitle],
+          ["Date", date],
+          ["Reference", donationId],
+        ]}
+      />
+      <EmailNote>This note confirms the gift recorded by FaithConnectHub. It is not a tax invoice.</EmailNote>
     </EmailLayout>
   );
 }

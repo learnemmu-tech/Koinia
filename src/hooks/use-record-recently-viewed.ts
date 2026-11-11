@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import type { RecentlyViewedItemType } from "@/types/firebase-recently-viewed";
 
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
-import { useRecentlyViewed } from "@/context/recently-viewed-context";
+import { useRecentlyViewedOptional } from "@/context/recently-viewed-context";
 
 type RecordRecentlyViewedInput = {
   itemType: RecentlyViewedItemType;
@@ -19,11 +19,12 @@ export function useRecordRecentlyViewed({
   enabled = true,
 }: RecordRecentlyViewedInput): void {
   const { user } = useFirebaseAuth();
-  const { recordView } = useRecentlyViewed();
+  const viewed = useRecentlyViewedOptional();
+  const recordView = viewed?.recordView;
   const recordedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !user?.uid) return;
+    if (!enabled || !user?.uid || !recordView) return;
 
     const trimmedId = itemId.trim();
     if (!trimmedId) return;

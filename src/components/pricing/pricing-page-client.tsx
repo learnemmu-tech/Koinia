@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Mail, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Mail, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { RazorpaySubscriptionButton } from "@/components/subscription/razorpay-subscription-button";
@@ -21,13 +21,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { siteConfig } from "@/config/site";
+import { useSubscriptionOptional } from "@/context/subscription-context";
+import { hasActivePaidEntitlement } from "@/lib/subscription/trial";
 import { cn } from "@/lib/utils";
 import type { BillingInterval } from "@/types/subscription";
 import {
   formatPlanPrice,
   getPlanComparisonRows,
-  PLAN_ORDER,
   PLANS,
+  PRICING_TABLE_COLUMNS,
+  PRO_PLUS_DISPLAY,
 } from "@/lib/subscription/plans";
 import {
   typeHeroTitleClass,
@@ -38,7 +41,7 @@ const FAQ_ITEMS = [
   {
     question: "Can I upgrade later?",
     answer:
-      "Yes. You can start with the 14-day free trial and upgrade to Starter, Professional, or Enterprise as your ministry grows. Plan changes will be available once billing is enabled.",
+      "Yes. You can start with the 14-day free trial and upgrade to Starter or Pro. Pro+ and Enterprise are marked coming soon and cannot be purchased yet.",
   },
   {
     question: "Can I cancel anytime?",
@@ -53,12 +56,12 @@ const FAQ_ITEMS = [
   {
     question: "Do you offer Enterprise plans?",
     answer:
-      "Yes. Enterprise is a custom offering for large ministries, including future white-label, custom domain, API, dedicated support, and SLA options. Contact our team for a quote.",
+      "Enterprise is coming soon. Planned options include white-label, custom domain, API access, dedicated support, and an SLA. It cannot be purchased yet.",
   },
   {
     question: "Is payment required today?",
     answer:
-      "No. FaithConnectHub is building toward full billing integration. You can start a 14-day trial now; checkout and invoices will be added in a future release.",
+      "The 14-day trial does not require payment. Starter and Pro can be purchased. Pro+ and Enterprise are coming soon.",
   },
 ];
 
@@ -75,18 +78,47 @@ function ComparisonCell({ value }: { value: string | boolean }) {
 }
 
 export function PricingPageClient() {
+  const subscription = useSubscriptionOptional();
+  const paidSubscription = subscription?.snapshot?.subscription;
+  const activePaidPlanId =
+    paidSubscription && hasActivePaidEntitlement(paidSubscription)
+      ? paidSubscription.planId
+      : null;
   const [interval, setInterval] = useState<BillingInterval>("monthly");
+  const [perView, setPerView] = useState(1);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const measure = () => {
+      const width = scroller.clientWidth;
+      setPerView(width >= 1080 ? 4 : width >= 680 ? 2 : 1);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, []);
+
+  function scrollPlans(direction: -1 | 1) {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const card = scroller.querySelector<HTMLElement>("[data-pricing-card]");
+    const distance = card?.getBoundingClientRect().width ?? scroller.clientWidth;
+    scroller.scrollBy({ left: direction * (distance + 16), behavior: "smooth" });
+  }
 
   return (
     <div className="min-w-0 overflow-x-hidden">
-      <section className="relative px-4 py-16 text-center sm:py-20 md:py-24">
+      <section className="relative px-4 pb-4 pt-10 text-center sm:pb-3 sm:pt-14">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 flex items-center justify-center"
         >
           <div className="h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
         </div>
-        <div className="relative mx-auto max-w-3xl space-y-5">
+        <div className="relative mx-auto max-w-3xl space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary/70">
             Pricing
           </p>
@@ -129,17 +161,50 @@ export function PricingPageClient() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-5 px-4 pb-16 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-        {PLAN_ORDER.map((planId) => {
-          const plan = PLANS[planId];
+      <section className="mx-auto max-w-6xl overflow-x-hidden px-4 pb-16">
+        <div className="mb-2 flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-8"
+            aria-label="Previous plans"
+            onClick={() => scrollPlans(-1)}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-8"
+            aria-label="Next plans"
+            onClick={() => scrollPlans(1)}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+        <div
+          ref={scrollerRef}
+          className="flex items-stretch gap-4 overflow-x-auto scroll-smooth pb-1 pt-3 [scrollbar-width:none] snap-x snap-mandatory [&::-webkit-scrollbar]:hidden"
+        >
+        {PRICING_TABLE_COLUMNS.map((planId) => {
+          const plan = planId === "pro_plus" ? PRO_PLUS_DISPLAY : PLANS[planId];
           const price = formatPlanPrice(plan, interval);
 
           return (
-            <Card
+            <div
               key={planId}
+              data-pricing-card
+              className="flex min-w-0 shrink-0 snap-start"
+              style={{
+                flexBasis: `calc((100% - ${(perView - 1) * 16}px) / ${perView})`,
+              }}
+            >
+            <Card
               className={cn(
-                "relative flex flex-col border-border/60 shadow-sm transition-shadow hover:shadow-md",
-                plan.highlighted && "border-primary/40 ring-1 ring-primary/20 lg:scale-[1.02]"
+                "relative flex h-full w-full flex-col border-border/60 shadow-sm transition-shadow hover:shadow-md",
+                plan.highlighted && "border-primary/40 ring-1 ring-primary/20"
               )}
             >
               {plan.highlighted ?
@@ -149,7 +214,7 @@ export function PricingPageClient() {
               : null}
               <CardHeader className="pb-4">
                 <CardTitle className="text-xl">{plan.name}</CardTitle>
-                <CardDescription>{plan.tagline}</CardDescription>
+                <CardDescription className="min-h-10">{plan.tagline}</CardDescription>
                 <div className="pt-2">
                   <p className="text-3xl font-bold tracking-tight">{price}</p>
                   {!plan.contactSales && plan.monthlyPrice !== 0 ?
@@ -172,8 +237,12 @@ export function PricingPageClient() {
                   ))}
                 </ul>
               </CardContent>
-              <CardFooter>
-                {plan.contactSales ?
+              <CardFooter className="mt-auto">
+                {plan.comingSoon ?
+                  <Button className="w-full" disabled>
+                    Coming soon
+                  </Button>
+                : plan.contactSales ?
                   <Button className="w-full" asChild>
                     <Link href={`mailto:${siteConfig.author.email}?subject=Enterprise%20Plan`}>
                       <Mail className="mr-2 size-4" />
@@ -185,17 +254,23 @@ export function PricingPageClient() {
                     <Link href="/signup">{plan.ctaLabel ?? "Start 14-day trial"}</Link>
                   </Button>
                 : planId === "starter" || planId === "professional" ?
-                  <div className="w-full">
-                    <RazorpaySubscriptionButton
-                      planId={planId}
-                      label="Start Subscription"
-                    />
-                  </div>
+                  activePaidPlanId === planId ?
+                    <Button className="w-full" variant="outline" disabled>
+                      Current Plan
+                    </Button>
+                  : <div className="w-full">
+                      <RazorpaySubscriptionButton
+                        planId={planId}
+                        label="Start Subscription"
+                      />
+                    </div>
                 : null}
               </CardFooter>
             </Card>
+            </div>
           );
         })}
+        </div>
       </section>
 
       <section className="bg-muted/30 px-4 py-16 sm:py-20">
@@ -212,9 +287,9 @@ export function PricingPageClient() {
               <thead>
                 <tr className="border-b border-border/60 bg-muted/30">
                   <th className="px-4 py-3 font-semibold">Feature</th>
-                  {PLAN_ORDER.map((id) => (
+                  {PRICING_TABLE_COLUMNS.map((id) => (
                     <th key={id} className="px-3 py-3 text-center font-semibold">
-                      {PLANS[id].name}
+                      {id === "pro_plus" ? PRO_PLUS_DISPLAY.name : PLANS[id].name}
                     </th>
                   ))}
                 </tr>
@@ -228,7 +303,7 @@ export function PricingPageClient() {
                     <td className="px-4 py-3 font-medium text-muted-foreground">
                       {row.label}
                     </td>
-                    {PLAN_ORDER.map((id) => (
+                    {PRICING_TABLE_COLUMNS.map((id) => (
                       <td key={id} className="px-3 py-3 text-center">
                         <ComparisonCell value={row.values[id]} />
                       </td>

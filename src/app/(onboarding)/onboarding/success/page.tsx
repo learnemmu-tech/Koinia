@@ -93,6 +93,7 @@ export default async function OnboardingSuccessPage() {
 
   return (
     <OnboardingSuccessScreen
+      organizationId={appUser.organizationId}
       churchName={church.name.trim() || "Your church"}
       publicPath={churchWebsitePath(publicSlug)}
       publicUrl={buildChurchWebsiteUrl(publicSlug, origin)}

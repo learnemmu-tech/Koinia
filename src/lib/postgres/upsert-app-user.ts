@@ -120,8 +120,8 @@ export async function upsertAppUserFromClerk(
         .set({
           clerkId,
           email,
-          firstName: input.firstName,
-          lastName: input.lastName,
+          firstName: existing.firstName.trim() ? existing.firstName : input.firstName,
+          lastName: existing.lastName.trim() ? existing.lastName : input.lastName,
           emailVerifiedAt: verifiedAt ?? existing.emailVerifiedAt,
           updatedAt: now,
           ...bootstrap,
@@ -169,8 +169,8 @@ export async function upsertAppUserFromClerk(
           .set({
             clerkId,
             email,
-            firstName: input.firstName,
-            lastName: input.lastName,
+            firstName: concurrent.firstName.trim() ? concurrent.firstName : input.firstName,
+            lastName: concurrent.lastName.trim() ? concurrent.lastName : input.lastName,
             emailVerifiedAt: verifiedAt ?? concurrent.emailVerifiedAt,
             updatedAt: now,
             ...bootstrap,

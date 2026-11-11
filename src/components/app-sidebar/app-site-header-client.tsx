@@ -1,12 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
-import { NotificationBell } from "@/components/notifications/notification-bell";
+
+const NotificationBell = dynamic(() =>
+  import("@/components/notifications/notification-bell").then(
+    (module) => module.NotificationBell
+  )
+);
 import { SearchMenuClient } from "@/components/search/search-menu-client";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";

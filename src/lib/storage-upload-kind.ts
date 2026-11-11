@@ -10,4 +10,5 @@ export type StorageUploadKind =
   | "donation"
   | "book"
   | "group"
-  | "church-website";
+  | "church-website"
+  | "profile-photo";

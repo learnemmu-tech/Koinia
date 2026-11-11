@@ -13,11 +13,25 @@ import type { PlanId } from "@/types/subscription";
 import type { RazorpaySubscriptionResponse } from "@/lib/payments/razorpay-subscriptions";
 import { webhookDeliveryAction } from "@/lib/security/webhook-delivery";
 import {
+  cancelRazorpaySubscription,
+  fetchRazorpayPlan,
   fetchRazorpaySubscription,
+  fetchRazorpaySubscriptionInvoices,
   getPlanIdFromRazorpayPlanId,
   getRazorpayPlanId,
   mapRazorpayPeriodDate,
+  type RazorpayInvoiceResponse,
 } from "@/lib/payments/razorpay-subscriptions";
+import {
+  billingIntervalFromPeriod,
+  chargeConfirmsPaidAccess,
+  periodEndFromPlan,
+} from "@/lib/subscription/billing-eligibility";
+import { recordPaidRazorpayInvoices } from "@/lib/subscription/billing-receipts";
+import { notifySubscriptionPayments } from "@/lib/subscription/subscription-payment-notice";
+import { hasActivePaidEntitlement } from "@/lib/subscription/trial";
+
+const AWAITING_CHARGE_STATUSES = new Set(["created", "authenticated", "pending"]);
 
 const PAID_PLAN_IDS = new Set<PlanId>(["starter", "professional"]);
 const TERMINAL_PROVIDER_STATUSES = new Set([
@@ -125,6 +139,10 @@ export async function claimSubscriptionCheckoutAttempt({
       !TERMINAL_PROVIDER_STATUSES.has(providerStatus) &&
       !isStale;
 
+    if (existing?.status === "scheduled" && existing.planId === planId) {
+      return { kind: "scheduled" as const, attempt: existing };
+    }
+
     if (isOpen) {
       if (
         existing.requestId === requestId &&
@@ -189,6 +207,22 @@ export async function markSubscriptionCheckoutFailed(attemptId: string) {
     .where(eq(subscriptionCheckoutAttempts.id, attemptId));
 }
 
+async function cancelCheckoutSubscriptionIfUnlinked(
+  organizationId: string,
+  subscriptionId: string
+) {
+  const current = await getOrganizationSubscription(organizationId);
+  if (current?.razorpaySubscriptionId === subscriptionId) return;
+  try {
+    await cancelRazorpaySubscription(subscriptionId, { atCycleEnd: false });
+  } catch (error) {
+    console.error("[razorpay checkout] unused subscription cancel failed", {
+      organizationId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+}
+
 export async function abandonSubscriptionCheckoutAttempt({
   organizationId,
   subscriptionId,
@@ -196,7 +230,7 @@ export async function abandonSubscriptionCheckoutAttempt({
   organizationId: string;
   subscriptionId: string;
 }): Promise<boolean> {
-  return db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${organizationId}))`
     );
@@ -211,13 +245,13 @@ export async function abandonSubscriptionCheckoutAttempt({
       .where(eq(subscriptionCheckoutAttempts.organizationId, organizationId))
       .limit(1);
 
-    if (!attempt) return true;
-    if (attempt.providerSubscriptionId !== subscriptionId) return false;
+    if (!attempt) return "done" as const;
+    if (attempt.providerSubscriptionId !== subscriptionId) return "ignored" as const;
     if (TERMINAL_CHECKOUT_ATTEMPT_STATUSES.has(attempt.status.toLowerCase())) {
-      return true;
+      return "done" as const;
     }
     if (attempt.status !== "creating" && attempt.status !== "pending") {
-      return true;
+      return "done" as const;
     }
 
     const updated = await tx
@@ -226,8 +260,12 @@ export async function abandonSubscriptionCheckoutAttempt({
       .where(eq(subscriptionCheckoutAttempts.id, attempt.id))
       .returning({ id: subscriptionCheckoutAttempts.id });
 
-    return updated.length > 0;
+    return updated.length > 0 ? ("cancel" as const) : ("done" as const);
   });
+  if (outcome === "cancel") {
+    await cancelCheckoutSubscriptionIfUnlinked(organizationId, subscriptionId);
+  }
+  return outcome !== "ignored";
 }
 
 export async function failSubscriptionCheckoutAttempt({
@@ -237,7 +275,7 @@ export async function failSubscriptionCheckoutAttempt({
   organizationId: string;
   subscriptionId: string;
 }): Promise<boolean> {
-  return db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${organizationId}))`
     );
@@ -252,13 +290,13 @@ export async function failSubscriptionCheckoutAttempt({
       .where(eq(subscriptionCheckoutAttempts.organizationId, organizationId))
       .limit(1);
 
-    if (!attempt) return true;
-    if (attempt.providerSubscriptionId !== subscriptionId) return false;
+    if (!attempt) return "done" as const;
+    if (attempt.providerSubscriptionId !== subscriptionId) return "ignored" as const;
     if (TERMINAL_CHECKOUT_ATTEMPT_STATUSES.has(attempt.status.toLowerCase())) {
-      return true;
+      return "done" as const;
     }
     if (attempt.status !== "creating" && attempt.status !== "pending") {
-      return true;
+      return "done" as const;
     }
 
     const updated = await tx
@@ -267,8 +305,12 @@ export async function failSubscriptionCheckoutAttempt({
       .where(eq(subscriptionCheckoutAttempts.id, attempt.id))
       .returning({ id: subscriptionCheckoutAttempts.id });
 
-    return updated.length > 0;
+    return updated.length > 0 ? ("cancel" as const) : ("done" as const);
   });
+  if (outcome === "cancel") {
+    await cancelCheckoutSubscriptionIfUnlinked(organizationId, subscriptionId);
+  }
+  return outcome !== "ignored";
 }
 
 export async function failSubscriptionCheckoutByProviderId(
@@ -305,26 +347,89 @@ async function getCreatingCheckoutAttemptForOrganization(organizationId: string)
   return row ?? null;
 }
 
+async function billingIntervalForPlan(planId: string) {
+  try {
+    const plan = await fetchRazorpayPlan(planId);
+    return billingIntervalFromPeriod(plan.period);
+  } catch {
+    return "monthly" as const;
+  }
+}
+
+async function confirmedSubscription(subscription: RazorpaySubscriptionResponse): Promise<{
+  subscription: RazorpaySubscriptionResponse;
+  hasPaidCharge: boolean;
+  invoices: RazorpayInvoiceResponse[];
+}> {
+  let invoices: RazorpayInvoiceResponse[] = [];
+  try {
+    invoices = await fetchRazorpaySubscriptionInvoices(subscription.id);
+  } catch (error) {
+    console.error("[razorpay invoices]", error instanceof Error ? error.message : "unknown");
+  }
+  const paidInvoices = invoices.filter(
+    (invoice) => invoice.status?.toLowerCase() === "paid" && Boolean(invoice.payment_id)
+  );
+  const hasPaidCharge = paidInvoices.length > 0;
+  if (isBillableRazorpaySubscription(subscription) || !hasPaidCharge) {
+    return { subscription, hasPaidCharge, invoices: paidInvoices };
+  }
+  const paidAt =
+    mapRazorpayPeriodDate(paidInvoices[0]?.paid_at) ?? new Date();
+  const start = mapRazorpayPeriodDate(subscription.current_start) ?? paidAt;
+  let end = mapRazorpayPeriodDate(subscription.current_end);
+  if (!end) {
+    const plan = await fetchRazorpayPlan(subscription.plan_id);
+    end = periodEndFromPlan(start, plan.period, plan.interval);
+  }
+  return {
+    hasPaidCharge,
+    invoices: paidInvoices,
+    subscription: {
+      ...subscription,
+      current_start: Math.floor(start.getTime() / 1000),
+      current_end: Math.floor(end.getTime() / 1000),
+    },
+  };
+}
+
+function grantsPaidAccess(
+  subscription: RazorpaySubscriptionResponse,
+  hasPaidCharge: boolean
+): boolean {
+  return chargeConfirmsPaidAccess({
+    status: subscription.status,
+    currentEnd: mapRazorpayPeriodDate(subscription.current_end) ?? null,
+    hasPaidCharge: hasPaidCharge || isBillableRazorpaySubscription(subscription),
+  });
+}
+
 async function activateCheckoutAttempt({
   attempt,
   subscription,
+  hasPaidCharge,
+  invoices,
 }: {
   attempt: typeof subscriptionCheckoutAttempts.$inferSelect;
   subscription: RazorpaySubscriptionResponse;
+  hasPaidCharge: boolean;
+  invoices: RazorpayInvoiceResponse[];
 }) {
-  if (!isBillableRazorpaySubscription(subscription)) {
+  if (!grantsPaidAccess(subscription, hasPaidCharge)) {
     throw new Error("Subscription is not in a paid state.");
   }
+  const interval = await billingIntervalForPlan(subscription.plan_id);
   await db
     .update(subscriptions)
     .set({
       planId: attempt.planId,
       status: "active",
+      billingInterval: interval,
       provider: "razorpay",
       providerStatus: subscription.status,
       razorpaySubscriptionId: subscription.id,
       razorpayPlanId: subscription.plan_id,
-      razorpayCustomerId: subscription.customer_id ?? null,
+      razorpayCustomerId: subscription.customer_id || undefined,
       currentPeriodStart: mapRazorpayPeriodDate(subscription.current_start),
       currentPeriodEnd: mapRazorpayPeriodDate(subscription.current_end),
       updatedAt: new Date(),
@@ -333,6 +438,24 @@ async function activateCheckoutAttempt({
   await db
     .delete(subscriptionCheckoutAttempts)
     .where(eq(subscriptionCheckoutAttempts.id, attempt.id));
+  await recordPaidRazorpayInvoices({
+    organizationId: attempt.organizationId,
+    planId: attempt.planId,
+    subscriptionId: subscription.id,
+    invoices,
+    periodStart: mapRazorpayPeriodDate(subscription.current_start),
+    periodEnd: mapRazorpayPeriodDate(subscription.current_end),
+  });
+  await notifySubscriptionPayments({
+    organizationId: attempt.organizationId,
+    invoices,
+    planId: attempt.planId,
+    billingInterval: interval,
+    subscriptionId: subscription.id,
+    status: "active",
+    nextBillingDate: mapRazorpayPeriodDate(subscription.current_end),
+    initialActivation: true,
+  });
 }
 
 export function hasOpenRazorpaySubscription(
@@ -365,19 +488,52 @@ export async function persistRazorpayCustomerId({
     .where(eq(subscriptions.organizationId, organizationId));
 }
 
+function assertCheckoutPlan(
+  subscription: RazorpaySubscriptionResponse,
+  planId: Extract<PlanId, "starter" | "professional">
+) {
+  if (getPlanIdFromRazorpayPlanId(subscription.plan_id) !== planId) {
+    throw new Error("Subscription plan does not match the checkout.");
+  }
+}
+
+async function fetchUntilSettled(
+  subscriptionId: string,
+  planId: Extract<PlanId, "starter" | "professional">
+): Promise<RazorpaySubscriptionResponse> {
+  let last: RazorpaySubscriptionResponse | null = null;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const fetched = await fetchRazorpaySubscription(subscriptionId);
+    last = {
+      ...fetched,
+      plan_id: fetched.plan_id || getRazorpayPlanId(planId),
+    };
+    const confirmed = await confirmedSubscription(last);
+    if (grantsPaidAccess(confirmed.subscription, confirmed.hasPaidCharge)) {
+      return confirmed.subscription;
+    }
+    if (TERMINAL_PROVIDER_STATUSES.has(last.status.toLowerCase())) return last;
+    if (attempt < 5) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  if (!last) throw new Error("Unable to confirm the subscription with Razorpay.");
+  return last;
+}
+
 export async function markRazorpayCheckoutAuthorized({
   organizationId,
   subscriptionId,
 }: {
   organizationId: string;
   subscriptionId: string;
-}) {
+}): Promise<"active" | "scheduled"> {
   const current = await getOrganizationSubscription(organizationId);
   if (
     current?.razorpaySubscriptionId === subscriptionId &&
     current.status === "active"
   ) {
-    return;
+    return "active";
   }
 
   const attempt = await getCheckoutAttemptForSubscription(subscriptionId);
@@ -390,11 +546,7 @@ export async function markRazorpayCheckoutAuthorized({
 
   let subscription: RazorpaySubscriptionResponse;
   try {
-    const fetched = await fetchRazorpaySubscription(subscriptionId);
-    subscription = {
-      ...fetched,
-      plan_id: fetched.plan_id || getRazorpayPlanId(attempt.planId),
-    };
+    subscription = await fetchUntilSettled(subscriptionId, attempt.planId);
   } catch (error) {
     console.error("[razorpay checkout authorize] subscription fetch failed", {
       organizationId,
@@ -403,14 +555,48 @@ export async function markRazorpayCheckoutAuthorized({
     throw new Error("Unable to confirm the subscription with Razorpay.");
   }
 
-  if (!isBillableRazorpaySubscription(subscription)) {
+  assertCheckoutPlan(subscription, attempt.planId);
+  const startsAt = mapRazorpayPeriodDate(subscription.start_at);
+  if (startsAt && startsAt.getTime() > Date.now()) {
+    await db
+      .update(subscriptionCheckoutAttempts)
+      .set({
+        status: "scheduled",
+        providerSubscriptionId: subscription.id,
+        providerStatus: subscription.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(subscriptionCheckoutAttempts.id, attempt.id));
+    if (
+      current?.razorpaySubscriptionId &&
+      current.razorpaySubscriptionId !== subscription.id
+    ) {
+      const ended = await cancelRazorpaySubscription(current.razorpaySubscriptionId, {
+        atCycleEnd: true,
+      });
+      await applyRazorpaySubscriptionEvent(ended, "subscription.cancelled", {
+        cancelAtPeriodEnd: true,
+      });
+    }
+    return "scheduled";
+  }
+  const confirmed = await confirmedSubscription(subscription);
+
+  if (!grantsPaidAccess(confirmed.subscription, confirmed.hasPaidCharge)) {
+    const providerStatus = confirmed.subscription.status.toLowerCase();
+    if (AWAITING_CHARGE_STATUSES.has(providerStatus)) {
+      throw new Error("Subscription payment is processing.");
+    }
     throw new Error("Subscription is not in a paid state.");
   }
 
   await activateCheckoutAttempt({
     attempt,
-    subscription,
+    subscription: confirmed.subscription,
+    hasPaidCharge: confirmed.hasPaidCharge,
+    invoices: confirmed.invoices,
   });
+  return "active";
 }
 
 export async function applyRazorpaySubscriptionEvent(
@@ -429,7 +615,12 @@ export async function applyRazorpaySubscriptionEvent(
         : null);
     if (!attempt) return false;
     const providerStatus = subscription.status.toLowerCase();
-    const isSuccessful = isBillableRazorpaySubscription(subscription);
+    const startsAt = mapRazorpayPeriodDate(subscription.start_at);
+    const stillDeferred = Boolean(startsAt && startsAt.getTime() > Date.now());
+    const confirmed = await confirmedSubscription(subscription);
+    const isSuccessful =
+      !stillDeferred &&
+      grantsPaidAccess(confirmed.subscription, confirmed.hasPaidCharge);
     if (
       TERMINAL_CHECKOUT_ATTEMPT_STATUSES.has(attempt.status.toLowerCase()) &&
       !isSuccessful
@@ -443,30 +634,59 @@ export async function applyRazorpaySubscriptionEvent(
         providerStatus: subscription.status,
         status: TERMINAL_PROVIDER_STATUSES.has(providerStatus)
           ? "failed"
-          : "pending",
+          : attempt.status === "scheduled"
+            ? "scheduled"
+            : "pending",
         updatedAt: new Date(),
       })
       .where(eq(subscriptionCheckoutAttempts.id, attempt.id));
     if (isSuccessful) {
-      await activateCheckoutAttempt({ attempt, subscription });
+      if (!isPaidPlan(attempt.planId)) return false;
+      assertCheckoutPlan(confirmed.subscription, attempt.planId);
+      await activateCheckoutAttempt({
+        attempt,
+        subscription: confirmed.subscription,
+        hasPaidCharge: confirmed.hasPaidCharge,
+        invoices: confirmed.invoices,
+      });
     }
     return true;
   }
 
-  const currentStart = mapRazorpayPeriodDate(subscription.current_start);
-  const currentEnd = mapRazorpayPeriodDate(subscription.current_end);
-  const endedAt = mapRazorpayPeriodDate(subscription.ended_at);
-  const notesPlan = subscription.notes?.planId;
+  const confirmed = await confirmedSubscription(subscription);
+  const effective = confirmed.subscription;
+  const currentStart = mapRazorpayPeriodDate(effective.current_start);
+  const currentEnd = mapRazorpayPeriodDate(effective.current_end);
+  const endedAt = mapRazorpayPeriodDate(effective.ended_at);
+  const notesPlan = effective.notes?.planId;
   const planId =
-    getPlanIdFromRazorpayPlanId(subscription.plan_id) ??
+    getPlanIdFromRazorpayPlanId(effective.plan_id) ??
     (isPaidPlan(notesPlan ?? "")
       ? (notesPlan as Extract<PlanId, "starter" | "professional">)
       : row.planId);
-  const localStatus = mapLocalStatus(
-    subscription.status.toLowerCase(),
+  let localStatus = mapLocalStatus(
+    effective.status.toLowerCase(),
     currentEnd,
     endedAt
   );
+  if (grantsPaidAccess(effective, confirmed.hasPaidCharge)) {
+    localStatus = "active";
+  }
+  const alreadyPaid = hasActivePaidEntitlement({
+    planId: row.planId,
+    status: row.status,
+    trialStart: row.trialStart?.getTime(),
+    trialEnd: row.trialEnd?.getTime(),
+    currentPeriodEnd: row.currentPeriodEnd?.getTime(),
+    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+  });
+  if (
+    alreadyPaid &&
+    localStatus === "incomplete" &&
+    !TERMINAL_PROVIDER_STATUSES.has(effective.status.toLowerCase())
+  ) {
+    localStatus = "active";
+  }
   if (
     row.providerStatus &&
     TERMINAL_PROVIDER_STATUSES.has(row.providerStatus.toLowerCase()) &&
@@ -491,10 +711,11 @@ export async function applyRazorpaySubscriptionEvent(
     .set({
       planId,
       status: localStatus,
+      billingInterval: await billingIntervalForPlan(effective.plan_id),
       provider: "razorpay",
-      providerStatus: subscription.status,
-      razorpayPlanId: subscription.plan_id,
-      razorpayCustomerId: subscription.customer_id ?? row.razorpayCustomerId,
+      providerStatus: effective.status,
+      razorpayPlanId: effective.plan_id,
+      razorpayCustomerId: effective.customer_id ?? row.razorpayCustomerId,
       currentPeriodStart: currentStart ?? row.currentPeriodStart,
       currentPeriodEnd: currentEnd ?? row.currentPeriodEnd,
       cancelAtPeriodEnd: scheduledCancellation,
@@ -503,7 +724,89 @@ export async function applyRazorpaySubscriptionEvent(
     })
     .where(eq(subscriptions.razorpaySubscriptionId, subscription.id));
 
+  if (isPaidPlan(planId)) {
+    await recordPaidRazorpayInvoices({
+      organizationId: row.organizationId,
+      planId,
+      subscriptionId: effective.id,
+      invoices: confirmed.invoices,
+      periodStart: currentStart ?? row.currentPeriodStart ?? undefined,
+      periodEnd: currentEnd ?? row.currentPeriodEnd ?? undefined,
+    });
+    if (localStatus === "active") {
+      await notifySubscriptionPayments({
+        organizationId: row.organizationId,
+        invoices: confirmed.invoices,
+        planId,
+        billingInterval: await billingIntervalForPlan(effective.plan_id),
+        subscriptionId: effective.id,
+        status: localStatus,
+        nextBillingDate: currentEnd ?? row.currentPeriodEnd,
+        initialActivation: !alreadyPaid,
+      });
+    }
+  }
+
   return eventType.length > 0;
+}
+
+export async function syncOrganizationReceipts(
+  organizationId: string,
+  existing?: Awaited<ReturnType<typeof getOrganizationSubscription>>
+) {
+  const row = existing ?? (await getOrganizationSubscription(organizationId));
+  if (!row?.razorpaySubscriptionId) return;
+  try {
+    const invoices = await fetchRazorpaySubscriptionInvoices(row.razorpaySubscriptionId);
+    await recordPaidRazorpayInvoices({
+      organizationId,
+      planId: isPaidPlan(row.planId) ? row.planId : null,
+      subscriptionId: row.razorpaySubscriptionId,
+      invoices,
+      periodStart: row.currentPeriodStart ?? undefined,
+      periodEnd: row.currentPeriodEnd ?? undefined,
+    });
+  } catch (error) {
+    console.error("[billing receipt sync]", {
+      organizationId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
+}
+
+export async function reconcileOrganizationBilling(organizationId: string) {
+  const row = await getOrganizationSubscription(organizationId);
+  const [attempt] = await db
+    .select()
+    .from(subscriptionCheckoutAttempts)
+    .where(eq(subscriptionCheckoutAttempts.organizationId, organizationId))
+    .limit(1);
+  const alreadyPaid =
+    row != null &&
+    hasActivePaidEntitlement({
+      planId: row.planId,
+      status: row.status,
+      trialStart: row.trialStart?.getTime(),
+      trialEnd: row.trialEnd?.getTime(),
+      currentPeriodEnd: row.currentPeriodEnd?.getTime(),
+      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    });
+  if (alreadyPaid) {
+    await syncOrganizationReceipts(organizationId, row);
+    return;
+  }
+  const subscriptionId =
+    row?.razorpaySubscriptionId || attempt?.providerSubscriptionId || "";
+  if (!subscriptionId) return;
+  try {
+    const subscription = await fetchRazorpaySubscription(subscriptionId);
+    await applyRazorpaySubscriptionEvent(subscription, "subscription.charged");
+  } catch (error) {
+    console.error("[razorpay reconcile]", {
+      organizationId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  }
 }
 
 export async function claimRazorpayWebhookEvent({

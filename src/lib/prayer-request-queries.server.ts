@@ -21,5 +21,10 @@ export async function listLatestApprovedPrayerRequests(
   scope: ContentQueryInput,
   limit = 6
 ): Promise<FirebasePrayerRequest[]> {
-  return (await listApprovedPrayerRequests(scope)).slice(0, limit);
+  const rows = await listPrayerRequests(scope, {
+    status: "approved",
+    limit,
+    resolveCreatorClerkIds: false,
+  });
+  return rows.filter((request) => isPublicPrayerRequest(request));
 }

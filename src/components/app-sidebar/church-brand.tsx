@@ -4,14 +4,18 @@ import Link from "next/link";
 
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useChurchUrlScope } from "@/lib/templates/church-url-scope";
+import { churchWebsitePath } from "@/lib/templates/paths";
 import { siteConfig } from "@/config/site";
 
 export function ChurchBrand() {
   const { isMobile, setOpenMobile } = useSidebar();
+  const churchScope = useChurchUrlScope();
+  const homeHref = churchScope?.slug ? churchWebsitePath(churchScope.slug) : "/";
 
   return (
     <Link
-      href="/"
+      href={homeHref}
       onClick={() => {
         if (isMobile) setOpenMobile(false);
       }}

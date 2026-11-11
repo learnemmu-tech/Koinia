@@ -22,7 +22,7 @@ export const emailConfig = {
     "",
   appUrl: getAppUrl(),
   appName: siteConfig.name,
-  logoUrl: `${getAppUrl()}${siteConfig.image}`,
+  logoUrl: `${getAppUrl()}/images/logo.png`,
   privacyUrl: `${getAppUrl()}/privacy`,
   contactEmail: siteConfig.author.email,
 } as const;

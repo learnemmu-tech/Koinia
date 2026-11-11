@@ -24,6 +24,7 @@ export function mapAppUserToProfile(row: AppUserRow): FirestoreUser {
     firstName: row.firstName,
     lastName: row.lastName,
     email: row.email,
+    photoUrl: row.photoUrl ?? undefined,
     role: row.platformRole === "user" ? "user" : "admin",
     platformRole: row.platformRole,
     organizationId: row.organizationId ?? undefined,

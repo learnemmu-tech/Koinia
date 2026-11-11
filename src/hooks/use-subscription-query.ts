@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { firebaseAuth } from "@/lib/firebase-auth-service";
-import { QUERY_STALE_TIME } from "@/lib/react-query-config";
 import type { SubscriptionSnapshot } from "@/types/subscription";
 
 async function fetchSubscription(
@@ -37,8 +36,8 @@ export function useSubscriptionQuery(organizationId: string | null | undefined) 
     queryKey: ["subscription", organizationId],
     queryFn: () => fetchSubscription(organizationId!),
     enabled,
-    staleTime: QUERY_STALE_TIME,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 }

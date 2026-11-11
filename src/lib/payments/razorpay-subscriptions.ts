@@ -9,11 +9,11 @@ type RazorpaySubscriptionResponse = {
   plan_id: string;
   customer_id?: string | null;
   status: string;
-  current_start?: number | null;
-  current_end?: number | null;
-  ended_at?: number | null;
-  start_at?: number | null;
-  end_at?: number | null;
+  current_start?: number | string | null;
+  current_end?: number | string | null;
+  ended_at?: number | string | null;
+  start_at?: number | string | null;
+  end_at?: number | string | null;
   notes?: Record<string, string>;
   short_url?: string | null;
   change_scheduled_at?: number | null;
@@ -171,18 +171,41 @@ export async function ensureRazorpayCustomer({
 export async function createRazorpaySubscription({
   planId,
   organizationId,
+  customerId,
+  notifyEmail,
+  notifyPhone,
+  startAt,
 }: {
   planId: Extract<PlanId, "starter" | "professional">;
   organizationId: string;
+  customerId?: string | null;
+  notifyEmail?: string;
+  notifyPhone?: string;
+  startAt?: number;
 }): Promise<RazorpaySubscriptionResponse> {
+  const linkedCustomerId = customerId?.trim() || undefined;
+  const email = notifyEmail?.trim() || undefined;
+  const phone = notifyPhone?.trim() || undefined;
+  const canNotify = Boolean(linkedCustomerId || email || phone);
   return razorpayRequest<RazorpaySubscriptionResponse>("/subscriptions", "POST", {
     plan_id: getRazorpayPlanId(planId),
     total_count: getTotalCount(),
     quantity: 1,
-    customer_notify: true,
+    customer_notify: canNotify ? 1 : 0,
+    ...(linkedCustomerId ? { customer_id: linkedCustomerId } : {}),
+    ...(!linkedCustomerId && (email || phone)
+      ? {
+          notify_info: {
+            ...(email ? { notify_email: email } : {}),
+            ...(phone ? { notify_phone: phone } : {}),
+          },
+        }
+      : {}),
+    ...(startAt ? { start_at: startAt } : {}),
     notes: {
       organizationId,
       planId,
+      ...(startAt ? { replacesAtPeriodEnd: "true" } : {}),
     },
   });
 }
@@ -200,18 +223,20 @@ export async function updateRazorpaySubscriptionPlan({
     {
       plan_id: getRazorpayPlanId(planId),
       schedule_change_at: "cycle_end",
-      customer_notify: true,
+      customer_notify: 1,
     }
   );
 }
 
 export async function cancelRazorpaySubscription(
-  subscriptionId: string
+  subscriptionId: string,
+  options?: { atCycleEnd?: boolean }
 ): Promise<RazorpaySubscriptionResponse> {
+  const atCycleEnd = options?.atCycleEnd !== false;
   return razorpayRequest<RazorpaySubscriptionResponse>(
     `/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`,
     "POST",
-    { cancel_at_cycle_end: true }
+    { cancel_at_cycle_end: atCycleEnd ? 1 : 0 }
   );
 }
 
@@ -229,12 +254,7 @@ export function verifyRazorpaySubscriptionSignature({
   const expected = createHmac("sha256", secret)
     .update(`${paymentId}|${subscriptionId}`)
     .digest("hex");
-  const expectedBuffer = Buffer.from(expected, "utf8");
-  const signatureBuffer = Buffer.from(signature, "utf8");
-  return (
-    expectedBuffer.length === signatureBuffer.length &&
-    timingSafeEqual(expectedBuffer, signatureBuffer)
-  );
+  return safeEqualHex(expected, signature);
 }
 
 export function verifyRazorpayWebhookSignature(
@@ -244,8 +264,12 @@ export function verifyRazorpayWebhookSignature(
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
   if (!secret) return false;
   const expected = createHmac("sha256", secret).update(payload).digest("hex");
-  const expectedBuffer = Buffer.from(expected, "utf8");
-  const signatureBuffer = Buffer.from(signature, "utf8");
+  return safeEqualHex(expected, signature);
+}
+
+function safeEqualHex(expected: string, signature: string): boolean {
+  const expectedBuffer = Buffer.from(expected.toLowerCase(), "utf8");
+  const signatureBuffer = Buffer.from(signature.trim().toLowerCase(), "utf8");
   return (
     expectedBuffer.length === signatureBuffer.length &&
     timingSafeEqual(expectedBuffer, signatureBuffer)
@@ -258,8 +282,13 @@ export function parseRazorpaySubscriptionEvent(
   return JSON.parse(payload) as RazorpaySubscriptionEvent;
 }
 
-export function mapRazorpayPeriodDate(value?: number | null): Date | undefined {
-  return typeof value === "number" && value > 0 ? new Date(value * 1000) : undefined;
+export function mapRazorpayPeriodDate(
+  value?: number | string | null
+): Date | undefined {
+  if (value == null || value === "") return undefined;
+  const seconds = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) return undefined;
+  return new Date(seconds * 1000);
 }
 
 export async function fetchRazorpayPayment(paymentId: string): Promise<{
@@ -268,6 +297,7 @@ export async function fetchRazorpayPayment(paymentId: string): Promise<{
   amount: number;
   currency: string;
   status: string;
+  methodSummary: string | null;
 }> {
   const response = await fetch(
     `https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`,
@@ -289,13 +319,61 @@ export async function fetchRazorpayPayment(paymentId: string): Promise<{
   if (!body.id || typeof body.amount !== "number" || !body.currency || !body.status) {
     throw new Error("Unable to confirm the payment with Razorpay.");
   }
+  const method = (body as { method?: string; card?: { last4?: string }; vpa?: string }).method;
+  const card = (body as { card?: { last4?: string } }).card;
+  const vpa = (body as { vpa?: string }).vpa;
+  let methodSummary: string | null = null;
+  const network = (body as { card?: { network?: string; last4?: string } }).card?.network;
+  if (method === "card" && card?.last4) {
+    methodSummary = `${network ? `${network} ` : ""}card ending ${card.last4}`;
+  }
+  else if (method === "upi" && vpa) methodSummary = `UPI ${vpa}`;
+  else if (method) methodSummary = method.toUpperCase();
   return {
     id: body.id,
     order_id: body.order_id ?? null,
     amount: body.amount,
     currency: body.currency,
     status: body.status,
+    methodSummary,
   };
+}
+
+export type RazorpayPlanResponse = {
+  id: string;
+  period: string;
+  interval: number;
+};
+
+export type RazorpayInvoiceResponse = {
+  id: string;
+  status: string;
+  amount: number;
+  amount_paid?: number;
+  currency: string;
+  payment_id?: string | null;
+  subscription_id?: string | null;
+  paid_at?: number | string | null;
+  description?: string | null;
+  customer_details?: { name?: string | null; email?: string | null };
+  short_url?: string | null;
+};
+
+export async function fetchRazorpayPlan(planId: string): Promise<RazorpayPlanResponse> {
+  return razorpayRequest<RazorpayPlanResponse>(
+    `/plans/${encodeURIComponent(planId)}`,
+    "GET"
+  );
+}
+
+export async function fetchRazorpaySubscriptionInvoices(
+  subscriptionId: string
+): Promise<RazorpayInvoiceResponse[]> {
+  const body = await razorpayRequest<{ items?: RazorpayInvoiceResponse[] }>(
+    `/invoices?subscription_id=${encodeURIComponent(subscriptionId)}&count=100`,
+    "GET"
+  );
+  return Array.isArray(body.items) ? body.items : [];
 }
 
 export type { RazorpayCustomerResponse, RazorpaySubscriptionResponse };

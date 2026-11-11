@@ -23,6 +23,8 @@ import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { useIsPlatformSuperAdmin } from "@/hooks/use-admin-church-id";
 import { useSidebarAdminBadges } from "@/hooks/use-sidebar-admin-badges";
 import { useNavLabel } from "@/i18n/nav";
+import { useChurchUrlScope } from "@/lib/templates/church-url-scope";
+import { churchScopedPublicHref } from "@/lib/templates/paths";
 import { cn } from "@/lib/utils";
 
 type SidebarNavSectionsProps = {
@@ -131,6 +133,90 @@ function writeStoredOpen(label: string, open: boolean) {
   }
 }
 
+function NavItemGroup({
+  item,
+  label,
+  isCollapsed,
+  showBadges,
+  resolveBadge,
+  navLabel,
+  onNavigate,
+}: {
+  item: AppNavItem;
+  label: string;
+  isCollapsed: boolean;
+  showBadges: boolean;
+  resolveBadge: (item: AppNavItem) => number;
+  navLabel: (label: string) => string;
+  onNavigate: () => void;
+}) {
+  const pathname = usePathname();
+  const children = item.children ?? [];
+  const childActive = children.some((child) => child.match(pathname));
+  const [open, setOpen] = useState(childActive);
+
+  useEffect(() => {
+    if (childActive) setOpen(true);
+  }, [childActive, pathname]);
+
+  if (isCollapsed) {
+    return (
+      <NavItemLink
+        item={{ ...item, href: children[0]?.href ?? item.href }}
+        label={label}
+        isActive={item.match(pathname)}
+        isCollapsed
+        badgeCount={0}
+        onNavigate={onNavigate}
+      />
+    );
+  }
+
+  function toggle(next: boolean) {
+    setOpen(next);
+  }
+
+  return (
+    <>
+      <SidebarMenuItem>
+        <button
+          type="button"
+          onClick={() => toggle(!open)}
+          className={cn(
+            expandedNavLinkClass,
+            childActive ? navActiveExpandedClass : cn(navIdleClass, navHoverClass),
+            "[&>svg]:size-4 [&>svg]:shrink-0"
+          )}
+          aria-expanded={open}
+          aria-label={`${open ? "Collapse" : "Expand"} ${label}`}
+        >
+          <item.icon />
+          <span className="truncate">{label}</span>
+          <ChevronDown
+            className={cn(
+              "ml-auto size-3.5 shrink-0 opacity-70 transition-transform",
+              open ? "rotate-0" : "-rotate-90"
+            )}
+          />
+        </button>
+      </SidebarMenuItem>
+      {open
+        ? children.map((child) => (
+            <NavItemLink
+              key={child.href}
+              item={child}
+              label={navLabel(child.label)}
+              isActive={child.match(pathname)}
+              isCollapsed={false}
+              badgeCount={showBadges ? resolveBadge(child) : 0}
+              onNavigate={onNavigate}
+            />
+          ))
+        : null}
+    </>
+  );
+}
+
 function NavItemLink({
   item,
   label,
@@ -211,8 +297,7 @@ function CollapsibleSection({
   }, [hasActiveChild, label, pathname]);
 
   function handleOpenChange(next: boolean) {
-    if (hasActiveChild && !next) {
-      // Keep the active route's group discoverable.
+    if (label !== "Organization" && hasActiveChild && !next) {
       setOpen(true);
       writeStoredOpen(label, true);
       return;
@@ -225,17 +310,30 @@ function CollapsibleSection({
     return (
       <SidebarGroup className="mt-0.5 px-1 py-0 first:mt-0">
         <SidebarMenu className="gap-0.5">
-          {visibleItems.map((item) => (
-            <NavItemLink
-              key={item.href}
-              item={item}
-              label={navLabel(item.label)}
-              isActive={item.match(pathname)}
-              isCollapsed
-              badgeCount={showBadges ? resolveBadge(item) : 0}
-              onNavigate={onNavigate}
-            />
-          ))}
+            {visibleItems.map((item) =>
+              item.children?.length ? (
+                <NavItemGroup
+                  key={item.href}
+                  item={item}
+                  label={navLabel(item.label)}
+                  isCollapsed
+                  showBadges={showBadges}
+                  resolveBadge={resolveBadge}
+                  navLabel={navLabel}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <NavItemLink
+                  key={item.href}
+                  item={item}
+                  label={navLabel(item.label)}
+                  isActive={item.match(pathname)}
+                  isCollapsed
+                  badgeCount={showBadges ? resolveBadge(item) : 0}
+                  onNavigate={onNavigate}
+                />
+              )
+            )}
         </SidebarMenu>
       </SidebarGroup>
     );
@@ -266,17 +364,30 @@ function CollapsibleSection({
 
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-none">
           <SidebarMenu className="gap-0.5 pb-0.5">
-            {visibleItems.map((item) => (
-              <NavItemLink
-                key={item.href}
-                item={item}
-                label={navLabel(item.label)}
-                isActive={item.match(pathname)}
-                isCollapsed={false}
-                badgeCount={showBadges ? resolveBadge(item) : 0}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {visibleItems.map((item) =>
+              item.children?.length ? (
+                <NavItemGroup
+                  key={item.href}
+                  item={item}
+                  label={navLabel(item.label)}
+                  isCollapsed={false}
+                  showBadges={showBadges}
+                  resolveBadge={resolveBadge}
+                  navLabel={navLabel}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <NavItemLink
+                  key={item.href}
+                  item={item}
+                  label={navLabel(item.label)}
+                  isActive={item.match(pathname)}
+                  isCollapsed={false}
+                  badgeCount={showBadges ? resolveBadge(item) : 0}
+                  onNavigate={onNavigate}
+                />
+              )
+            )}
           </SidebarMenu>
         </CollapsibleContent>
       </SidebarGroup>
@@ -297,7 +408,20 @@ export function SidebarNavSections({
   const { user } = useFirebaseAuth();
   const badges = useSidebarAdminBadges();
   const navLabel = useNavLabel();
+  const churchScope = useChurchUrlScope();
   const canSeeAuthItems = Boolean(user) || isAuthenticated;
+
+  function scopeItem(item: AppNavItem): AppNavItem {
+    if (!churchScope?.slug) return item;
+    const href = churchScopedPublicHref(churchScope.slug, item.href);
+    return {
+      ...item,
+      href,
+      match: (pathname) =>
+        item.match(pathname) || pathname === href || pathname.startsWith(`${href}/`),
+      children: item.children?.map(scopeItem),
+    };
+  }
 
   function closeMobile() {
     if (isMobile) setOpenMobile(false);
@@ -314,11 +438,13 @@ export function SidebarNavSections({
   return (
     <div className={cn("flex flex-col", className)}>
       {sections.map((section, index) => {
-        const visibleItems = section.items.filter((item) => {
-          if (item.authOnly && !canSeeAuthItems) return false;
-          if (item.superAdminOnly && !isSuperAdmin) return false;
-          return true;
-        });
+        const visibleItems = section.items
+          .filter((item) => {
+            if (item.authOnly && !canSeeAuthItems) return false;
+            if (item.superAdminOnly && !isSuperAdmin) return false;
+            return true;
+          })
+          .map(scopeItem);
 
         if (visibleItems.length === 0) return null;
 
@@ -355,17 +481,30 @@ export function SidebarNavSections({
               </SidebarGroupLabel>
             : null}
             <SidebarMenu className="gap-0.5">
-              {visibleItems.map((item) => (
-                <NavItemLink
-                  key={item.href}
-                  item={item}
-                  label={navLabel(item.label)}
-                  isActive={item.match(pathname)}
-                  isCollapsed={isCollapsed}
-                  badgeCount={showBadges ? resolveBadge(item) : 0}
-                  onNavigate={closeMobile}
-                />
-              ))}
+              {visibleItems.map((item) =>
+                item.children?.length ? (
+                  <NavItemGroup
+                    key={item.href}
+                    item={item}
+                    label={navLabel(item.label)}
+                    isCollapsed={isCollapsed}
+                    showBadges={showBadges}
+                    resolveBadge={resolveBadge}
+                    navLabel={navLabel}
+                    onNavigate={closeMobile}
+                  />
+                ) : (
+                  <NavItemLink
+                    key={item.href}
+                    item={item}
+                    label={navLabel(item.label)}
+                    isActive={item.match(pathname)}
+                    isCollapsed={isCollapsed}
+                    badgeCount={showBadges ? resolveBadge(item) : 0}
+                    onNavigate={closeMobile}
+                  />
+                )
+              )}
             </SidebarMenu>
           </SidebarGroup>
         );

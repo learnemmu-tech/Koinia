@@ -12,7 +12,7 @@ import {
 } from "@/lib/postgres/app-user";
 import { isWebsiteSetupCompleted } from "@/lib/postgres/church-websites";
 
-export type FirstTimeStage = "onboarding" | "website" | "ready";
+export type FirstTimeStage = "onboarding" | "website" | "plan" | "urls" | "ready";
 
 export async function resolveFirstTimeStage(
   appUser: Pick<
@@ -28,7 +28,10 @@ export async function resolveFirstTimeStage(
     appUser.activeChurchId,
     appUser.organizationId
   );
-  return websiteReady ? "ready" : "website";
+  if (!websiteReady) return "website";
+
+  // Plan selection stays implemented, but it is temporarily skipped.
+  return "ready";
 }
 
 export async function resolveFirstTimeDestination(
@@ -41,6 +44,7 @@ export async function resolveFirstTimeDestination(
   const stage = await resolveFirstTimeStage(appUser);
   if (stage === "onboarding") return CREATE_WORKSPACE_PATH;
   if (stage === "website") return ONBOARDING_WEBSITE_PATH;
+  if (stage === "plan" || stage === "urls") return ONBOARDING_SUCCESS_PATH;
   return readyDestination;
 }
 
@@ -50,6 +54,7 @@ export function pathForFirstTimeStage(
 ): string {
   if (stage === "onboarding") return CREATE_WORKSPACE_PATH;
   if (stage === "website") return ONBOARDING_WEBSITE_PATH;
+  if (stage === "plan" || stage === "urls") return ONBOARDING_SUCCESS_PATH;
   if (stage === "ready") return readyDestination;
   return readyDestination;
 }

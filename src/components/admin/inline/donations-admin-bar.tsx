@@ -6,7 +6,7 @@ import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
-import { useAllowTrialWrite } from "@/context/subscription-context";
+import { useAllowTrialWrite, useSubscription } from "@/context/subscription-context";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useIsPlatformSuperAdmin } from "@/hooks/use-admin-church-id";
 import { useWorkspaceTenantScope } from "@/hooks/use-workspace-tenant-scope";
@@ -31,18 +31,23 @@ export function DonationsAdminBar({
   const isSuperAdmin = useIsPlatformSuperAdmin();
   const workspace = useWorkspaceTenantScope();
   const allowWrite = useAllowTrialWrite();
+  const { canUseFeature, loading: subscriptionLoading } = useSubscription();
   const [open, setOpen] = useState(false);
 
   const effectiveScope =
     contentScope === "platform_public" && isSuperAdmin
       ? ("platform_public" as const)
       : ("organization" as const);
+  const canCreateDonations =
+    effectiveScope === "platform_public" ||
+    (!subscriptionLoading && canUseFeature("canCreateDonations"));
 
   const churchId =
     effectiveScope === "platform_public" ? "" : (workspace.churchId ?? "");
 
   if (!isAdmin) return null;
   if (effectiveScope === "organization" && !churchId) return null;
+  if (!canCreateDonations) return null;
 
   return (
     <>

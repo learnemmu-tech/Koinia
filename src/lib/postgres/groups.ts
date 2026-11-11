@@ -20,7 +20,7 @@ import {
 import { getChurchById, getChurchRowById } from "@/lib/postgres/tenants";
 import { isPostgresUuid } from "@/lib/postgres/uuid";
 import { EmailService } from "@/lib/email/email-service";
-import { getStorageObjectKeyFromUrl } from "@/lib/supabase-storage";
+import { getStorageObjectKeyFromUrl } from "@/lib/storage/object-storage";
 import type {
   ChurchGroupDetail,
   ChurchGroupInviteCandidate,

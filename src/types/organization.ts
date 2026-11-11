@@ -14,6 +14,12 @@ export type OrganizationSettings = {
   email?: string;
   website?: string;
   address?: string;
+  billingLegalName?: string;
+  billingContactName?: string;
+  billingEmail?: string;
+  billingAddress?: string;
+  billingCountry?: string;
+  billingTaxId?: string;
   workspaceType?: WorkspaceType;
   defaultCurrency?: string;
   allowPublicSignup?: boolean;

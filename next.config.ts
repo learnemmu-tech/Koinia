@@ -9,16 +9,6 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const isProd = process.env.NODE_ENV === "production";
 const isDocker = process.env.IS_DOCKER === "true";
 
-function supabaseImageHostname(): string | null {
-  const raw = process.env.SUPABASE_URL?.trim();
-  if (!raw) return null;
-  try {
-    return new URL(raw).hostname;
-  } catch {
-    return null;
-  }
-}
-
 const config: NextConfig = {
   // Keep `next dev` and `next build` from sharing an incomplete `.next` cache.
   // A partial app-paths-manifest from the dev server makes collect-page-data
@@ -54,14 +44,6 @@ const config: NextConfig = {
         protocol: "https",
         hostname: "i.ytimg.com",
       },
-      ...(supabaseImageHostname()
-        ? [
-            {
-              protocol: "https" as const,
-              hostname: supabaseImageHostname()!,
-            },
-          ]
-        : []),
     ],
     // Optimize on Vercel production and Docker. Keep originals in local `next dev`
     // so admin-managed media is not double-compressed during development.
@@ -81,6 +63,17 @@ const config: NextConfig = {
     },
   },
   output: isDocker ? "standalone" : undefined,
+  webpack: (config, { dev }) => {
+    if (!dev) return config;
+    const ignored = [
+      "**/.git/**",
+      "**/node_modules/**",
+      "**/.tmp-heritage-shots/**",
+      "**/.next-dev/**",
+    ];
+    config.watchOptions = { ...config.watchOptions, ignored };
+    return config;
+  },
   async headers() {
     // script-src-elem lists the external <script> hosts the app actually loads:
     // Clerk, Cloudflare challenges, Umami, Vercel Web Analytics, and Razorpay

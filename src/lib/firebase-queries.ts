@@ -21,9 +21,13 @@ export async function getAllSongs(scope: ContentQueryInput): Promise<FirebaseSon
 
 export async function getPublishedSongs(
   scope: ContentQueryInput,
-  options?: { limit?: number }
+  options?: { limit?: number; offset?: number }
 ): Promise<FirebaseSong[]> {
-  return listSongs(scope, { publishedOnly: true, limit: options?.limit });
+  return listSongs(scope, {
+    publishedOnly: true,
+    limit: options?.limit,
+    offset: options?.offset,
+  });
 }
 
 export async function getSongById(songId: string): Promise<FirebaseSong | null> {

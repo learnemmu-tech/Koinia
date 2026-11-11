@@ -3,10 +3,6 @@ import { tenantContentQuery } from "@/lib/content/content-scope";
 import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
 import { generateChurchWebsiteMetadata } from "@/lib/templates/church-page-metadata";
 import { requireChurchWebsite } from "@/lib/templates/require-church-website";
-import { listSongs } from "@/lib/postgres/features";
-import { HeritageSongsPage } from "@/templates/heritage/pages/catalog";
-
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -19,13 +15,21 @@ export async function generateMetadata({
 
 export default async function ChurchSongsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
   const { model } = await requireChurchWebsite(slug);
-  if (usesSignatureAppExperience(model.templateId)) return <AppSongsPage />;
+  if (usesSignatureAppExperience(model.templateId)) {
+    return <AppSongsPage searchParams={searchParams} />;
+  }
 
+  const [{ listSongs }, { HeritageSongsPage }] = await Promise.all([
+    import("@/lib/postgres/features"),
+    import("@/templates/heritage/pages/catalog"),
+  ]);
   const songs = await listSongs(
     tenantContentQuery({
       organizationId: model.church.organizationId,

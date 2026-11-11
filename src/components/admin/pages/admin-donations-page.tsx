@@ -13,7 +13,7 @@ import { AdminListPagination } from "@/components/admin/admin-list-pagination";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { AdminToolbar } from "@/components/admin/admin-toolbar";
 import { adminSectionClass } from "@/lib/responsive-classes";
-import { useAllowTrialWrite } from "@/context/subscription-context";
+import { useAllowTrialWrite, useSubscription } from "@/context/subscription-context";
 import {
   Select,
   SelectContent,
@@ -49,6 +49,8 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
   const allowWrite = useAllowTrialWrite();
+  const { canUseFeature } = useSubscription();
+  const canCreateDonations = canUseFeature("canCreateDonations");
   const { campaigns, donations, loading } = useAdminDonations();
   const { invalidateDonations } = useInvalidateAdminQueries();
 
@@ -61,11 +63,12 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
+      if (!canCreateDonations) return;
       if (!allowWrite({ action: "create", resource: "donation" })) return;
       setSelectedCampaign(null);
       setModalOpen(true);
     }
-  }, [searchParams, allowWrite]);
+  }, [searchParams, allowWrite, canCreateDonations]);
 
   useEffect(() => {
     setPage(1);
@@ -109,7 +112,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         <AdminPageHeader
           title={t("title")}
           description={t("adminDescription")}
-          actionLabel={t("create")}
+          actionLabel={canCreateDonations ? t("create") : undefined}
           trialWrite={{ action: "create", resource: "donation" }}
           onAction={() => {
             setSelectedCampaign(null);
@@ -125,7 +128,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={t("searchPlaceholder")}
-        actionLabel={embedded ? t("create") : undefined}
+        actionLabel={embedded && canCreateDonations ? t("create") : undefined}
         trialWrite={{ action: "create", resource: "donation" }}
         onAction={
           embedded ?
@@ -166,6 +169,11 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         campaigns={pageItems}
         recentDonations={donations.slice(0, 10)}
         loading={loading}
+        emptyMessage={
+          !canCreateDonations && campaigns.length === 0 ?
+            "Donation campaigns are not available during the Free Trial. Upgrade your plan to create and manage donation campaigns."
+          : undefined
+        }
         onEdit={(campaign) => {
           if (!allowWrite({ action: "edit", resource: "donation" })) return;
           setSelectedCampaign(campaign);
@@ -181,6 +189,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         onPageChange={setPage}
       />
 
+      {canCreateDonations || selectedCampaign ?
       <AddDonationCampaignModal
         isOpen={modalOpen}
         onClose={() => {
@@ -194,6 +203,7 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         initialCampaign={selectedCampaign}
         churchId={adminChurchId ?? ""}
       />
+      : null}
     </div>
   );
 }

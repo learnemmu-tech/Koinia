@@ -30,10 +30,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid subscription signature." }, { status: 400 });
     }
 
-    await markRazorpayCheckoutAuthorized({
+    const result = await markRazorpayCheckoutAuthorized({
       organizationId: auth.organizationId,
       subscriptionId: body.subscriptionId,
     });
+
+    if (result === "scheduled") {
+      return NextResponse.json({
+        verified: true,
+        scheduled: true,
+        message:
+          "Your current plan stays active until this period ends. The new plan starts then, after Razorpay confirms that charge.",
+      });
+    }
 
     return NextResponse.json({ verified: true });
   } catch (error) {
@@ -43,6 +52,12 @@ export async function POST(request: Request) {
     }
     console.error("[api/subscription/razorpay/verify]", error instanceof Error ? error.message : "request failed");
     const message = error instanceof Error ? error.message : "";
+    if (message === "Subscription payment is processing.") {
+      return NextResponse.json({ verified: true, pending: true });
+    }
+    if (message === "Subscription plan does not match the checkout.") {
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
     if (
       message === "Subscription is not in a paid state." ||
       message === "Unable to confirm the subscription with Razorpay." ||

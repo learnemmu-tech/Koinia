@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { WebsiteTemplateGallery } from "@/components/website/website-template-gallery";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
 import { ONBOARDING_SUCCESS_PATH } from "@/lib/auth/auth-paths";
-import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
 import {
   bindFirebaseAuthCurrentUser,
   firebaseAuth,
@@ -102,7 +101,7 @@ export function OnboardingWebsiteSetupScreen({
     setSkipping(true);
     try {
       await persistTemplate(DEFAULT_TEMPLATE_ID);
-      navigateAfterAuth(WORKSPACE_BASE);
+      navigateAfterAuth(ONBOARDING_SUCCESS_PATH);
     } catch (error) {
       setSaveError(
         error instanceof Error

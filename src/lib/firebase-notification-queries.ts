@@ -68,6 +68,12 @@ export const NOTIFICATION_PRESETS: Record<
     message: "Your FaithConnectHub trial has an important update.",
     pathPrefix: "/dashboard/billing",
   },
+  subscription: {
+    title: "Subscription Activated",
+    message:
+      "Your subscription is now active. Your church workspace has been upgraded successfully.",
+    pathPrefix: "/dashboard/billing",
+  },
   short_pending_review: {
     title: "Short awaiting review",
     message: "A member submitted a Short for review.",

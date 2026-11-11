@@ -43,7 +43,7 @@ import {
 } from "@/lib/notifications/notification-destination";
 import { getChurchRowById } from "@/lib/postgres/tenants";
 import { isPostgresUuid, postgresUuidOrEmpty } from "@/lib/postgres/uuid";
-import { deleteStoredMediaUrls } from "@/lib/supabase-storage";
+import { deleteStoredMediaUrls } from "@/lib/storage/object-storage";
 import { TRIAL_EXPIRED_MESSAGE } from "@/lib/subscription/trial";
 import type { CreateArticleInput, FirebaseArticle, UpdateArticleInput } from "@/types/firebase-article";
 import type {
@@ -152,6 +152,11 @@ const NOTIFICATION_PRESETS: Record<
   trial_lifecycle: {
     title: "Trial update",
     message: "Your FaithConnectHub trial has an important update.",
+  },
+  subscription: {
+    title: "Subscription Activated",
+    message:
+      "Your subscription is now active. Your church workspace has been upgraded successfully.",
   },
   short_pending_review: {
     title: "Short awaiting review",
@@ -913,6 +918,7 @@ export async function listPrayerRequests(
     limit?: number;
     offset?: number;
     status?: string;
+    resolveCreatorClerkIds?: boolean;
   }
 ): Promise<FirebasePrayerRequest[]> {
   const query = resolveListQuery(scope);
@@ -953,6 +959,9 @@ export async function listPrayerRequests(
           .where(and(...conditions))
           .orderBy(desc(prayerRequests.createdAt))
           .offset(offset);
+  if (options?.resolveCreatorClerkIds === false) {
+    return rows.map((row) => mapPrayerRequest(row, null));
+  }
   const clerkIds = await getClerkIdsByUserIds(
     rows.map((row) => row.userId).filter((id): id is string => Boolean(id))
   );
@@ -1189,6 +1198,11 @@ export async function createDonationCampaign(
   }
 
   const church = await requireChurch(input.churchId);
+  const { assertFeatureAllowed, assertUsageAllowed } = await import(
+    "@/lib/subscription/subscription-server"
+  );
+  await assertFeatureAllowed(church.organizationId, "canCreateDonations");
+  await assertUsageAllowed(church.organizationId, "donationCampaigns");
   const [row] = await db
     .insert(donationCampaigns)
     .values({
@@ -1785,8 +1799,13 @@ export async function computeOrganizationUsage(
         WHERE organization_id = ${organizationId}) AS donation_campaigns,
       (SELECT count(*)::int FROM books
         WHERE organization_id = ${organizationId}) AS books,
-      (SELECT count(*)::int FROM video_shorts
-        WHERE organization_id = ${organizationId}) AS shorts,
+      (
+        (SELECT count(*)::int FROM video_shorts
+          WHERE organization_id = ${organizationId})
+        +
+        (SELECT count(*)::int FROM church_videos
+          WHERE organization_id = ${organizationId})
+      ) AS shorts,
       (SELECT count(*)::int FROM prayer_requests
         WHERE organization_id = ${organizationId}) AS prayer_requests
   `);

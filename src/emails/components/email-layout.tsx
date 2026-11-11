@@ -14,115 +14,183 @@ import type { ReactNode } from "react";
 
 import { emailConfig } from "@/lib/email/config";
 
+const ACCENT = "#c26a3a";
+const INK = "#2a241f";
+const MUTED = "#6d625b";
+const CREAM = "#f6f1ea";
+const CARD = "#fffdfb";
+
+export type EmailBrand = {
+  name?: string;
+  logoUrl?: string;
+  accentColor?: string;
+};
+
 type EmailLayoutProps = {
   preview: string;
   title: string;
+  eyebrow?: string;
   children: ReactNode;
+  brand?: EmailBrand;
 };
 
-export function EmailLayout({ preview, title, children }: EmailLayoutProps) {
+function safeAccent(value?: string): string {
+  return value && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim() : ACCENT;
+}
+
+function safeLogo(value?: string): string | null {
+  const url = value?.trim();
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function EmailLayout({
+  preview,
+  title,
+  eyebrow,
+  children,
+  brand,
+}: EmailLayoutProps) {
+  const accent = safeAccent(brand?.accentColor);
+  const churchName = brand?.name?.trim();
+  const logo = safeLogo(brand?.logoUrl) ?? emailConfig.logoUrl;
+  const wordmark = churchName || emailConfig.appName;
+
   return (
     <Html lang="en">
-      <Head>
-        <meta name="color-scheme" content="light dark" />
-        <meta name="supported-color-schemes" content="light dark" />
-        <style>{`
-          :root { color-scheme: light dark; }
-          body { margin: 0; padding: 0; }
-          @media (prefers-color-scheme: dark) {
-            .email-body, .email-wrapper { background-color: #111111 !important; }
-            .email-card { background-color: #1a1a1a !important; border-color: #2e2e2e !important; }
-            .email-title, .email-text { color: #f5f5f5 !important; }
-            .email-muted { color: #a3a3a3 !important; }
-            .email-footer { color: #737373 !important; }
-          }
-        `}</style>
-      </Head>
+      <Head />
       <Preview>{preview}</Preview>
       <Body
-        className="email-body"
         style={{
-          backgroundColor: "#f4f0f8",
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+          backgroundColor: CREAM,
+          fontFamily: "Georgia, 'Times New Roman', serif",
           margin: 0,
-          padding: "24px 12px",
+          padding: "28px 12px",
         }}
       >
-        <Container
-          className="email-wrapper"
-          style={{ maxWidth: "560px", margin: "0 auto" }}
-        >
-          <Section style={{ textAlign: "center", marginBottom: "24px" }}>
-            <Img
-              src={emailConfig.logoUrl}
-              width="48"
-              height="48"
-              alt={emailConfig.appName}
-              style={{ margin: "0 auto", borderRadius: "12px" }}
-            />
+        <Container style={{ maxWidth: "560px", margin: "0 auto" }}>
+          <Section style={{ textAlign: "center", padding: "8px 12px 0" }}>
             <Text
-              className="email-title"
               style={{
-                fontSize: "20px",
-                fontWeight: 700,
-                color: "#3d2d52",
-                margin: "12px 0 0",
+                fontFamily: "Arial, Helvetica, sans-serif",
+                fontSize: "11px",
+                letterSpacing: "0.22em",
+                color: accent,
+                margin: "0 0 10px",
+                textTransform: "uppercase",
               }}
             >
-              {emailConfig.appName}
+              {churchName ? churchName : emailConfig.appName}
             </Text>
-          </Section>
-
-          <Section
-            className="email-card"
-            style={{
-              backgroundColor: "#ffffff",
-              border: "1px solid #e8dff0",
-              borderRadius: "16px",
-              padding: "32px 28px",
-            }}
-          >
-            <Text
-              className="email-title"
+            <Hr style={{ borderColor: accent, borderTopWidth: "2px", margin: "0 0 4px" }} />
+            <Hr style={{ borderColor: accent, borderTopWidth: "1px", margin: "0" }} />
+            <Img
+              src={logo}
+              width="44"
+              height="44"
+              alt={wordmark}
+              title={wordmark}
               style={{
-                fontSize: "22px",
-                fontWeight: 700,
-                color: "#2d2438",
-                margin: "0 0 16px",
-                lineHeight: "1.3",
+                display: "block",
+                margin: "18px auto 8px",
+                width: "44px",
+                height: "44px",
+                border: "0",
+                outline: "none",
+                textDecoration: "none",
+                borderRadius: "8px",
+              }}
+            />
+            <Text
+              style={{
+                fontSize: "30px",
+                lineHeight: "1.2",
+                color: INK,
+                margin: "0",
+                fontWeight: 500,
               }}
             >
               {title}
             </Text>
+            {eyebrow ? (
+              <Text
+                style={{
+                  fontFamily: "Arial, Helvetica, sans-serif",
+                  fontSize: "12px",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: accent,
+                  margin: "10px 0 0",
+                }}
+              >
+                {eyebrow}
+              </Text>
+            ) : null}
+            <Hr style={{ borderColor: "#e4d9cc", margin: "18px 0 0" }} />
+          </Section>
+
+          <Section
+            style={{
+              backgroundColor: CARD,
+              padding: "8px 8px 28px",
+            }}
+          >
             {children}
           </Section>
 
-          <Hr style={{ borderColor: "#e8dff0", margin: "24px 0" }} />
-
-          <Section style={{ textAlign: "center" }}>
+          <Section
+            style={{
+              backgroundColor: "#2a241f",
+              borderRadius: "0 0 12px 12px",
+              padding: "22px 20px",
+              textAlign: "center",
+            }}
+          >
             <Text
-              className="email-footer"
-              style={{ fontSize: "12px", color: "#6b5f75", margin: "0 0 8px" }}
+              style={{
+                fontFamily: "Arial, Helvetica, sans-serif",
+                fontSize: "12px",
+                color: "#f6f1ea",
+                margin: "0 0 6px",
+              }}
             >
-              © {new Date().getFullYear()} {emailConfig.appName}. All rights
-              reserved.
+              © {new Date().getFullYear()} {emailConfig.appName}. All rights reserved.
             </Text>
-            <Text
-              className="email-footer"
-              style={{ fontSize: "12px", color: "#6b5f75", margin: "0 0 8px" }}
-            >
-              <Link
-                href={emailConfig.privacyUrl}
-                style={{ color: "#7c5c9a", textDecoration: "underline" }}
+            {churchName ? (
+              <Text
+                style={{
+                  fontFamily: "Arial, Helvetica, sans-serif",
+                  fontSize: "12px",
+                  color: "#d9cfc4",
+                  margin: "0 0 8px",
+                }}
               >
-                Privacy Policy
+                Sent for {churchName} with {emailConfig.appName}.
+              </Text>
+            ) : null}
+            <Text
+              style={{
+                fontFamily: "Arial, Helvetica, sans-serif",
+                fontSize: "12px",
+                color: "#d9cfc4",
+                margin: 0,
+              }}
+            >
+              <Link href={emailConfig.privacyUrl} style={{ color: "#f3d2bf" }}>
+                Privacy
               </Link>
               {" · "}
-              <Link
-                href={`mailto:${emailConfig.contactEmail}`}
-                style={{ color: "#7c5c9a", textDecoration: "underline" }}
-              >
+              <Link href={`${emailConfig.appUrl}/settings/notifications`} style={{ color: "#f3d2bf" }}>
+                Email preferences
+              </Link>
+              {" · "}
+              <Link href={`mailto:${emailConfig.contactEmail}`} style={{ color: "#f3d2bf" }}>
                 {emailConfig.contactEmail}
               </Link>
             </Text>
@@ -132,3 +200,6 @@ export function EmailLayout({ preview, title, children }: EmailLayoutProps) {
     </Html>
   );
 }
+
+export const emailInk = INK;
+export const emailMuted = MUTED;

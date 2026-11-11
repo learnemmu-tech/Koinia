@@ -18,10 +18,19 @@ import { roleMeetsMinimum } from "@/types/membership";
 import type { StorageUploadKind } from "@/lib/storage-upload-kind";
 import { rateLimitUploadRequest } from "@/lib/rate-limit";
 import {
+  createContentSignedUpload,
   deleteStoredMediaUrls,
+  getPublicStorageUrl,
   getStorageObjectKeyFromUrl,
+  isOwnedContentObjectKey,
   uploadPublicObject,
-} from "@/lib/supabase-storage";
+} from "@/lib/storage/object-storage";
+import {
+  deleteStoredObject,
+  headStoredObject,
+  readObjectPrefix,
+} from "@/lib/storage/s3";
+import { recordReadyChurchMedia } from "@/lib/storage/stored-objects";
 import {
   assertChurchContentWritable,
   assertSubscriptionWritable,
@@ -44,6 +53,7 @@ const UPLOAD_KINDS: StorageUploadKind[] = [
   "book",
   "group",
   "church-website",
+  "profile-photo",
 ];
 
 function isUploadKind(value: string | null): value is StorageUploadKind {
@@ -208,6 +218,7 @@ function isAuthorizedReplaceUrl(
     book: `books/${entityId}/`,
     group: `groups/${entityId}/`,
     "church-website": `churches/${entityId}/`,
+    "profile-photo": `profiles/${entityId}/`,
   };
 
   const prefix = prefixes[kind];
@@ -220,7 +231,7 @@ async function authorizeUpload(
   kind: StorageUploadKind,
   entityId: string
 ): Promise<true | NextResponse> {
-  if (kind === "onboarding") {
+  if (kind === "onboarding" || kind === "profile-photo") {
     if (entityId !== uid) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -332,6 +343,31 @@ export async function POST(request: NextRequest) {
       return authorized;
     }
 
+    let trackedChurchId: string | null = null;
+    if (kind === "church-logo" || kind === "church-cover" || kind === "church-website") {
+      trackedChurchId = entityId;
+    } else if (kind === "group") {
+      const { getChurchGroupDetail } = await import("@/lib/postgres/groups");
+      const group = await getChurchGroupDetail({
+        clerkId: decoded.uid,
+        email: decoded.email,
+        groupId: entityId,
+      });
+      trackedChurchId = group.churchId;
+    } else if (kind !== "onboarding" && kind !== "profile-photo" && kind !== "organization-logo") {
+      const record =
+        kind === "song" ? await getSongById(entityId)
+        : kind === "sermon" ? await getSermonById(entityId)
+        : kind === "article" ? await getArticleById(entityId)
+        : kind === "event" ? await getEventById(entityId)
+        : kind === "donation" ? await getDonationCampaignById(entityId)
+        : kind === "book" ? await (await import("@/lib/postgres/books")).getBookById(entityId)
+        : null;
+      trackedChurchId = record && "churchId" in record && typeof record.churchId === "string"
+        ? record.churchId
+        : null;
+    }
+
     try {
       if (kind === "organization-logo") {
         await assertSubscriptionWritable(entityId);
@@ -345,7 +381,7 @@ export async function POST(request: NextRequest) {
           groupId: entityId,
         });
         await assertSubscriptionWritable(group.organizationId);
-      } else if (kind !== "onboarding") {
+      } else if (kind !== "onboarding" && kind !== "profile-photo") {
         const record =
           kind === "song" ? await getSongById(entityId)
           : kind === "sermon" ? await getSermonById(entityId)
@@ -368,6 +404,93 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 403 });
       }
       throw error;
+    }
+
+    const contentTypeHeader = request.headers.get("content-type") ?? "";
+    if (contentTypeHeader.includes("application/json")) {
+      const body = (await request.json().catch(() => null)) as {
+        action?: string;
+        contentType?: string;
+        fileName?: string;
+        size?: number;
+        objectKey?: string;
+      } | null;
+      const maxBytes = type === "cover" ? MAX_IMAGE_SIZE : MAX_AUDIO_SIZE;
+      if (body?.action === "sign") {
+        const declaredSize = body.size ?? 0;
+        const declaredType = body.contentType?.trim() || "";
+        const declaredName = body.fileName?.trim() || entityId;
+        if (!Number.isFinite(declaredSize) || declaredSize < 1 || declaredSize > maxBytes) {
+          return NextResponse.json({ error: "File exceeds the size limit." }, { status: 400 });
+        }
+        const claimedExt = getFileExtension(declaredType, declaredName);
+        const allowedImage = ["jpg", "png", "webp", "gif", "avif"].includes(claimedExt);
+        const allowedAudio = /^(mp3|wav|m4a|ogg|webm|aac)$/.test(claimedExt);
+        const typeAllowed =
+          type === "cover" ? allowedImage : allowedAudio || declaredType.startsWith("audio/");
+        if (!typeAllowed) {
+          return NextResponse.json({ error: "File type is not allowed." }, { status: 400 });
+        }
+        const ext = type === "audio" && !allowedAudio ? "mp3" : claimedExt;
+        const safeType =
+          type === "cover" ? declaredType || "image/jpeg"
+          : declaredType.startsWith("audio/") ? declaredType
+          : "audio/mpeg";
+        const signed = await createContentSignedUpload({
+          kind,
+          entityId,
+          ext,
+          contentType: safeType,
+        });
+        return NextResponse.json({ ...signed, contentType: safeType });
+      }
+      if (body?.action === "complete") {
+        const objectKey = body.objectKey?.trim() ?? "";
+        if (!isOwnedContentObjectKey(kind, entityId, objectKey)) {
+          return NextResponse.json({ error: "Invalid upload." }, { status: 400 });
+        }
+        const head = await headStoredObject(objectKey);
+        const size = Number(head.ContentLength ?? -1);
+        if (size < 1 || size > maxBytes) {
+          await deleteStoredObject(objectKey).catch(() => undefined);
+          return NextResponse.json({ error: "Uploaded size does not match." }, { status: 409 });
+        }
+        const prefix = await readObjectPrefix(objectKey, 32);
+        const sniffed = type === "cover" ? sniffImageContentType(prefix) : null;
+        const audioOk = type === "audio" && looksLikeAudio(prefix);
+        if (type === "cover" ? !sniffed : !audioOk) {
+          await deleteStoredObject(objectKey).catch(() => undefined);
+          return NextResponse.json({ error: "Uploaded file failed validation." }, { status: 400 });
+        }
+        const ext = objectKey.split(".").pop() || "bin";
+        const mime = sniffed?.contentType || head.ContentType || "application/octet-stream";
+        if (trackedChurchId) {
+          await recordReadyChurchMedia({
+            churchId: trackedChurchId,
+            clerkId: decoded.uid,
+            objectKey,
+            filename: objectKey.split("/").pop() || entityId,
+            mimeType: mime,
+            extension: ext,
+            sizeBytes: size,
+            purpose: type === "audio" ? "audio" : "image",
+            visibility: "public_read",
+          });
+        }
+        if (replaceUrl) {
+          if (isAuthorizedReplaceUrl(replaceUrl, kind, entityId)) {
+            await deleteStoredMediaUrls(replaceUrl);
+          }
+        }
+        return NextResponse.json({
+          success: true,
+          url: getPublicStorageUrl(objectKey),
+          objectKey,
+          fileName: objectKey.split("/").pop(),
+          size,
+        });
+      }
+      return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
     }
 
     const formData = await request.formData();
@@ -429,6 +552,10 @@ export async function POST(request: NextRequest) {
       ext,
       body: buffer,
       contentType: safeContentType,
+      filename: fileName,
+      churchId: trackedChurchId,
+      clerkId: decoded.uid,
+      visibility: "public_read",
     });
 
     if (replaceUrl) {

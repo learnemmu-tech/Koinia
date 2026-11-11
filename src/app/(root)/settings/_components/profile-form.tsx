@@ -1,28 +1,17 @@
 "use client";
 
-import React from "react";
-import Image from "next/image";
-import { Pen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { ProfileAccountFields } from "@/components/profile/profile-account-fields";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useFirebaseAuth } from "@/context/firebase-auth-context";
-import { currentlyInDev } from "@/lib/utils";
 
 export function ProfileForm() {
   const t = useTranslations("settings");
   const tAuth = useTranslations("auth");
-  const tCommon = useTranslations("common");
-  const { authUser, profile, signOut } = useFirebaseAuth();
-
-  const displayName =
-    profile ?
-      `${profile.firstName} ${profile.lastName}`.trim()
-    : authUser?.displayName ?? "";
+  const { signOut } = useFirebaseAuth();
 
   async function handleSignOut() {
     try {
@@ -36,32 +25,7 @@ export function ProfileForm() {
   return (
     <div className="flex w-full max-w-5xl justify-between gap-4 px-6 py-2">
       <div className="space-y-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="profile-name">{t("nameLabel")}</Label>
-            <Input
-              id="profile-name"
-              value={displayName}
-              readOnly
-              className="w-96 shadow-sm"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="profile-email">{tAuth("email")}</Label>
-            <Input
-              id="profile-email"
-              type="email"
-              value={authUser?.email ?? ""}
-              readOnly
-              className="w-96 shadow-sm"
-            />
-          </div>
-
-          <Button type="button" onClick={currentlyInDev} className="shadow-sm">
-            {tCommon("saveChanges")}
-          </Button>
-        </div>
+        <ProfileAccountFields layout="settings" />
 
         <div id="delete-account" className="space-y-4">
           <p className="text-3xl font-bold text-destructive drop-shadow">
@@ -84,23 +48,6 @@ export function ProfileForm() {
         </div>
       </div>
 
-      <div className="relative size-52 overflow-hidden">
-        <Image
-          src={authUser?.photoURL ?? "/images/placeholder/user.jpg"}
-          alt={displayName || t("profilePhotoAlt")}
-          fill
-          className="rounded-full border p-1 shadow-sm"
-        />
-
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={currentlyInDev}
-          className="absolute bottom-4 left-0 gap-2 shadow-sm"
-        >
-          <Pen size={14} /> {tCommon("edit")}
-        </Button>
-      </div>
     </div>
   );
 }

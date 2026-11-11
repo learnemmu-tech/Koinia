@@ -13,7 +13,8 @@ import type {
  * subscriptions work — `getPlanLimits` / paid feature flags then apply as-is.
  * Do not treat this as a permanent pricing-model change.
  */
-export const TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED = true;
+/** Plan catalog limits are enforced as-is. Do not raise trial caps here. */
+export const TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED = false;
 
 export const TEMPORARY_TRIAL_CONTENT_ALLOWANCE = {
   events: 3,
@@ -30,17 +31,22 @@ export function applyTemporaryTrialContentAllowance(
     return { limits, features };
   }
 
+  const donationsIncluded =
+    features.canCreateDonations || (limits.donationCampaigns ?? 0) !== 0;
+
   return {
     limits: {
       ...limits,
       events: TEMPORARY_TRIAL_CONTENT_ALLOWANCE.events,
-      donationCampaigns: TEMPORARY_TRIAL_CONTENT_ALLOWANCE.donationCampaigns,
       books: TEMPORARY_TRIAL_CONTENT_ALLOWANCE.books,
+      ...(donationsIncluded
+        ? { donationCampaigns: TEMPORARY_TRIAL_CONTENT_ALLOWANCE.donationCampaigns }
+        : {}),
     },
     features: {
       ...features,
       canCreateEvents: true,
-      canCreateDonations: true,
+      ...(donationsIncluded ? { canCreateDonations: true } : {}),
     },
   };
 }

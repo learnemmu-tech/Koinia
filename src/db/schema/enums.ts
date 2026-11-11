@@ -152,6 +152,24 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "cancelled",
 ]);
 
+export const storedObjectVisibilityEnum = pgEnum("stored_object_visibility", [
+  "public_read",
+  "private",
+]);
+
+export const storedObjectStatusEnum = pgEnum("stored_object_status", [
+  "pending",
+  "ready",
+  "failed",
+  "deleting",
+]);
+
+export const storedObjectPurposeEnum = pgEnum("stored_object_purpose", [
+  "image",
+  "audio",
+  "video",
+]);
+
 export const notificationTypeEnum = pgEnum("notification_type", [
   "song",
   "article",
@@ -166,6 +184,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "short_pending_review",
   "short_review_result",
   "group_invitation",
+  "subscription",
 ]);
 
 export const favoriteItemTypeEnum = pgEnum("favorite_item_type", [

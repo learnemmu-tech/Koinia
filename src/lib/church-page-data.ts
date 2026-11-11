@@ -6,9 +6,8 @@ import type { TenantScope } from "@/lib/organization/tenant-scope";
 import type { TemplateId } from "@/lib/templates/types";
 
 import { resolveCurrentMemberChurchContext } from "@/lib/organization/resolve-current-church-server";
-import { getActiveTemplateForChurch } from "@/lib/postgres/church-websites";
-import { getChurchBySlug } from "@/lib/postgres/tenants";
 import { getRequestChurchUrlScope } from "@/lib/templates/church-url-request";
+import { cachedPublicChurchCore } from "@/lib/templates/load-church-website";
 
 export const getPageTenantContext = cache(async (): Promise<{
   scope: TenantScope;
@@ -21,20 +20,18 @@ export const getPageTenantContext = cache(async (): Promise<{
   // before the page could render, on every template.
   const urlChurch = await getRequestChurchUrlScope();
   if (urlChurch) {
-    const church = await getChurchBySlug(urlChurch.slug);
-    const activeTemplate =
-      church?.organizationId
-        ? await getActiveTemplateForChurch(church.id, church.organizationId)
-        : null;
+    const core = await cachedPublicChurchCore(urlChurch.slug);
+    const church = core
+      ? { ...core.church, activeTemplate: core.templateId }
+      : null;
     return {
       scope: {
         organizationId: urlChurch.organizationId,
         churchId: urlChurch.churchId,
       },
-      church:
-        church && activeTemplate ? { ...church, activeTemplate } : church,
+      church,
       defaultBranchId: church?.defaultBranchId?.trim() || null,
-      activeTemplate,
+      activeTemplate: core?.templateId ?? null,
     };
   }
 

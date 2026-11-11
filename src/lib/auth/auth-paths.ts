@@ -2,6 +2,7 @@
 
 export const CREATE_WORKSPACE_PATH = "/onboarding";
 export const ONBOARDING_WEBSITE_PATH = "/onboarding/website";
+export const ONBOARDING_PLAN_PATH = "/onboarding/plan";
 export const ONBOARDING_SUCCESS_PATH = "/onboarding/success";
 export const POST_AUTH_CONTINUE_PATH = "/auth/continue";
 /** Safe SSO/Clerk fallback when redirectUrlComplete is dropped — preserves callbackUrl. */

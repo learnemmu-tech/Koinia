@@ -5,8 +5,6 @@ import { isSectionVisible } from "@/lib/templates/visibility";
 import { notFound } from "next/navigation";
 import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
 
-export const dynamic = "force-dynamic";
-
 export async function generateMetadata({
   params,
 }: {

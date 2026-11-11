@@ -8,6 +8,7 @@ import { getChurchVideosForViewer } from "@/lib/cached-videos-data";
 import { listPendingReviewShorts } from "@/lib/postgres/shorts";
 import { pageContentClass } from "@/lib/responsive-classes";
 import { buildPageMetadata } from "@/lib/seo";
+import { headers } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
@@ -32,19 +33,21 @@ export default async function VideosPage({
   searchParams: Promise<{ tab?: string; short?: string }>;
 }) {
   const { short: initialShortId } = await searchParams;
-  const session = await auth();
-  const email = session.sessionClaims?.email as string | undefined;
+  const anonymous = (await headers()).get("x-koinia-session") === "0";
+  const session = anonymous ? null : await auth();
+  const userId = session?.userId ?? null;
+  const email = session?.sessionClaims?.email as string | undefined;
   const { contentQuery, isPlatformPublic, tenantScope } =
     await resolvePageContentQuery();
 
   const [videos, shorts, posting] = await Promise.all([
     getChurchVideosForViewer(contentQuery, {
-      clerkId: session.userId ?? null,
+      clerkId: userId ?? null,
       email,
-      includeUnpublished: Boolean(session.userId),
+      includeUnpublished: Boolean(userId),
     }),
     getPublishedShortsForViewer(contentQuery, "church", {
-      clerkId: session.userId ?? null,
+      clerkId: userId ?? null,
       email,
     }),
     (async () => {
@@ -56,19 +59,19 @@ export default async function VideosPage({
       let churchName = "FaithConnectHub";
       let pendingShorts: Awaited<ReturnType<typeof listPendingReviewShorts>> = [];
 
-      if (isPlatformPublic && session.userId) {
-        const appUser = await getAppUserByClerkId(session.userId);
+      if (isPlatformPublic && userId) {
+        const appUser = await getAppUserByClerkId(userId);
         if (isPlatformSuperAdmin(appUser?.platformRole)) {
           canManageVideos = true;
           canManageShorts = true;
           createContentScope = "platform_public";
           createChurchId = "";
         }
-      } else if (tenantScope?.churchId && session.userId) {
+      } else if (tenantScope?.churchId && userId) {
         const [church, canManage, canAccess] = await Promise.all([
           getChurchById(tenantScope.churchId),
-          userCanManageChurch(session.userId, email, tenantScope.churchId),
-          userCanAccessChurchContent(session.userId, email, tenantScope.churchId),
+          userCanManageChurch(userId, email, tenantScope.churchId),
+          userCanAccessChurchContent(userId, email, tenantScope.churchId),
         ]);
 
         churchName = church?.name?.trim() || churchName;
@@ -80,7 +83,7 @@ export default async function VideosPage({
 
         if (canManage) {
           pendingShorts = await listPendingReviewShorts({
-            clerkId: session.userId,
+            clerkId: userId,
             email,
             churchId: tenantScope.churchId,
           });

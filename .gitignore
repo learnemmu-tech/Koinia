@@ -77,6 +77,7 @@ web_modules/
 
 # Local audit / CDP artifacts (never deploy)
 tmp-heritage-shots/
+.tmp-heritage-shots/
 cdp.mjs
 eslint-report.json
 

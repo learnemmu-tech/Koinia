@@ -25,14 +25,15 @@ import {
   getPublicStorageUrl,
   isOwnedShortObjectKey,
   uploadShortObject,
-} from "@/lib/supabase-storage";
+} from "@/lib/storage/object-storage";
+import { recordReadyChurchMedia } from "@/lib/storage/stored-objects";
 
 const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "m4v"]);
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
 
-/** Large video uploads may take time on slower connections. */
-export const maxDuration = 120;
+/** JSON sign/complete calls are short. Video bytes go to S3 with a presigned PUT. */
+export const maxDuration = 60;
 
 function getExtension(mimeType: string, fileName: string): string {
   const map: Record<string, string> = {
@@ -206,6 +207,18 @@ export async function POST(request: NextRequest) {
         }
 
         const publicUrl = getPublicStorageUrl(objectKey);
+        if (short.churchId) {
+          await recordReadyChurchMedia({
+            churchId: short.churchId,
+            clerkId: auth.clerkId,
+            objectKey,
+            filename: body.fileName || objectKey,
+            mimeType: body.contentType || "application/octet-stream",
+            extension: objectKey.split(".").pop() || "bin",
+            purpose: slot === "video" ? "video" : "image",
+            visibility: "public_read",
+          });
+        }
         await finalizeSlot({ short, slot, publicUrl });
 
         return NextResponse.json({
@@ -228,6 +241,7 @@ export async function POST(request: NextRequest) {
         shortId: short.id,
         slot,
         ext: validated.ext!,
+        contentType: mimeType || "application/octet-stream",
       });
 
       return NextResponse.json({
@@ -280,6 +294,9 @@ export async function POST(request: NextRequest) {
       ext: validated.ext!,
       body: buffer,
       contentType: file.type || "application/octet-stream",
+      trackChurchId: short.churchId,
+      clerkId: auth.clerkId,
+      filename: file.name,
     });
 
     await finalizeSlot({

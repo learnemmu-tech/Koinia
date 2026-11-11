@@ -11,9 +11,9 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { Analytics } from "@vercel/analytics/react";
 
-import { RootClientShell } from "@/components/root-client-shell";
 import { siteConfig } from "@/config/site";
 import { LOCALE_COOKIE, parseLocale } from "@/i18n/config";
+import { getMessagesForLocale } from "@/i18n/messages";
 import { POST_AUTH_CONTINUE_HOME, CREATE_WORKSPACE_PATH } from "@/lib/auth/auth-paths";
 import { env } from "@/lib/env";
 import { SEO_KEYWORDS } from "@/lib/seo";
@@ -51,9 +51,12 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
   const cookieChurchId = readActiveChurchIdFromCookieValue(
     cookieStore.get(ACTIVE_CHURCH_COOKIE_NAME)?.value
   );
+  const pathname = headerStore.get("x-koinia-pathname") ?? "";
+  const anonymousPublicChurch =
+    pathname.startsWith("/c/") && headerStore.get("x-koinia-session") !== "1";
   let initialActiveChurchId = cookieChurchId;
   let signedIn = false;
-  if (!initialActiveChurchId) {
+  if (!initialActiveChurchId && !anonymousPublicChurch) {
     const authStarted = Date.now();
     const { userId } = await auth();
     logNavStage(traceId, "root.auth", authStarted, { signedIn: Boolean(userId) });
@@ -67,10 +70,19 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
     }
   }
   logNavStage(traceId, "root.layout", layoutStarted, {
-    sessionLookup: cookieChurchId ? "skipped-cookie" : signedIn ? "signed-in" : "signed-out",
+    sessionLookup: cookieChurchId
+      ? "skipped-cookie"
+      : anonymousPublicChurch
+        ? "public-church"
+        : signedIn
+          ? "signed-in"
+          : "signed-out",
     churchFromCookie: Boolean(cookieChurchId),
   });
   const locale = parseLocale(cookieStore.get(LOCALE_COOKIE)?.value);
+  const Shell = anonymousPublicChurch
+    ? (await import("@/components/public-root-shell")).PublicRootShell
+    : (await import("@/components/root-client-shell")).RootClientShell;
 
   return (
     <React.StrictMode>
@@ -98,13 +110,14 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
             signInFallbackRedirectUrl={POST_AUTH_CONTINUE_HOME}
             signUpFallbackRedirectUrl={CREATE_WORKSPACE_PATH}
           >
-            <RootClientShell
+            <Shell
               initialActiveChurchId={initialActiveChurchId}
               initialLocale={locale}
+              messages={getMessagesForLocale(locale)}
               modal={modal}
             >
               {children}
-            </RootClientShell>
+            </Shell>
           </ClerkProvider>
           <Analytics />
         </body>

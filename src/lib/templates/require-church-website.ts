@@ -3,7 +3,6 @@ import "server-only";
 import { notFound } from "next/navigation";
 
 import { loadChurchWebsiteBySlug } from "@/lib/templates/load-church-website";
-import { getTemplatePages } from "@/lib/templates/pages";
 import { usesSignatureAppExperience } from "@/lib/templates/signature-experience";
 import type { ChurchWebsiteViewModel, TemplatePages } from "@/lib/templates/types";
 import type { WebsiteVisibilityKey } from "@/lib/templates/types";
@@ -21,8 +20,19 @@ export async function requireChurchWebsite(slug: string): Promise<{
     ? shell
     : await loadChurchWebsiteBySlug(slug);
   if (!model) notFound();
+  if (usesSignatureAppExperience(model.templateId)) {
+    return { model, pages: unusedSignatureTemplatePages };
+  }
+  const { getTemplatePages } = await import("@/lib/templates/pages");
   return { model, pages: getTemplatePages(model.templateId) };
 }
+
+/** Signature routes render the app pages and never read this object. */
+const unusedSignatureTemplatePages = new Proxy({} as TemplatePages, {
+  get() {
+    throw new Error("Signature church routes do not render template pages.");
+  },
+});
 
 export async function requireVisibleChurchWebsite(
   slug: string,

@@ -1,18 +1,7 @@
-import { Text } from "@react-email/components";
-
 import { EmailButton } from "@/emails/components/email-button";
+import { EmailFacts, EmailNote, EmailText } from "@/emails/components/email-copy";
 import { EmailLayout } from "@/emails/components/email-layout";
 import { emailConfig } from "@/lib/email/config";
-
-type EventAnnouncementEmailProps = {
-  userName: string;
-  eventTitle: string;
-  eventDate: string;
-  eventTime?: string;
-  location?: string;
-  description: string;
-  eventId: string;
-};
 
 export function EventAnnouncementEmail({
   userName,
@@ -22,75 +11,27 @@ export function EventAnnouncementEmail({
   location,
   description,
   eventId,
-}: EventAnnouncementEmailProps) {
-  const preview = `New event: ${eventTitle}`;
-
+}: {
+  userName: string;
+  eventTitle: string;
+  eventDate: string;
+  eventTime?: string;
+  location?: string;
+  description: string;
+  eventId: string;
+}) {
   return (
-    <EmailLayout preview={preview} title="New ministry event">
-      <Text
-        className="email-text"
-        style={{
-          fontSize: "15px",
-          lineHeight: "1.6",
-          color: "#3d3545",
-          margin: "0 0 12px",
-        }}
-      >
-        Hi {userName},
-      </Text>
-      <Text
-        className="email-text"
-        style={{
-          fontSize: "15px",
-          lineHeight: "1.6",
-          color: "#3d3545",
-          margin: "0 0 16px",
-        }}
-      >
-        A new event has been published on FaithConnectHub:{" "}
-        <strong>{eventTitle}</strong>
-      </Text>
-      <Text
-        className="email-text"
-        style={{
-          fontSize: "14px",
-          lineHeight: "1.8",
-          color: "#3d3545",
-          margin: "0 0 8px",
-        }}
-      >
-        <strong>Date:</strong> {eventDate}
-        {eventTime ?
-          <>
-            <br />
-            <strong>Time:</strong> {eventTime}
-          </>
-        : null}
-        {location ?
-          <>
-            <br />
-            <strong>Location:</strong> {location}
-          </>
-        : null}
-      </Text>
-      {description ?
-        <Text
-          className="email-text"
-          style={{
-            fontSize: "14px",
-            lineHeight: "1.7",
-            color: "#3d3545",
-            margin: "12px 0 16px",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {description}
-        </Text>
-      : null}
-      <EmailButton
-        href={`${emailConfig.appUrl}/events/${eventId}`}
-        label="Register Now"
+    <EmailLayout preview={`New event: ${eventTitle}`} eyebrow="Event" title={eventTitle}>
+      <EmailText>Hi {userName}, a new event has been published.</EmailText>
+      <EmailFacts
+        rows={[
+          ["Date", eventDate],
+          ["Time", eventTime],
+          ["Location", location],
+        ]}
       />
+      {description?.trim() ? <EmailNote>{description}</EmailNote> : null}
+      <EmailButton href={`${emailConfig.appUrl}/events/${eventId}`} label="View event" />
     </EmailLayout>
   );
 }

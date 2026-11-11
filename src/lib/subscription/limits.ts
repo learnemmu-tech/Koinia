@@ -114,6 +114,9 @@ export function getRecommendedPlanForLimit(
   return "enterprise";
 }
 
+export const DONATION_REQUIRES_PAID_PLAN =
+  "Donation campaigns require an eligible paid plan.";
+
 export function getLimitExceededMessage(
   limitKey: UsageLimitKey,
   planName: string

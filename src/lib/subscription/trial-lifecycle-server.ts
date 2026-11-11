@@ -674,6 +674,17 @@ export async function processTrialLifecycle(
       continue;
     }
 
+    if (subscription.status === "incomplete" && !subscription.trialStart) {
+      results.skipped += 1;
+      results.organizations.push({
+        organizationId: row.organizationId,
+        entitlement: "unknown",
+        skipReason: "trial_not_started",
+        events: [],
+      });
+      continue;
+    }
+
     const lifecycle = getTrialLifecycle(
       {
         planId: subscription.planId,

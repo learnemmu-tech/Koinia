@@ -16,7 +16,6 @@ import { slugifyChurchSlug } from "@/lib/church-scope";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
 import type { WorkspaceType } from "@/types/organization";
-import { getTrialEndDate } from "@/lib/subscription/trial";
 
 export type PostgresWorkspaceProvisionInput = {
   name: string;
@@ -264,9 +263,10 @@ export async function provisionWorkspaceInPostgres(
           ? tx.insert(subscriptions).values({
               organizationId,
               planId: "free",
-              status: "trialing",
-              trialStart: now,
-              trialEnd: getTrialEndDate(now),
+              status: "incomplete",
+              billingInterval: null,
+              trialStart: null,
+              trialEnd: null,
             })
           : Promise.resolve();
 
@@ -282,9 +282,10 @@ export async function provisionWorkspaceInPostgres(
       await tx.insert(subscriptions).values({
         organizationId,
         planId: "free",
-        status: "trialing",
-        trialStart: now,
-        trialEnd: getTrialEndDate(now),
+        status: "incomplete",
+        billingInterval: null,
+        trialStart: null,
+        trialEnd: null,
       });
     }
 

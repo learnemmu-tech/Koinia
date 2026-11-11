@@ -120,9 +120,9 @@ export function HeaderUserMenu({
               heritage && "border-[var(--heritage-border)]"
             )}
           >
-            {authUser.photoURL ?
+            {(profile?.photoUrl || authUser.photoURL) ?
               <AvatarImage
-                src={authUser.photoURL}
+                src={profile?.photoUrl || authUser.photoURL || undefined}
                 alt={displayName}
                 referrerPolicy="no-referrer"
               />

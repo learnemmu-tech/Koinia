@@ -7,7 +7,7 @@ import { isSubscriptionLimitError } from "@/lib/subscription/subscription-server
 import {
   deleteStoredMediaUrls,
   uploadPublicObject,
-} from "@/lib/supabase-storage";
+} from "@/lib/storage/object-storage";
 import { validateImageFile } from "@/lib/upload-limits";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -49,6 +49,9 @@ export async function POST(request: Request, context: RouteContext) {
       ext,
       body: buffer,
       contentType: file.type || "image/jpeg",
+      filename: file.name,
+      churchId: book.churchId,
+      clerkId: authUser.uid,
     });
 
     await deleteStoredMediaUrls(book.coverImageUrl);

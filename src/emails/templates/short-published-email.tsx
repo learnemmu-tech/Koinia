@@ -1,48 +1,24 @@
-import { Text } from "@react-email/components";
-
 import { EmailButton } from "@/emails/components/email-button";
+import { EmailText } from "@/emails/components/email-copy";
 import { EmailLayout } from "@/emails/components/email-layout";
 import { emailConfig } from "@/lib/email/config";
-
-type ShortPublishedEmailProps = {
-  userName: string;
-  caption: string;
-  shortId: string;
-};
 
 export function ShortPublishedEmail({
   userName,
   caption,
   shortId,
-}: ShortPublishedEmailProps) {
+}: {
+  userName: string;
+  caption: string;
+  shortId: string;
+}) {
+  const title =
+    caption.split(/\r?\n/).map((line) => line.trim()).find(Boolean) || "New video";
   return (
-    <EmailLayout preview={`New Short: ${caption}`} title="New Short">
-      <Text
-        className="email-text"
-        style={{
-          fontSize: "15px",
-          lineHeight: "1.6",
-          color: "#3d3545",
-          margin: "0 0 12px",
-        }}
-      >
-        Hi {userName},
-      </Text>
-      <Text
-        className="email-text"
-        style={{
-          fontSize: "15px",
-          lineHeight: "1.6",
-          color: "#3d3545",
-          margin: "0 0 16px",
-        }}
-      >
-        Your church shared a new Short: <strong>{caption}</strong>
-      </Text>
-      <EmailButton
-        href={`${emailConfig.appUrl}/shorts?short=${encodeURIComponent(shortId)}`}
-        label="Watch Short"
-      />
+    <EmailLayout preview={`New video: ${title}`} eyebrow="Video" title={title}>
+      <EmailText>Hi {userName}, a new video is ready to watch.</EmailText>
+      {caption.trim() && caption.trim() !== title ? <EmailText>{caption}</EmailText> : null}
+      <EmailButton href={`${emailConfig.appUrl}/shorts/${shortId}`} label="Watch video" />
     </EmailLayout>
   );
 }

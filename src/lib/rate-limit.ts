@@ -10,6 +10,13 @@ function isProductionRuntime(): boolean {
   );
 }
 
+/** Deployed production must fail closed. `next start` on a workstation has no Upstash. */
+function isDeployedProduction(): boolean {
+  return Boolean(process.env.VERCEL);
+}
+
+let warnedLocalMemoryLimiter = false;
+
 /**
  * Rate limiter.
  * Production / Vercel: Upstash Redis required (fail closed if missing/unavailable).
@@ -26,10 +33,18 @@ async function rateLimitByKey(
   const production = isProductionRuntime();
 
   if (production && (!upstashUrl || !upstashToken)) {
-    console.error(
-      "[rate-limit] UPSTASH_REDIS_REST_URL/TOKEN required in production"
-    );
-    return { allowed: false, retryAfterMs: 60_000 };
+    if (isDeployedProduction()) {
+      console.error(
+        "[rate-limit] UPSTASH_REDIS_REST_URL/TOKEN required in production"
+      );
+      return { allowed: false, retryAfterMs: 60_000 };
+    }
+    if (!warnedLocalMemoryLimiter) {
+      warnedLocalMemoryLimiter = true;
+      console.warn(
+        "[rate-limit] Upstash is not set. This local production process is using the in-memory limiter. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN before deploying."
+      );
+    }
   }
 
   if (upstashUrl && upstashToken) {

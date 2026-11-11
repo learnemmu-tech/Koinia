@@ -1,87 +1,65 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { emailConfig } from "@/lib/email/config";
-import { EmailService } from "@/lib/email/email-service";
-import { verifyBearerToken } from "@/lib/email/verify-auth";
-import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { sendEmail } from "@/lib/email/send-email";
+import { renderTestEmail, TEST_EMAIL_TYPES } from "@/lib/email/test-templates";
 
 const bodySchema = z.object({
-  type: z.enum(["welcome", "article"]).default("welcome"),
-  to: z.string().email().optional(),
+  to: z.string().email(),
+  type: z.enum(["all", ...TEST_EMAIL_TYPES]).default("welcome"),
 });
 
 /**
- * Dev email verification — Super Admin only, never available in production.
- * POST /api/email/test { "type": "welcome" | "article", "to": "optional@email.com" }
+ * Development-only. Sends existing templates to the address in the request.
+ * POST /api/email/test { "to": "you@example.com", "type": "all" | "welcome" | ... }
  */
 export async function POST(request: Request) {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const authUser = await verifyBearerToken(request);
-  if (!authUser) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const appUser = await getAppUserByClerkId(authUser.uid);
-  if (!isPlatformSuperAdmin(appUser?.platformRole)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  let body: z.infer<typeof bodySchema>;
-  try {
-    body = bodySchema.parse(await request.json().catch(() => ({})));
-  } catch {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  }
-
-  const to = body.to ?? emailConfig.adminEmail;
-
-  const result =
-    body.type === "article" ?
-      await EmailService.sendArticlePublished({
-        to,
-        userName: "Test User",
-        articleTitle: "Test Article — Resend Verification",
-        summary:
-          "This is a test article notification to verify the Resend email pipeline.",
-        articleId: "test-article-id",
-      })
-    : await EmailService.sendWelcomeEmail({
-        to,
-        firstName: "Test",
-        lastName: "User",
-      });
-
-  if (!result.success) {
+  const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
     return NextResponse.json(
       {
-        success: false,
-        error: result.error,
-        config: {
-          from: emailConfig.from,
-          replyTo: emailConfig.replyTo,
-          apiKeyConfigured: Boolean(emailConfig.apiKey),
-          appUrl: emailConfig.appUrl,
-        },
+        error: "Provide your email as { \"to\": \"you@example.com\", \"type\": \"all\" }.",
+        types: ["all", ...TEST_EMAIL_TYPES],
       },
-      { status: 502 }
+      { status: 400 }
     );
   }
 
-  return NextResponse.json({
-    success: true,
-    id: result.id,
-    to,
-    type: body.type,
-    config: {
+  const { to, type } = parsed.data;
+  const types = type === "all" ? [...TEST_EMAIL_TYPES] : [type];
+  const results: Array<{ type: string; success: boolean; id?: string; error?: string }> = [];
+
+  for (const template of types) {
+    const message = renderTestEmail(template);
+    const result = await sendEmail({
+      to,
+      subject: message.subject,
+      react: message.react,
+    });
+    results.push({
+      type: template,
+      success: result.success,
+      id: result.id,
+      error: result.error,
+    });
+  }
+
+  const accepted = results.filter((item) => item.success).length;
+  return NextResponse.json(
+    {
+      accepted,
+      failed: results.length - accepted,
+      to,
       from: emailConfig.from,
-      replyTo: emailConfig.replyTo,
-      apiKeyConfigured: Boolean(emailConfig.apiKey),
-      appUrl: emailConfig.appUrl,
+      providerAccepted: accepted > 0 && accepted === results.length,
+      inboxDeliveryConfirmed: false,
+      results,
     },
-  });
+    { status: accepted === results.length ? 200 : 502 }
+  );
 }

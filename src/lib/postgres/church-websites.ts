@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { churchWebsites } from "@/db/schema";
+import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
 import { isPostgresUuid } from "@/lib/postgres/uuid";
 import { parseSocialLinks } from "@/lib/templates/social-links";
 import {
@@ -69,16 +70,22 @@ function optionalText(value: string | null | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function uploadedLogo(value: string | null | undefined): string | undefined {
+  const trimmed = optionalText(value);
+  if (!trimmed || trimmed === DEFAULT_CHURCH_LOGO) return undefined;
+  return trimmed;
+}
+
 function mapImages(row: WebsiteRow | null, church: FirebaseChurch) {
   const images: Partial<Record<TemplateImageSlot, string>> = {};
-  const logo = optionalText(row?.logoUrl) ?? optionalText(church.logoUrl);
+  const logo = uploadedLogo(church.logoUrl) ?? uploadedLogo(row?.logoUrl);
   const hero = optionalText(row?.heroImageUrl);
   const about = optionalText(row?.aboutImageUrl);
   const featuredMinistry = optionalText(row?.featuredMinistryImageUrl);
   const worship = optionalText(row?.worshipImageUrl);
   const socialPreview =
     optionalText(row?.socialPreviewImageUrl) ?? optionalText(row?.ogImageUrl);
-  const favicon = optionalText(row?.faviconUrl) ?? logo;
+  const favicon = uploadedLogo(church.logoUrl) ?? uploadedLogo(row?.faviconUrl) ?? logo;
 
   if (logo) images.logo = logo;
   if (hero) images.hero = hero;
@@ -137,7 +144,7 @@ export function mapWebsiteConfig(
     ogImageUrl: optionalText(row.ogImageUrl),
     canonicalUrl: optionalText(row.canonicalUrl),
     indexable: row.indexable,
-    logoUrl: optionalText(row.logoUrl) ?? defaults.logoUrl,
+    logoUrl: uploadedLogo(church.logoUrl) ?? uploadedLogo(row.logoUrl) ?? defaults.logoUrl,
     images: mapImages(row, church),
     heroEyebrow: optionalText(row.heroEyebrow),
     heroHeadline: optionalText(row.heroHeadline),
@@ -191,14 +198,20 @@ export const getChurchWebsiteRow = cache(async function getChurchWebsiteRow(
   return row ?? null;
 });
 
-export async function getChurchWebsiteConfig(
+export async function readChurchWebsiteConfig(
   church: FirebaseChurch
 ): Promise<ChurchWebsiteConfig> {
-  noStore();
   const organizationId = church.organizationId?.trim();
   if (!organizationId) return defaultWebsiteConfig(church);
   const row = await getChurchWebsiteRow(church.id, organizationId);
   return mapWebsiteConfig(row, church);
+}
+
+export async function getChurchWebsiteConfig(
+  church: FirebaseChurch
+): Promise<ChurchWebsiteConfig> {
+  noStore();
+  return readChurchWebsiteConfig(church);
 }
 
 /** Stored `church_websites.active_template` only — no Signature fallback. */

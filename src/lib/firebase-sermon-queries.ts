@@ -21,12 +21,12 @@ export async function getSermons(scope: ContentQueryInput): Promise<FirebaseSerm
 
 export async function getPublishedSermons(
   scope: ContentQueryInput,
-  options?: { limit?: number }
+  options?: { limit?: number; offset?: number }
 ): Promise<FirebaseSermon[]> {
   return listSermons(scope, {
     publishedOnly: true,
     limit: options?.limit,
-    // Catalog cards do not need creator Clerk ids — skip an extra Neon round-trip.
+    offset: options?.offset,
     resolveCreatorClerkIds: false,
   });
 }

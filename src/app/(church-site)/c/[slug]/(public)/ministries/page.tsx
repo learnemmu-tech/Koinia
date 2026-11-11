@@ -1,7 +1,5 @@
 import { requireVisibleChurchWebsite } from "@/lib/templates/require-church-website";
 
-export const dynamic = "force-dynamic";
-
 export default async function MinistriesPage({
   params,
 }: {

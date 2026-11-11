@@ -96,6 +96,8 @@ export type PlanDefinition = {
   yearlyPrice: number | null;
   highlighted?: boolean;
   contactSales?: boolean;
+  /** Shown on the pricing page. Not a checkout plan. */
+  comingSoon?: boolean;
   ctaLabel?: string;
   limits: PlanLimits;
   features: SubscriptionFeatureFlags;

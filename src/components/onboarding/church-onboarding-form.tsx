@@ -48,6 +48,10 @@ import {
 } from "@/lib/firebase-auth-service";
 
 import { COUNTRIES } from "@/lib/countries";
+import {
+  validateChurchAddress,
+  validateChurchPhone,
+} from "@/lib/organization/onboarding-contact";
 
 import { MAX_IMAGE_SIZE_LABEL, validateImageFile } from "@/lib/upload-limits";
 
@@ -83,7 +87,7 @@ export function ChurchOnboardingForm() {
 
   const [phone, setPhone] = useState("");
 
-  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
 
   const [website, setWebsite] = useState("");
 
@@ -183,6 +187,18 @@ export function ChurchOnboardingForm() {
 
     }
 
+    const phoneError = validateChurchPhone(phone);
+    if (phoneError) {
+      toast.error(phoneError);
+      return;
+    }
+
+    const addressError = validateChurchAddress(address);
+    if (addressError) {
+      toast.error(addressError);
+      return;
+    }
+
 
 
     const user = firebaseAuth.currentUser ?? sessionUserFromClerk();
@@ -226,8 +242,8 @@ export function ChurchOnboardingForm() {
       const requestBody = {
         name: name.trim(),
         ...(logoUrl ? { logoUrl } : {}),
-        phone: phone.trim() || undefined,
-        email: email.trim() || undefined,
+        phone: phone.trim(),
+        address: address.trim(),
         website: website.trim() || undefined,
         city: city.trim(),
         state: "N/A",
@@ -529,53 +545,34 @@ export function ChurchOnboardingForm() {
 
 
         <div className="grid gap-4 sm:grid-cols-2">
-
           <div className="space-y-2">
-
-            <Label htmlFor="phone">Phone (optional)</Label>
-
+            <Label htmlFor="phone">
+              Phone Number <span className="text-destructive">*</span>
+            </Label>
             <Input
-
               id="phone"
-
               type="tel"
-
               value={phone}
-
               onChange={(e) => setPhone(e.target.value)}
-
-              placeholder="+1 (555) 123-4567"
-
+              placeholder="+91 98765 43210"
+              required
               disabled={loading}
-
             />
-
           </div>
-
-
 
           <div className="space-y-2">
-
-            <Label htmlFor="email">Email (optional)</Label>
-
+            <Label htmlFor="address">
+              Church Address <span className="text-destructive">*</span>
+            </Label>
             <Input
-
-              id="email"
-
-              type="email"
-
-              value={email}
-
-              onChange={(e) => setEmail(e.target.value)}
-
-              placeholder="hello@yourchurch.org"
-
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Street, area, and postal code"
+              required
               disabled={loading}
-
             />
-
           </div>
-
         </div>
 
 

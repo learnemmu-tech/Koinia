@@ -28,16 +28,17 @@ function queryCacheKey(query: ContentQueryInput): string {
 
 export const getPublishedSongsCached = cache(async (
   query: ContentQueryInput,
-  limit?: number
+  limit?: number,
+  offset?: number
 ) => {
   const key = queryCacheKey(query);
   try {
     return await unstable_cache(
       async (): Promise<FirebaseSong[]> => {
-        const songs = await getPublishedSongs(query, { limit });
+        const songs = await getPublishedSongs(query, { limit, offset });
         return songs.map(toSongListItem);
       },
-      ["worship-published-songs", key, limit != null ? `limit-${limit}` : "all"],
+      ["worship-published-songs", key, limit != null ? `limit-${limit}` : "all", `offset-${offset ?? 0}`],
       {
         revalidate: REVALIDATE_SECONDS,
         tags: ["worship-songs", `content-${key}`],
@@ -51,16 +52,17 @@ export const getPublishedSongsCached = cache(async (
 
 export const getPublishedSermonsCached = cache(async (
   query: ContentQueryInput,
-  limit?: number
+  limit?: number,
+  offset?: number
 ) => {
   const key = queryCacheKey(query);
   try {
     return await unstable_cache(
       async (): Promise<FirebaseSermon[]> => {
-        const sermons = await getPublishedSermons(query, { limit });
+        const sermons = await getPublishedSermons(query, { limit, offset });
         return sermons.map(toSermonListItem);
       },
-      ["worship-published-sermons", key, limit != null ? `limit-${limit}` : "all"],
+      ["worship-published-sermons", key, limit != null ? `limit-${limit}` : "all", `offset-${offset ?? 0}`],
       {
         revalidate: REVALIDATE_SECONDS,
         tags: ["worship-sermons", `content-${key}`],
@@ -74,16 +76,17 @@ export const getPublishedSermonsCached = cache(async (
 
 export const getPublishedArticlesCached = cache(async (
   query: ContentQueryInput,
-  limit?: number
+  limit?: number,
+  offset?: number
 ) => {
   const key = queryCacheKey(query);
   try {
     return await unstable_cache(
       async (): Promise<FirebaseArticle[]> => {
-        const articles = await getPublishedArticles(query, { limit });
+        const articles = await getPublishedArticles(query, { limit, offset });
         return articles.map(toArticleListItem);
       },
-      ["worship-published-articles", key, limit != null ? `limit-${limit}` : "all"],
+      ["worship-published-articles", key, limit != null ? `limit-${limit}` : "all", `offset-${offset ?? 0}`],
       {
         revalidate: REVALIDATE_SECONDS,
         tags: ["worship-articles", `content-${key}`],
@@ -97,15 +100,16 @@ export const getPublishedArticlesCached = cache(async (
 
 export const getPublishedEventsCached = cache(async (
   query: ContentQueryInput,
-  limit?: number
+  limit?: number,
+  offset?: number
 ) => {
   const key = queryCacheKey(query);
   try {
     return await unstable_cache(
       async (): Promise<FirebaseEvent[]> => {
-        return getPublishedEvents(query, { limit });
+        return getPublishedEvents(query, { limit, offset });
       },
-      ["worship-published-events", key, limit != null ? `limit-${limit}` : "all"],
+      ["worship-published-events", key, limit != null ? `limit-${limit}` : "all", `offset-${offset ?? 0}`],
       { revalidate: REVALIDATE_SECONDS, tags: ["events", `content-${key}`] }
     )();
   } catch (error) {

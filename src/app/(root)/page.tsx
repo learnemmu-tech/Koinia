@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 
 import { HomeAdminFab } from "@/components/home-admin-fab";
@@ -24,11 +25,12 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function HomePage() {
+  const anonymous = (await headers()).get("x-koinia-session") === "0";
   const [{ church }, { contentQuery, isPlatformPublic }, session] =
     await Promise.all([
       getPageTenantContext(),
       resolvePageContentQuery(),
-      auth(),
+      anonymous ? Promise.resolve({ userId: null }) : auth(),
     ]);
 
   return (

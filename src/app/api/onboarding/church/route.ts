@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  validateChurchAddress,
+  validateChurchPhone,
+} from "@/lib/organization/onboarding-contact";
 import { provisionWorkspaceInPostgres } from "@/lib/postgres/provision-workspace";
 import type { FirstChurchOnboardingInput } from "@/lib/organization/onboarding-server";
 import type { WorkspaceType } from "@/types/organization";
@@ -42,6 +46,14 @@ export async function POST(request: Request) {
     if (!city) {
       return NextResponse.json({ error: "City is required" }, { status: 400 });
     }
+    const phoneError = validateChurchPhone(body.phone ?? "");
+    if (phoneError) {
+      return NextResponse.json({ error: phoneError }, { status: 400 });
+    }
+    const addressError = validateChurchAddress(body.address ?? "");
+    if (addressError) {
+      return NextResponse.json({ error: addressError }, { status: 400 });
+    }
     if (!state) {
       return NextResponse.json({ error: "State is required" }, { status: 400 });
     }
@@ -60,10 +72,10 @@ export async function POST(request: Request) {
       country,
       city,
       state,
-      phone: body.phone?.trim() || undefined,
-      email: body.email?.trim() || undefined,
+      phone: body.phone?.trim(),
+      email: undefined,
       website: body.website?.trim() || undefined,
-      address: body.address?.trim() || undefined,
+      address: body.address?.trim(),
       workspaceType,
     };
 

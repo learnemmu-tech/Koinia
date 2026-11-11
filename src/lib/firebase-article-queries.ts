@@ -21,11 +21,12 @@ export async function getArticles(scope: ContentQueryInput): Promise<FirebaseArt
 
 export async function getPublishedArticles(
   scope: ContentQueryInput,
-  options?: { limit?: number }
+  options?: { limit?: number; offset?: number }
 ): Promise<FirebaseArticle[]> {
   return listArticles(scope, {
     publishedOnly: true,
     limit: options?.limit,
+    offset: options?.offset,
     resolveCreatorClerkIds: false,
   });
 }

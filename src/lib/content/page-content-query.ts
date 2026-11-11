@@ -62,8 +62,6 @@ export const resolvePageContentQuery = cache(
     options: ResolvePageContentQueryOptions = {}
   ): Promise<PageContentContext> => {
     const totalStarted = Date.now();
-    const { userId } = await traceRequestStage("resolve.auth", () => auth());
-
     const urlChurch = await getRequestChurchUrlScope();
     if (urlChurch) {
       await logRequestStage("resolve.content", totalStarted, { source: "url" });
@@ -76,6 +74,8 @@ export const resolvePageContentQuery = cache(
         },
       };
     }
+
+    const { userId } = await traceRequestStage("resolve.auth", () => auth());
 
     if (!userId) {
       await logRequestStage("resolve.content", totalStarted, {

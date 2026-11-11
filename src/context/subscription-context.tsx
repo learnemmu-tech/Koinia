@@ -139,6 +139,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         });
         return false;
       }
+      if (
+        limitKey === "donationCampaigns" &&
+        !data.features.canCreateDonations
+      ) {
+        toast.error("Donation campaigns require an eligible paid plan.");
+        return false;
+      }
       const check = data.usageChecks.find((item) => item.key === limitKey);
       if (!check?.atLimit) return true;
       if (

@@ -34,6 +34,7 @@ type DonationCampaignListProps = {
   campaigns: FirebaseDonationCampaign[];
   recentDonations: FirebaseDonation[];
   loading: boolean;
+  emptyMessage?: string;
   onEdit: (campaign: FirebaseDonationCampaign) => void;
   onDelete: () => void;
 };
@@ -42,6 +43,7 @@ export function DonationCampaignList({
   campaigns,
   recentDonations,
   loading,
+  emptyMessage,
   onEdit,
   onDelete,
 }: DonationCampaignListProps) {
@@ -108,7 +110,7 @@ export function DonationCampaignList({
         {campaigns.length === 0 ?
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <HeartHandshake className="h-5 w-5 text-muted-foreground" />
-            <p className="text-sm font-medium">{t("emptyAdminTitle")}</p>
+            <p className="text-sm font-medium">{emptyMessage ?? t("emptyAdminTitle")}</p>
           </div>
         : <div className="divide-y divide-border/40">
             {campaigns.map((campaign) => {

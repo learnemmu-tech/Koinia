@@ -13,10 +13,6 @@ export const env = createEnv({
 
     CLERK_SECRET_KEY: z.string().min(1),
 
-    SUPABASE_URL: z.string().url(),
-    SUPABASE_SECRET_KEY: z.string().min(1),
-    SUPABASE_STORAGE_BUCKET: z.string().min(1).default("faithconnecthub"),
-
     UMAMI_WEBSITE_ID: z.string().optional(),
     SUPER_ADMIN_EMAIL: z.string().email().optional(),
     ADMIN_NOTIFICATION_EMAIL: z.string().email().optional(),
@@ -34,6 +30,16 @@ export const env = createEnv({
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
     CRON_SECRET: z.string().min(1).optional(),
+
+    /** Optional. When unset, sends fail instead of being reported as delivered. */
+    RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_FROM_EMAIL: z.string().min(1).optional(),
+    RESEND_REPLY_TO: z.string().min(1).optional(),
+
+    AWS_REGION: z.string().min(1),
+    AWS_S3_BUCKET: z.string().min(1),
+    AWS_ACCESS_KEY_ID: z.string().min(1),
+    AWS_SECRET_ACCESS_KEY: z.string().min(1),
 
     /** Shepherd AI — server-only. Never expose via NEXT_PUBLIC_. */
     GEMINI_API_KEY: z.string().min(1).optional(),

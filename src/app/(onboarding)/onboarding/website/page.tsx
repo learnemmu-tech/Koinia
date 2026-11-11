@@ -12,6 +12,7 @@ import { resolveFirstTimeStage } from "@/lib/auth/first-time-destination";
 import { organizationAllowsWorkspaceAccess } from "@/lib/auth/organization-workspace-access-server";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
+import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
 import { getChurchRowById } from "@/lib/postgres/tenants";
 import { listTemplateManifests } from "@/lib/templates/registry";
 
@@ -36,8 +37,14 @@ export default async function OnboardingWebsitePage() {
   if (stage === "onboarding") {
     redirect(CREATE_WORKSPACE_PATH);
   }
-  if (stage === "ready") {
+  if (stage === "plan") {
     redirect(ONBOARDING_SUCCESS_PATH);
+  }
+  if (stage === "urls") {
+    redirect(ONBOARDING_SUCCESS_PATH);
+  }
+  if (stage === "ready") {
+    redirect(WORKSPACE_BASE);
   }
 
   if (!appUser?.organizationId) {

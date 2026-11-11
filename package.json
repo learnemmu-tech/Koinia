@@ -10,7 +10,7 @@
     "preview": "next build && next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/production-security.test.ts tests/security-audit-fixes.test.ts",
+    "test": "node --experimental-strip-types --test tests/production-security.test.ts tests/security-audit-fixes.test.ts tests/billing-subscription.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -24,6 +24,8 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1165.0",
+    "@aws-sdk/s3-request-presigner": "^3.1165.0",
     "@clerk/nextjs": "^7.9.1",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
@@ -51,7 +53,6 @@
     "@radix-ui/react-tooltip": "^1.2.10",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.0.9",
-    "@supabase/supabase-js": "^2.115.0",
     "@t3-oss/env-nextjs": "^0.13.8",
     "@tanstack/react-query": "^5.59.13",
     "@upstash/ratelimit": "^2.0.3",

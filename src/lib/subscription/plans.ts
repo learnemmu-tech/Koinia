@@ -55,7 +55,7 @@ const STARTER_FEATURES: SubscriptionFeatureFlags = {
   canUseAnalytics: true,
   canCustomizeBranding: true,
   canInviteAdmins: true,
-  hasPrioritySupport: true,
+  hasPrioritySupport: false,
 };
 
 const PROFESSIONAL_FEATURES: SubscriptionFeatureFlags = {
@@ -72,8 +72,8 @@ const ENTERPRISE_FEATURES: SubscriptionFeatureFlags = {
   canUseWhiteLabel: false,
   canUseCustomDomain: false,
   canUseApiAccess: false,
-  hasDedicatedSupport: true,
-  hasSla: true,
+  hasDedicatedSupport: false,
+  hasSla: false,
 };
 
 export const PLANS: Record<PlanId, PlanDefinition> = {
@@ -87,17 +87,20 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     monthlyPrice: 0,
     yearlyPrice: 0,
     ctaLabel: "Start 14-day trial",
-    limits: limits({}),
+    limits: limits({
+      songs: 5,
+      sermons: 5,
+      articles: 5,
+      shorts: 3,
+      books: 3,
+      donationCampaigns: 0,
+      prayerRequests: 5,
+    }),
     features: FREE_FEATURES,
     highlights: [
       "1 Church",
-      "15 Members",
-      "10 Songs",
-      "10 Sermons",
-      "10 Articles",
-      "5 Shorts / Videos",
-      "1 Event",
-      "5 Prayer Requests",
+      "Up to 15 members",
+      "Limited content access",
       `Shepherd AI for ${SHEPHERD_TRIAL_DAYS} days`,
       "Donations not included",
     ],
@@ -105,12 +108,12 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
   starter: {
     id: "starter",
     name: "Starter",
-    tagline: "Growing ministries",
+    tagline: "Small and growing churches",
     description: "For churches ready to scale worship content and engagement.",
-    monthlyPrice: 29,
-    yearlyPrice: 290,
+    monthlyPrice: 1499,
+    yearlyPrice: 14990,
     limits: limits({
-      members: 500,
+      members: 300,
       songs: UNLIMITED,
       sermons: UNLIMITED,
       articles: UNLIMITED,
@@ -124,31 +127,28 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     features: STARTER_FEATURES,
     highlights: [
       "1 Church",
-      "500 Members",
-      "Unlimited Songs",
-      "Unlimited Sermons",
-      "Unlimited Articles",
-      "Email Notifications",
-      "Analytics",
-      "Custom Branding",
-      "Priority Support",
+      "Up to 300 members",
+      "Heritage and Signature templates",
+      "Unlimited songs, sermons, and articles",
+      "Donations, events, and community features",
+      "Shepherd AI — limited monthly usage",
     ],
   },
   professional: {
     id: "professional",
-    name: "Professional",
-    tagline: "Multi-campus",
-    description: "For ministries managing multiple churches and teams.",
-    monthlyPrice: 79,
-    yearlyPrice: 790,
+    name: "Pro",
+    tagline: "Larger congregations",
+    description: "For a single church with a larger membership and more admins.",
+    monthlyPrice: 2499,
+    yearlyPrice: 24990,
     highlighted: true,
     limits: limits({
-      members: UNLIMITED,
+      members: 1000,
       songs: UNLIMITED,
       sermons: UNLIMITED,
       articles: UNLIMITED,
       churches: 1,
-      admins: 10,
+      admins: 5,
       events: UNLIMITED,
       donationCampaigns: UNLIMITED,
       books: UNLIMITED,
@@ -157,24 +157,25 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     }),
     features: PROFESSIONAL_FEATURES,
     highlights: [
-      "5 Churches (coming soon)",
-      "Unlimited Members",
-      "Unlimited Songs",
-      "Unlimited Sermons",
-      "Advanced Analytics (coming soon)",
-      "Event Registration (coming soon)",
-      "Multiple Admins",
-      "Priority Support",
+      "1 Church",
+      "Up to 1,000 members",
+      "Heritage and Signature templates",
+      "Unlimited songs, sermons, and articles",
+      "Donations, events, and community features",
+      "Shepherd AI — higher monthly usage than Starter",
+      "Advanced analytics",
+      "Up to 5 admin seats",
     ],
   },
   enterprise: {
     id: "enterprise",
     name: "Enterprise",
-    tagline: "Custom",
-    description: "Custom solutions for large organizations and networks.",
+    tagline: "Large church networks",
+    description: "Custom plans for large organizations. Not available for purchase yet.",
     monthlyPrice: null,
     yearlyPrice: null,
     contactSales: true,
+    comingSoon: true,
     limits: limits({
       members: UNLIMITED,
       songs: UNLIMITED,
@@ -190,16 +191,34 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     }),
     features: ENTERPRISE_FEATURES,
     highlights: [
-      "Unlimited Churches (coming soon)",
-      "Unlimited Members",
-      "White Label (coming soon)",
-      "Custom Domain (coming soon)",
-      "API Access (coming soon)",
-      "Dedicated Support",
-      "SLA",
-      "Contact Sales",
+      "Custom church and member capacity",
+      "All Pro+ features",
+      "Custom integrations and API access",
+      "Dedicated support and SLA",
     ],
   },
+};
+
+/** Display-only. Not a stored plan id and not available for checkout. */
+export const PRO_PLUS_DISPLAY = {
+  id: "pro_plus" as const,
+  name: "Pro+",
+  tagline: "Multi-church organizations",
+  description: "Planned for larger organizations. Not available for purchase yet.",
+  monthlyPrice: 3999,
+  yearlyPrice: 39990,
+  comingSoon: true as const,
+  highlighted: false,
+  contactSales: false,
+  highlights: [
+    "Up to 5 churches — coming soon",
+    "Higher member capacity — coming soon",
+    "All Pro features",
+    "Event registration — included in Pro+",
+    "Advanced analytics",
+    "Own domain and white-label",
+    "Unlimited Shepherd AI",
+  ],
 };
 
 export const PLAN_ORDER: PlanId[] = [
@@ -213,16 +232,17 @@ export type PlanComparisonValue = string | boolean;
 
 export type PlanComparisonRow = {
   label: string;
-  values: Record<PlanId, PlanComparisonValue>;
+  values: Record<PlanId | "pro_plus", PlanComparisonValue>;
 };
 
 function comparisonValues(
   map: (plan: PlanDefinition) => PlanComparisonValue
-): Record<PlanId, PlanComparisonValue> {
+): Record<PlanId | "pro_plus", PlanComparisonValue> {
   return {
     free: map(PLANS.free),
     starter: map(PLANS.starter),
     professional: map(PLANS.professional),
+    pro_plus: "Coming soon",
     enterprise: map(PLANS.enterprise),
   };
 }
@@ -238,13 +258,20 @@ export function getPlanComparisonRows(): PlanComparisonRow[] {
       values: {
         free: "1",
         starter: "1",
-        professional: "5 (coming soon)",
-        enterprise: "Unlimited (coming soon)",
+        professional: "1",
+        pro_plus: "Up to 5 churches — coming soon",
+        enterprise: "Custom — coming soon",
       },
     },
     {
       label: "Members",
-      values: comparisonValues((plan) => limitLabel(plan.limits.members)),
+      values: {
+        free: "Up to 15 members",
+        starter: "Up to 300 members",
+        professional: "Up to 1,000 members",
+        pro_plus: "Up to 3,000 members — coming soon",
+        enterprise: "Custom — coming soon",
+      },
     },
     {
       label: "Songs",
@@ -264,28 +291,72 @@ export function getPlanComparisonRows(): PlanComparisonRow[] {
     },
     {
       label: "Events",
-      values: comparisonValues((plan) => limitLabel(plan.limits.events)),
+      values: {
+        free: "1",
+        starter: "Unlimited basic events",
+        professional: "Unlimited basic events",
+        pro_plus: "Coming soon",
+        enterprise: "Coming soon",
+      },
     },
     {
       label: "Prayer Requests",
       values: comparisonValues((plan) => limitLabel(plan.limits.prayerRequests)),
     },
     {
+      label: "Books",
+      values: comparisonValues((plan) =>
+        plan.limits.books === 0 ? "Not included" : limitLabel(plan.limits.books)
+      ),
+    },
+    {
+      label: "Heritage template",
+      values: {
+        free: "Included",
+        starter: "Included",
+        professional: "Included",
+        pro_plus: "Coming soon",
+        enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "Signature template",
+      values: {
+        free: "Included",
+        starter: "Included",
+        professional: "Included",
+        pro_plus: "Coming soon",
+        enterprise: "Coming soon",
+      },
+    },
+    {
       label: "Donations",
       values: {
-        free: "No",
-        starter: true,
-        professional: true,
-        enterprise: true,
+        free: "Not included",
+        starter: "Included",
+        professional: "Included",
+        pro_plus: "Coming soon",
+        enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "Direct chat and group chat",
+      values: {
+        free: "Not included",
+        starter: "Included",
+        professional: "Included",
+        pro_plus: "Coming soon",
+        enterprise: "Coming soon",
       },
     },
     {
       label: "Shepherd AI",
       values: {
         free: `${SHEPHERD_TRIAL_DAYS} days`,
-        starter: true,
-        professional: true,
-        enterprise: true,
+        starter: "Limited monthly usage",
+        professional: "Higher monthly usage than Starter",
+        pro_plus: "Unlimited",
+        enterprise: "Coming soon",
       },
     },
     {
@@ -301,8 +372,39 @@ export function getPlanComparisonRows(): PlanComparisonRow[] {
       values: {
         free: false,
         starter: false,
-        professional: "Coming soon",
+        professional: "Included",
+        pro_plus: "Included",
         enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "Church subdomain",
+      values: {
+        free: "Included",
+        starter: "Included",
+        professional: "Included",
+        pro_plus: "Coming soon",
+        enterprise: "Coming soon",
+      },
+    },
+    {
+      label: "Admin seats",
+      values: {
+        free: "1",
+        starter: "2",
+        professional: "Up to 5",
+        pro_plus: "Coming soon",
+        enterprise: "Custom — coming soon",
+      },
+    },
+    {
+      label: "Support",
+      values: {
+        free: "Standard",
+        starter: "Standard",
+        professional: "Standard",
+        pro_plus: "Coming soon",
+        enterprise: "Dedicated support — coming soon",
       },
     },
     {
@@ -314,7 +416,8 @@ export function getPlanComparisonRows(): PlanComparisonRow[] {
       values: {
         free: false,
         starter: false,
-        professional: "Coming soon",
+        professional: "Not included",
+        pro_plus: "Included",
         enterprise: "Coming soon",
       },
     },
@@ -327,25 +430,28 @@ export function getPlanComparisonRows(): PlanComparisonRow[] {
       values: {
         free: false,
         starter: false,
-        professional: false,
+        professional: "Not included",
+        pro_plus: "Included",
         enterprise: "Coming soon",
       },
     },
     {
       label: "Custom domain",
       values: {
-        free: false,
-        starter: false,
-        professional: false,
+        free: "Not included",
+        starter: "Not included",
+        professional: "Not included",
+        pro_plus: "Included",
         enterprise: "Coming soon",
       },
     },
     {
       label: "API access",
       values: {
-        free: false,
-        starter: false,
-        professional: false,
+        free: "Not included",
+        starter: "Not included",
+        professional: "Not included",
+        pro_plus: "Coming soon",
         enterprise: "Coming soon",
       },
     },
@@ -360,6 +466,23 @@ export function getPlanComparisonRows(): PlanComparisonRow[] {
   ];
 }
 
+/** Paid plans an administrator can choose during onboarding. Excludes trial-only, contact-sales, and coming-soon plans. */
+export function getPurchasablePlans(): PlanDefinition[] {
+  return PLAN_ORDER.map((id) => PLANS[id]).filter(
+    (plan) =>
+      !plan.comingSoon &&
+      !plan.contactSales &&
+      plan.monthlyPrice != null &&
+      plan.monthlyPrice > 0 &&
+      plan.yearlyPrice != null &&
+      plan.yearlyPrice > 0
+  );
+}
+
+export function isPurchasablePlan(planId: string): planId is PlanId {
+  return getPurchasablePlans().some((plan) => plan.id === planId);
+}
+
 export function getPlan(planId: PlanId): PlanDefinition {
   return PLANS[planId];
 }
@@ -370,8 +493,31 @@ export function getNextPlan(planId: PlanId): PlanDefinition | null {
   return PLANS[PLAN_ORDER[index + 1]];
 }
 
+export const PRICING_TABLE_COLUMNS = [
+  "free",
+  "starter",
+  "professional",
+  "pro_plus",
+  "enterprise",
+] as const;
+
+/** Shared whole-percent annual savings when every plan uses the same rate. */
+export function sharedAnnualSavingsPercent(
+  plans: Pick<PlanDefinition, "monthlyPrice" | "yearlyPrice">[]
+): number | null {
+  const rates = plans.map((plan) => {
+    if (!plan.monthlyPrice || !plan.yearlyPrice) return null;
+    const fullYear = plan.monthlyPrice * 12;
+    if (fullYear <= plan.yearlyPrice) return null;
+    return Math.round((1 - plan.yearlyPrice / fullYear) * 100);
+  });
+  const first = rates[0];
+  if (first == null || rates.some((rate) => rate !== first)) return null;
+  return first;
+}
+
 export function formatPlanPrice(
-  plan: PlanDefinition,
+  plan: Pick<PlanDefinition, "contactSales" | "monthlyPrice" | "yearlyPrice">,
   interval: "monthly" | "yearly"
 ): string {
   if (plan.contactSales) return "Custom";
@@ -379,9 +525,8 @@ export function formatPlanPrice(
     interval === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
   if (price === null || price === undefined) return "Custom";
   if (price === 0) return `Free for ${TRIAL_DURATION_DAYS} days`;
-  return interval === "yearly" ?
-      `$${price}/yr`
-    : `$${price}/mo`;
+  const amount = price.toLocaleString("en-IN");
+  return interval === "yearly" ? `₹${amount}/yr` : `₹${amount}/mo`;
 }
 
 export function formatLimitValue(limit: number | null): string {

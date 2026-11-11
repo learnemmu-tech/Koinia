@@ -11,8 +11,6 @@ type LayoutProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamic = "force-dynamic";
-
 export async function generateMetadata({
   params,
 }: {

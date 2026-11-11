@@ -12,7 +12,7 @@ import { upsertBookSchema } from "@/lib/books/validation";
 import { optionalBooksAuth } from "@/lib/books/optional-auth";
 import { verifyBearerToken } from "@/lib/email/verify-auth";
 import { deleteProtectedBookObject } from "@/lib/storage/protected-book-storage";
-import { deleteStoredMediaUrls } from "@/lib/supabase-storage";
+import { deleteStoredMediaUrls } from "@/lib/storage/object-storage";
 import {
   deleteBook,
   getBookById,

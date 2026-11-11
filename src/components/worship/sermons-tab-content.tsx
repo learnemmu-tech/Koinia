@@ -19,6 +19,7 @@ type SermonsTabContentProps = {
   isPlatformPublic?: boolean;
   hrefPrefix?: string;
   showCollectionHeader?: boolean;
+  clientSync?: boolean;
 };
 
 export function SermonsTabContent({
@@ -26,10 +27,11 @@ export function SermonsTabContent({
   isPlatformPublic = false,
   hrefPrefix,
   showCollectionHeader = true,
+  clientSync,
 }: SermonsTabContentProps) {
   const t = useTranslations("sermons");
   const { data: liveSermons, syncing, loadMore, hasMore, loadingMore } =
-    useRealtimeSermons(initialSermons, { clientSync: !isPlatformPublic });
+    useRealtimeSermons(initialSermons, { clientSync: clientSync ?? !isPlatformPublic });
   const sermons = useMemo(
     () => liveSermons.filter((sermon) => sermon.isPublished),
     [liveSermons]

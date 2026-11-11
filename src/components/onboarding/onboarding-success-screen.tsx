@@ -9,13 +9,21 @@ import {
   Copy,
   ExternalLink,
   Globe,
+  Loader2,
   Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { WORKSPACE_BASE } from "@/lib/dashboard-routes";
+import {
+  bindFirebaseAuthCurrentUser,
+  firebaseAuth,
+  navigateAfterAuth,
+  sessionUserFromClerk,
+} from "@/lib/firebase-auth-service";
 
 type OnboardingSuccessScreenProps = {
+  organizationId: string;
   churchName: string;
   publicPath: string;
   publicUrl: string;
@@ -24,6 +32,7 @@ type OnboardingSuccessScreenProps = {
 };
 
 export function OnboardingSuccessScreen({
+  organizationId,
   churchName,
   publicPath,
   publicUrl,
@@ -31,6 +40,8 @@ export function OnboardingSuccessScreen({
   selectedTemplateName,
 }: OnboardingSuccessScreenProps) {
   const [copiedPublic, setCopiedPublic] = useState(false);
+  const [continuing, setContinuing] = useState(false);
+  const [continueError, setContinueError] = useState<string | null>(null);
   const [copiedJoin, setCopiedJoin] = useState(false);
 
   async function copyValue(value: string, which: "public" | "join") {
@@ -51,6 +62,38 @@ export function OnboardingSuccessScreen({
     }
   }
 
+  async function continueToDashboard() {
+    if (continuing) return;
+    setContinueError(null);
+    setContinuing(true);
+    try {
+      const user = firebaseAuth.currentUser ?? sessionUserFromClerk();
+      if (user) bindFirebaseAuthCurrentUser(user);
+      const token = await firebaseAuth.currentUser?.getIdToken();
+      if (!token) throw new Error("Please sign in to continue");
+      const response = await fetch("/api/onboarding/trial", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ organizationId }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok && !data.error?.includes("Select a subscription plan")) {
+        throw new Error(data.error || "Unable to start the free trial. Please try again.");
+      }
+      navigateAfterAuth(WORKSPACE_BASE);
+    } catch (error) {
+      setContinueError(
+        error instanceof Error
+          ? error.message
+          : "Unable to start the free trial. Please try again."
+      );
+      setContinuing(false);
+    }
+  }
+
   return (
     <div className="w-full max-w-3xl animate-in fade-in duration-500">
       <section className="rounded-3xl border bg-card/95 p-5 shadow-sm sm:p-8">
@@ -66,6 +109,11 @@ export function OnboardingSuccessScreen({
           Your website is ready to share
           {selectedTemplateName ? ` with the ${selectedTemplateName} design` : ""}.
         </p>
+        {continueError ? (
+          <p className="mt-4 text-sm text-destructive" role="alert">
+            {continueError}
+          </p>
+        ) : null}
 
         <div className="mt-8 space-y-6">
           <PublicWebsiteRow
@@ -82,11 +130,20 @@ export function OnboardingSuccessScreen({
                 <ExternalLink className="size-4" aria-hidden />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="h-11">
-              <Link href={WORKSPACE_BASE}>
-                Continue to Dashboard
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="h-11"
+              disabled={continuing}
+              onClick={() => void continueToDashboard()}
+            >
+              {continuing ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
                 <ArrowRight className="size-4" aria-hidden />
-              </Link>
+              )}
+              Continue to Dashboard
             </Button>
           </div>
 

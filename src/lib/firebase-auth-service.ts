@@ -17,6 +17,7 @@ export type FirestoreUser = {
   firstName: string;
   lastName: string;
   email: string;
+  photoUrl?: string;
   role: UserRole;
   platformRole?: PlatformRole;
   organizationId?: string;

@@ -98,6 +98,10 @@ export function RecentlyViewedProvider({ children }: React.PropsWithChildren) {
   );
 }
 
+export function useRecentlyViewedOptional(): RecentlyViewedContextValue | null {
+  return React.useContext(RecentlyViewedContext);
+}
+
 export function useRecentlyViewed(): RecentlyViewedContextValue {
   const context = React.useContext(RecentlyViewedContext);
   if (!context) {

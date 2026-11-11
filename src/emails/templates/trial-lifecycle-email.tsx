@@ -1,6 +1,5 @@
-import { Text } from "@react-email/components";
-
 import { EmailButton } from "@/emails/components/email-button";
+import { EmailText } from "@/emails/components/email-copy";
 import { EmailLayout } from "@/emails/components/email-layout";
 
 export function TrialLifecycleEmail({
@@ -15,13 +14,8 @@ export function TrialLifecycleEmail({
   actionUrl: string;
 }) {
   return (
-    <EmailLayout preview={title} title={title}>
-      <Text
-        className="email-text"
-        style={{ fontSize: "15px", lineHeight: "1.6", color: "#3d3545", margin: "0 0 16px" }}
-      >
-        {message}
-      </Text>
+    <EmailLayout preview={title} eyebrow="Trial" title={title}>
+      <EmailText>{message}</EmailText>
       <EmailButton href={actionUrl} label={actionLabel} />
     </EmailLayout>
   );

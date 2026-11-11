@@ -23,6 +23,7 @@ import type {
 import { resolveFeatureFlagsFromSubscription } from "./features";
 import {
   buildUsageChecks,
+  DONATION_REQUIRES_PAID_PLAN,
   getLimitExceededMessage,
   getPlanLimits,
 } from "./limits";
@@ -30,6 +31,8 @@ import { getPlan } from "./plans";
 import { buildDefaultSubscription } from "./subscription-firestore";
 import {
   getTrialLifecycle,
+  isTrialNotStarted,
+  notStartedTrialLifecycle,
   resolveTrialWindow,
   TRIAL_DURATION_DAYS,
   TRIAL_EXPIRED_MESSAGE,
@@ -40,6 +43,7 @@ import {
   isTemporaryTrialAllowanceLimitKey,
   TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED,
 } from "./trial-allowance";
+import { reconcileOrganizationBilling } from "./razorpay-subscription-server";
 import { computeOrganizationUsage } from "./usage-server";
 
 async function getOrganizationCreatedAt(
@@ -98,6 +102,7 @@ export async function persistLegacyTrialWindows(): Promise<number> {
     FROM organizations AS o
     WHERE s.organization_id = o.id
       AND s.plan_id = 'free'
+      AND s.status <> 'incomplete'
       AND s.trial_start IS NULL
       AND s.trial_end IS NULL
   `);
@@ -136,19 +141,26 @@ export const getSubscriptionSnapshot = cache(async function getSubscriptionSnaps
 ): Promise<SubscriptionSnapshot> {
   const snapshotStarted = Date.now();
   const orgId = organizationId.trim();
+  if (orgId) {
+    await reconcileOrganizationBilling(orgId);
+  }
   const usageOrganizationId = orgId || preloadedSubscription?.organizationId || "";
   const [createdAt, loaded, usage] = await Promise.all([
     orgId ? getOrganizationCreatedAt(orgId) : Promise.resolve(null),
-    preloadedSubscription
-      ? Promise.resolve(preloadedSubscription)
-      : orgId
-        ? getSubscriptionByOrganizationId(orgId)
+    orgId
+      ? getSubscriptionByOrganizationId(orgId)
+      : preloadedSubscription
+        ? Promise.resolve(preloadedSubscription)
         : Promise.resolve(buildDefaultSubscription("default")),
     computeOrganizationUsage(usageOrganizationId),
   ]);
-  const window = resolveTrialWindow(loaded, createdAt);
+  const pendingPlanSelection = isTrialNotStarted(loaded);
+  const window = pendingPlanSelection
+    ? null
+    : resolveTrialWindow(loaded, createdAt);
   if (
     orgId &&
+    !pendingPlanSelection &&
     loaded.planId === "free" &&
     loaded.trialStart == null &&
     loaded.trialEnd == null &&
@@ -161,13 +173,20 @@ export const getSubscriptionSnapshot = cache(async function getSubscriptionSnaps
       });
     });
   }
-  const subscription = applyTrialWindow(loaded, createdAt);
-  const trial = getTrialLifecycle(subscription, Date.now(), createdAt);
+  const subscription = pendingPlanSelection
+    ? loaded
+    : applyTrialWindow(loaded, createdAt);
+  const trial = pendingPlanSelection
+    ? notStartedTrialLifecycle()
+    : getTrialLifecycle(subscription, Date.now(), createdAt);
   const paid = trial.access === "paid";
   const resolved = applyTemporaryTrialContentAllowance(
     trial.access,
     getPlanLimits(paid ? subscription.planId : "free"),
-    resolveFeatureFlagsFromSubscription(subscription, createdAt)
+    resolveFeatureFlagsFromSubscription(
+      subscription,
+      pendingPlanSelection ? null : createdAt
+    )
   );
   const limits = resolved.limits;
   const features = resolved.features;
@@ -247,6 +266,9 @@ export async function assertUsageAllowed(
   assertTrialWritable(snapshot);
   const check = snapshot.usageChecks.find((item) => item.key === key);
   if (check?.atLimit) {
+    if (key === "donationCampaigns" && (check.limit ?? 0) <= 0) {
+      throw new SubscriptionLimitError(DONATION_REQUIRES_PAID_PLAN);
+    }
     if (
       TEMPORARY_TRIAL_CONTENT_ALLOWANCE_ENABLED &&
       snapshot.trial.access === "trial" &&
@@ -290,7 +312,9 @@ export async function assertFeatureAllowed(
   assertTrialWritable(snapshot);
   if (!snapshot.features[key]) {
     throw new SubscriptionLimitError(
-      "This feature is not included in your current plan."
+      key === "canCreateDonations"
+        ? DONATION_REQUIRES_PAID_PLAN
+        : "This feature is not included in your current plan."
     );
   }
 }

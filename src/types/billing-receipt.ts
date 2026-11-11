@@ -1,0 +1,20 @@
+export type BillingReceiptRecord = {
+  id: string;
+  organizationId: string;
+  receiptNumber: string;
+  description: string;
+  amountMinor: number;
+  currency: string;
+  status: string;
+  paidAt: string | null;
+  planId: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  paymentMethodSummary: string | null;
+  providerPaymentId: string;
+  providerInvoiceId: string | null;
+  providerSubscriptionId: string | null;
+  documentStatus: string;
+};

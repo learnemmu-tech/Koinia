@@ -13,8 +13,11 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { siteConfig } from "@/config/site";
 import type { SubscriptionSnapshot } from "@/types/subscription";
-import { formatLimitValue, PLAN_ORDER, PLANS } from "@/lib/subscription/plans";
+import { useBillingReceipts } from "@/components/subscription/billing-history";
 import { BILLING_USAGE_KEYS } from "@/lib/subscription/limits";
+import { formatLimitValue, formatPlanPrice, PLAN_ORDER, PLANS } from "@/lib/subscription/plans";
+
+export type BillingPageSection = "overview" | "plans";
 
 type BillingOverviewProps = {
   snapshot: SubscriptionSnapshot | undefined;
@@ -22,6 +25,7 @@ type BillingOverviewProps = {
   error?: string | null;
   showUpgradeOptions?: boolean;
   onRetry?: () => void;
+  section?: BillingPageSection;
 };
 
 function FeatureRow({
@@ -47,7 +51,11 @@ export function BillingOverview({
   error,
   showUpgradeOptions = true,
   onRetry,
+  section = "overview",
 }: BillingOverviewProps) {
+  const receiptsQuery = useBillingReceipts(snapshot?.subscription.organizationId ?? "");
+  const paymentMethod =
+    receiptsQuery.receipts?.[0]?.paymentMethodSummary ?? null;
   if (loading) {
     return (
       <div className="space-y-4">
@@ -80,16 +88,26 @@ export function BillingOverview({
   }
 
   const { plan, usageChecks, features, trial } = snapshot;
-  const paidDaysRemaining = snapshot.subscription.currentPeriodEnd
-    ? Math.max(
-        0,
-        Math.ceil((snapshot.subscription.currentPeriodEnd - Date.now()) / (24 * 60 * 60 * 1000))
-      )
-    : null;
   const isPaidPlan = plan.id === "starter" || plan.id === "professional";
+  const interval =
+    snapshot.subscription.billingInterval === "yearly" ? "yearly" : "monthly";
+  const catalogPrice = formatPlanPrice(plan, interval);
+  const periodStart = snapshot.subscription.currentPeriodStart
+    ? new Date(snapshot.subscription.currentPeriodStart).toLocaleDateString()
+    : null;
   const periodEnd = snapshot.subscription.currentPeriodEnd
     ? new Date(snapshot.subscription.currentPeriodEnd).toLocaleDateString()
     : null;
+  const statusLabel =
+    trial.access === "paid"
+      ? snapshot.subscription.cancelAtPeriodEnd
+        ? "Cancels at period end"
+        : snapshot.subscription.status === "past_due"
+          ? "Past due"
+          : "Active"
+      : trial.access === "trial"
+        ? "Trial"
+        : "Trial ended";
   const usageByKey = new Map(usageChecks.map((item) => [item.key, item]));
   const displayedChecks = BILLING_USAGE_KEYS.map((key) => usageByKey.get(key)).filter(
     (item): item is NonNullable<typeof item> => Boolean(item)
@@ -117,74 +135,78 @@ export function BillingOverview({
     { label: "API access", enabled: features.canUseApiAccess },
   ];
 
-  return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Current plan
-            </p>
-            <h3 className="text-2xl font-semibold">{plan.name}</h3>
-            <p className="text-sm text-muted-foreground">{plan.description}</p>
-          </div>
-          <PlanBadge planId={plan.id} asLink />
-        </div>
-        {isPaidPlan ?
-          <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 px-3 py-3 text-sm">
-            <p className="font-medium">
-              {snapshot.subscription.status === "active" ? "Active" : "Subscription needs attention"}
-            </p>
-            {periodEnd ?
-              <p className="mt-1 text-muted-foreground">
-                {snapshot.subscription.cancelAtPeriodEnd ? "Paid access ends" : "Renews"} on {periodEnd}
-                {paidDaysRemaining != null ?
-                  ` (${paidDaysRemaining} ${paidDaysRemaining === 1 ? "day" : "days"})`
-                : null}
+  const subscriptionCard = (
+      <section className="rounded-xl border border-border/70 bg-card">
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Current subscription
               </p>
-            : null}
+              <span className="inline-flex rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium">
+                {statusLabel}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-xl font-semibold tracking-tight">{plan.name}</h3>
+              <PlanBadge planId={plan.id} showIcon={false} />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {catalogPrice}
+              {plan.monthlyPrice ? ` · billed ${interval}` : ""}
+            </p>
           </div>
-        : null}
-        {trial.phase === "reminder" ?
-          <p className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
-            Your 14-day trial ends in {trial.daysRemaining}{" "}
-            {trial.daysRemaining === 1 ? "day" : "days"}. Existing content will be preserved.
-          </p>
-        : null}
-        {trial.phase === "urgent" && trial.access !== "expired" ?
-          <p className="mt-4 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
-            {trial.daysIntoTrial != null && trial.daysIntoTrial >= 14
-              ? "Your FaithConnectHub trial ends today. Upgrade your plan to continue creating and managing your church content after the trial."
-              : `Your trial expires in ${trial.daysRemaining} ${trial.daysRemaining === 1 ? "day" : "days"}. Your content stays available to view.`}
-          </p>
-        : null}
-        {trial.access === "expired" || trial.phase === "expired" ?
-          <p className="mt-4 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 text-sm">
-            Your 14-day trial has ended. Existing content is preserved and remains available to view. Upgrade your plan to restore content management.
-          </p>
-        : null}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/pricing">Compare plans</Link>
-          </Button>
-          {!isPaidPlan && showUpgradeOptions ?
-            <RazorpaySubscriptionButton planId="starter" label="Start Starter" onComplete={onRetry} />
-          : null}
-          {plan.id === "starter" && showUpgradeOptions ?
-            <RazorpaySubscriptionButton planId="professional" label="Upgrade to Professional" onComplete={onRetry} />
-          : null}
-          {isPaidPlan ? <CancelRazorpaySubscriptionButton onComplete={onRetry} /> : null}
-          {plan.id === "enterprise" || plan.contactSales ?
-            <Button size="sm" asChild>
-              <Link href={`mailto:${siteConfig.author.email}?subject=Enterprise%20Plan`}>
-                <Mail className="mr-1.5 size-4" />
-                Contact Sales
-              </Link>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end [&_button]:h-9">
+            {showUpgradeOptions && !isPaidPlan ?
+              <RazorpaySubscriptionButton planId="starter" label="Upgrade plan" onComplete={onRetry} />
+            : null}
+            {showUpgradeOptions && plan.id === "starter" ?
+              <RazorpaySubscriptionButton planId="professional" label="Change plan" onComplete={onRetry} />
+            : null}
+            {plan.id === "enterprise" || plan.contactSales ?
+              <Button size="sm" asChild>
+                <Link href={`mailto:${siteConfig.author.email}?subject=Enterprise%20Plan`}>
+                  <Mail className="mr-1.5 size-4" />
+                  Contact sales
+                </Link>
+              </Button>
+            : null}
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/pricing">Compare plans</Link>
             </Button>
-          : null}
+            {isPaidPlan ? <CancelRazorpaySubscriptionButton onComplete={onRetry} /> : null}
+          </div>
         </div>
+        <dl className="grid gap-px border-t border-border/70 bg-border/70 sm:grid-cols-3">
+          {[
+            ["Billing period", periodStart && periodEnd ? `${periodStart} – ${periodEnd}` : "Not started"],
+            [
+              snapshot.subscription.cancelAtPeriodEnd ? "Access ends" : "Next renewal",
+              periodEnd ?? "Not scheduled",
+            ],
+            ...(paymentMethod ? [["Payment method", paymentMethod] as const] : []),
+            ...(trial.access === "trial"
+              ? [[
+                  "Trial",
+                  `${trial.daysRemaining} ${trial.daysRemaining === 1 ? "day" : "days"} left`,
+                ]]
+              : []),
+          ].map(([label, value]) => (
+            <div key={label} className="bg-card px-4 py-3 sm:px-5">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="mt-1 text-sm font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        {trial.access === "expired" ?
+          <p className="border-t border-border/70 px-4 py-3 text-sm text-muted-foreground sm:px-5">
+            Your 14-day trial has ended. Existing content stays available to view. Upgrade to restore content management.
+          </p>
+        : null}
       </section>
+  );
 
+  const usageSection = (
       <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
         <h3 className="font-semibold">Usage & limits</h3>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -209,7 +231,9 @@ export function BillingOverview({
           ))}
         </div>
       </section>
+  );
 
+  const featureSection = (
       <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
         <h3 className="font-semibold">Feature access</h3>
         <div className="mt-2 divide-y divide-border/50">
@@ -222,8 +246,9 @@ export function BillingOverview({
           ))}
         </div>
       </section>
+  );
 
-      {showUpgradeOptions ?
+  const upgradeSection = showUpgradeOptions ? (
         <section className="rounded-2xl border border-border/60 bg-muted/20 p-5 sm:p-6">
           <h3 className="font-semibold">Upgrade options</h3>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -258,7 +283,50 @@ export function BillingOverview({
             })}
           </div>
         </section>
-      : null}
+  ) : null;
+
+  if (section === "plans") {
+    return (
+      <div className="space-y-6">
+        <section className="rounded-xl border border-border/70 bg-card px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current plan</p>
+              <div className="mt-1 flex items-center gap-2">
+                <h2 className="text-lg font-semibold">{plan.name}</h2>
+                <PlanBadge planId={plan.id} showIcon={false} />
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">{catalogPrice}</p>
+            </div>
+            <span className="inline-flex rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium">
+              {statusLabel}
+            </span>
+          </div>
+        </section>
+        {usageSection}
+        {featureSection}
+        {upgradeSection}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {subscriptionCard}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/dashboard/billing/plans"
+          className="rounded-xl border border-border/70 bg-card px-4 py-3 text-sm font-medium hover:bg-muted/40"
+        >
+          Review usage and plans
+        </Link>
+        <Link
+          href="/dashboard/billing/invoices"
+          className="rounded-xl border border-border/70 bg-card px-4 py-3 text-sm font-medium hover:bg-muted/40"
+        >
+          View receipts
+        </Link>
+      </div>
     </div>
   );
 }

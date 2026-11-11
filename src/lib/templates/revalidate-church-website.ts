@@ -33,6 +33,7 @@ export async function revalidateChurchPublicSite(
   if (!church?.slug) return;
 
   const publicPath = churchWebsitePath(church.slug);
+  revalidateTag(`church-public-${church.slug.trim().toLowerCase()}`);
   revalidatePath(publicPath, "layout");
   revalidatePath(publicPath, "page");
   for (const subpath of PUBLIC_SUBPATHS) {

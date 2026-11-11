@@ -12,6 +12,7 @@ export function SignatureExperienceShell({
   churchName,
   churchSlug,
   logoUrl,
+  publicVisitor = false,
   children,
 }: {
   churchId: string;
@@ -19,6 +20,7 @@ export function SignatureExperienceShell({
   churchName: string;
   churchSlug: string;
   logoUrl?: string;
+  publicVisitor?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -29,7 +31,7 @@ export function SignatureExperienceShell({
       slug={churchSlug}
       logoUrl={logoUrl}
     >
-      <AuthenticatedAppShell>
+      <AuthenticatedAppShell publicVisitor={publicVisitor}>
         <SyncActiveChurch churchId={churchId} />
         {children}
       </AuthenticatedAppShell>

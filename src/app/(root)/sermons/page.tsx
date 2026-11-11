@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
+import { CatalogPager } from "@/components/worship/catalog-pager";
 import { SermonsTabContent } from "@/components/worship/sermons-tab-content";
 import { SermonsAdminBar } from "@/components/admin/inline/sermons-admin-bar";
 import { I18nPageHeading } from "@/components/i18n/page-heading";
+import { catalogPageQuery, sliceCatalogPage } from "@/lib/content/catalog-page";
 import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getPublishedSermonsCached } from "@/lib/cached-worship-data";
 import { pageContentClass } from "@/lib/responsive-classes";
@@ -18,7 +21,13 @@ export const metadata: Metadata = buildPageMetadata({
   keywords: ["Christian sermons", "biblical teaching", "sermon archive", "faith messages"],
 });
 
-export default async function SermonsPage() {
+export default async function SermonsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await (searchParams ?? Promise.resolve<{ page?: string }>({}));
+  const { page, offset, limit } = catalogPageQuery(pageParam);
   const resolveStarted = performance.now();
   const { contentQuery, isPlatformPublic } = await resolvePageContentQuery();
   if (process.env.PERF_TIMING === "1") {
@@ -28,7 +37,9 @@ export default async function SermonsPage() {
   }
 
   const sermonsStarted = performance.now();
-  const sermons = await getPublishedSermonsCached(contentQuery);
+  const loaded = await getPublishedSermonsCached(contentQuery, limit, offset);
+  const { items: sermons, hasMore } = sliceCatalogPage(loaded);
+  const signedIn = (await headers()).get("x-koinia-session") === "1";
   if (process.env.PERF_TIMING === "1") {
     console.info(
       `[perf] sermons.getPublishedSermonsCached: ${Math.round(performance.now() - sermonsStarted)}ms count=${sermons.length}`
@@ -50,7 +61,9 @@ export default async function SermonsPage() {
       <SermonsTabContent
         initialSermons={sermons}
         isPlatformPublic={isPlatformPublic}
+        clientSync={signedIn}
       />
+      {signedIn ? null : <CatalogPager page={page} hasMore={hasMore} />}
     </section>
   );
 }

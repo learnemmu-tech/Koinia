@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Bell, BookMarked, BookOpen, CalendarDays, Church, HeartHandshake, Loader2, Music, Users, UsersRound } from "lucide-react";
+import { Bell, BookMarked, BookOpen, CalendarDays, CheckCircle2, Church, HeartHandshake, Loader2, Music, Users, UsersRound } from "lucide-react";
 
 import type { FirebaseNotification } from "@/types/firebase-notification";
 
@@ -59,6 +59,8 @@ function NotificationTypeIcon({
       return <Users className={className} aria-hidden />;
     case "trial_lifecycle":
       return <Bell className={className} aria-hidden />;
+    case "subscription":
+      return <CheckCircle2 className={className} aria-hidden />;
     case "group_invitation":
       return <UsersRound className={className} aria-hidden />;
     default:

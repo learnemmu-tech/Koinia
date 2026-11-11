@@ -4,8 +4,6 @@ import { usesSignatureAppExperience } from "@/lib/templates/signature-experience
 import { isSectionVisible } from "@/lib/templates/visibility";
 import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
 export default async function AboutPage({
   params,
 }: {

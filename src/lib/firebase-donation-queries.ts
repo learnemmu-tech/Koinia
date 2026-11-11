@@ -27,11 +27,12 @@ export async function getDonationCampaigns(
 
 export async function getActiveDonationCampaigns(
   scope: ContentQueryInput,
-  options?: { limit?: number }
+  options?: { limit?: number; offset?: number }
 ): Promise<FirebaseDonationCampaign[]> {
   return listDonationCampaigns(scope, {
     publishedOnly: true,
     limit: options?.limit,
+    offset: options?.offset,
   });
 }
 

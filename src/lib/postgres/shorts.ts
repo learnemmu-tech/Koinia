@@ -11,7 +11,7 @@ import {
   videoShortReports,
   videoShorts,
 } from "@/db/schema";
-import { deleteStoredMediaUrls } from "@/lib/supabase-storage";
+import { deleteStoredMediaUrls } from "@/lib/storage/object-storage";
 import { isPlatformSuperAdmin } from "@/lib/auth/platform-role";
 import type { ContentQueryInput } from "@/lib/content/content-scope";
 import { contentScopeWhere, resolveContentQuery } from "@/lib/content/content-scope";

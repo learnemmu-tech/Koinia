@@ -43,7 +43,12 @@ export function resolveFeatureFlagsFromSubscription(
     return { ...EXPIRED_FEATURE_FLAGS };
   }
 
-  const flags = resolveFeatureFlags("free", subscription.featureFlags);
+  const storedFlags = subscription.featureFlags;
+  const trialFlags =
+    storedFlags ?
+      { ...storedFlags, canCreateDonations: false }
+    : undefined;
+  const flags = resolveFeatureFlags("free", trialFlags);
   return {
     ...flags,
     canUseShepherdAi: trial.shepherdAiAvailable,

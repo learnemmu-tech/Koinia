@@ -126,6 +126,29 @@ export function getDueTrialLifecycleEventKeys(
   return keys;
 }
 
+/** Organization exists, but the administrator has not confirmed a trial yet. */
+export function notStartedTrialLifecycle(): TrialLifecycle {
+  return {
+    isTrial: false,
+    phase: "none",
+    access: "trial",
+    daysIntoTrial: null,
+    daysRemaining: null,
+    shepherdAiAvailable: false,
+    shepherdDaysRemaining: null,
+  };
+}
+
+export function isTrialNotStarted(
+  subscription: Pick<EntitlementSubscription, "status" | "trialStart" | "trialEnd">
+): boolean {
+  return (
+    subscription.status === "incomplete" &&
+    subscription.trialStart == null &&
+    subscription.trialEnd == null
+  );
+}
+
 export function getTrialLifecycle(
   subscription: EntitlementSubscription,
   now = Date.now(),

@@ -24,6 +24,7 @@ type EventsListClientProps = {
   initialPast: FirebaseEvent[];
   isPlatformPublic?: boolean;
   hrefPrefix?: string;
+  clientSync?: boolean;
 };
 
 function matchesSearch(event: FirebaseEvent, query: string): boolean {
@@ -36,6 +37,7 @@ export function EventsListClient({
   initialPast,
   isPlatformPublic = false,
   hrefPrefix,
+  clientSync,
 }: EventsListClientProps) {
   const t = useTranslations("events");
   const initialCombined = useMemo(
@@ -43,7 +45,7 @@ export function EventsListClient({
     [initialUpcoming, initialPast]
   );
   const { grouped, loading, loadMore, hasMore, loadingMore } =
-    usePublishedEvents(initialCombined, { clientSync: !isPlatformPublic });
+    usePublishedEvents(initialCombined, { clientSync: clientSync ?? !isPlatformPublic });
   const tenantScope = useContentTenantScope();
   const { upcoming, past } = grouped;
 

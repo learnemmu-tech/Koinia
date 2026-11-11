@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 
 import { BooksAdminBar } from "@/components/books/books-admin-bar";
@@ -24,7 +25,8 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default async function BooksPage() {
-  const { userId } = await auth();
+  const anonymous = (await headers()).get("x-koinia-session") === "0";
+  const { userId } = anonymous ? { userId: null } : await auth();
   const [memberChurchIds, adminScope] = await Promise.all([
     listCatalogMemberChurchIds(userId),
     userId ? resolveBookAdminScope(userId) : Promise.resolve(null),
