@@ -21,7 +21,8 @@
     "dev:reset-user": "node scripts/dev-reset-user.mjs",
     "clean": "rm -rf .next",
     "cleani": "rm -rf .next && rm -rf node_modules && bun i",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "node scripts/patch-next-font-loader.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1165.0",
