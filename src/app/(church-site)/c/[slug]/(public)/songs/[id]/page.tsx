@@ -5,6 +5,7 @@ import { getPublishedSongForChurch } from "@/lib/templates/public-content";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { HeritageDetailFrame } from "@/templates/heritage/components/heritage-content-frame";
+import { ParishDetailFrame } from "@/templates/parish/components/parish-frame";
 
 export default async function ChurchSongDetailPage({
   params,
@@ -27,6 +28,14 @@ export default async function ChurchSongDetailPage({
       <HeritageDetailFrame>
         <SongDetailClient song={item} listHref={listHref} />
       </HeritageDetailFrame>
+    );
+  }
+
+  if (model.templateId === "parish") {
+    return (
+      <ParishDetailFrame>
+        <SongDetailClient song={item} listHref={listHref} />
+      </ParishDetailFrame>
     );
   }
 

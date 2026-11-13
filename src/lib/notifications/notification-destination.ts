@@ -27,6 +27,10 @@ export function sanitizeNotificationDestination(
   return sanitizeCallbackUrl(value, fallback);
 }
 
+function staysOnChurchWebsite(templateId?: string | null) {
+  return templateId === "heritage" || templateId === "parish";
+}
+
 function heritageOrAppPath(
   input: {
     churchSlug?: string | null;
@@ -39,7 +43,7 @@ function heritageOrAppPath(
   const detail = contentId
     ? `${listPath}/${encodeURIComponent(contentId)}`
     : listPath;
-  if (slug && input.templateId === "heritage") {
+  if (slug && staysOnChurchWebsite(input.templateId)) {
     return churchWebsitePath(slug, detail);
   }
   return detail;
@@ -52,7 +56,7 @@ export function prayerNotificationPath(input: {
 }): string {
   const id = input.contentId.trim();
   const slug = input.churchSlug?.trim();
-  if (slug && input.templateId === "heritage") {
+  if (slug && staysOnChurchWebsite(input.templateId)) {
     return id
       ? churchWebsitePath(slug, `/prayer/${encodeURIComponent(id)}`)
       : churchWebsitePath(slug, "/prayer");
@@ -74,7 +78,7 @@ export function notificationDestination(input: {
     case "prayer_request_submitted":
       return "/dashboard/content?tab=prayers";
     case "membership_approved":
-      return input.churchSlug?.trim() && input.templateId === "heritage"
+      return input.churchSlug?.trim() && staysOnChurchWebsite(input.templateId)
         ? churchWebsitePath(input.churchSlug)
         : "/";
     case "membership_request":

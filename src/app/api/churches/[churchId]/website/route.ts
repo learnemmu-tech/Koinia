@@ -8,7 +8,8 @@ import {
   type ChurchWebsiteUpdateInput,
 } from "@/lib/postgres/church-websites";
 import { userCanManageChurch } from "@/lib/postgres/session";
-import { getChurchById } from "@/lib/postgres/tenants";
+import { getChurchById, updateChurch } from "@/lib/postgres/tenants";
+import { DEFAULT_CHURCH_LOGO } from "@/lib/organization/onboarding-constants";
 import { canSelectTemplate, parseTemplateId } from "@/lib/templates/resolver";
 import { getTemplateManifest, listTemplateManifests } from "@/lib/templates/registry";
 import { parseSocialLinks } from "@/lib/templates/social-links";
@@ -214,6 +215,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const website = await upsertChurchWebsite(church, input);
+  const savedLogo = input.logoUrl?.trim();
+  if (savedLogo && savedLogo !== DEFAULT_CHURCH_LOGO) {
+    await updateChurch(church.id, { logoUrl: savedLogo });
+  }
   const publicPath = churchWebsitePath(church.slug);
   await revalidateChurchPublicSite(church.id);
   revalidatePath(`/preview/website/${website.activeTemplate}`);

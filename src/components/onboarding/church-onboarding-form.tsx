@@ -309,7 +309,7 @@ export function ChurchOnboardingForm() {
 
         try {
 
-          await uploadSongFileLocal(
+          const uploadedLogoUrl = await uploadSongFileLocal(
 
             result.churchId,
 
@@ -323,6 +323,17 @@ export function ChurchOnboardingForm() {
 
             { kind: "church-logo" }
 
+          );
+
+          const { updateChurchInOrganizationAction } = await import(
+            "@/lib/organization/organization-mutations"
+          );
+          await updateChurchInOrganizationAction(
+            result.organizationId,
+            result.churchId,
+            user.uid,
+            user.email,
+            { logoUrl: uploadedLogoUrl }
           );
 
         } catch {

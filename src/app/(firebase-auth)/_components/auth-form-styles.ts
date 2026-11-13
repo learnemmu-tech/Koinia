@@ -41,7 +41,11 @@ export const AUTH_FORM_FIELDS_CLASS = "grid gap-3.5 lg:gap-4";
 
 export const AUTH_FIELD_GROUP_CLASS = "grid gap-1";
 
-export type AuthFormAppearance = "default" | "heritage";
+export type AuthFormAppearance = "default" | "heritage" | "parish";
+
+export function isChurchAuthAppearance(appearance: AuthFormAppearance) {
+  return appearance === "heritage" || appearance === "parish";
+}
 
 export const HERITAGE_AUTH_INPUT_CLASS =
   "h-10 min-h-10 rounded-md border-[#DDD5C6] bg-[#FFFDF9] px-3 py-0 text-sm text-[#202624] shadow-none placeholder:text-[#5A615E] focus-visible:border-[#641F32] focus-visible:ring-[#B49A62]/30";
@@ -75,7 +79,32 @@ export const HERITAGE_AUTH_ERROR_CLASS =
 export const HERITAGE_AUTH_PASSWORD_TOGGLE_CLASS =
   "absolute inset-y-0 right-1 my-auto flex size-9 items-center justify-center rounded-md text-[#5A615E] transition-colors hover:text-[#202624] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B49A62]/40";
 
+const PARISH_AUTH_INPUT_CLASS =
+  "h-10 min-h-10 rounded-none border-[#D9CBB4] bg-[#FFFCF7] px-3 py-0 text-sm text-[#24312C] shadow-none placeholder:text-[#6E675F] focus-visible:border-[#1B3C32] focus-visible:ring-[#C6A36A]/40";
+
 export function authFormStyles(appearance: AuthFormAppearance = "default") {
+  if (appearance === "parish") {
+    return {
+      input: PARISH_AUTH_INPUT_CLASS,
+      inputWithIcon: `${PARISH_AUTH_INPUT_CLASS} pl-10`,
+      primaryButton:
+        "relative inline-flex h-10 min-h-10 w-full items-center justify-center rounded-none bg-[#1B3C32] px-0 py-0 text-sm font-semibold tracking-wide text-[#F4EFE4] shadow-none hover:bg-[#163228] focus-visible:ring-[#C6A36A]/40",
+      googleButton:
+        "inline-flex h-10 min-h-10 w-full items-center justify-center rounded-none border border-[#D9CBB4] bg-[#FFFCF7] px-5 py-0 text-sm font-medium text-[#24312C] shadow-none hover:bg-[#F4EFE4] focus-visible:ring-[#C6A36A]/40",
+      label: "text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1B3C32]",
+      link: "text-sm font-medium text-[#8A6A32] underline-offset-4 transition-colors hover:text-[#1B3C32] hover:underline",
+      muted: "text-[15px] leading-snug text-[#6E675F]",
+      divider:
+        "relative bg-[#FFFCF7] px-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6E675F]",
+      fieldIcon: "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#6E675F]",
+      error: "rounded-none border border-[#1B3C32]/20 bg-[#1B3C32]/5 px-3 py-2 text-sm text-[#1B3C32]",
+      passwordToggle:
+        "absolute inset-y-0 right-1 my-auto flex size-9 items-center justify-center text-[#6E675F] hover:text-[#1B3C32]",
+      dividerLine: "w-full border-t border-[#D9CBB4]",
+      heading: "parish-display text-4xl text-[#1B3C32]",
+    };
+  }
+
   if (appearance === "heritage") {
     return {
       input: HERITAGE_AUTH_INPUT_CLASS,

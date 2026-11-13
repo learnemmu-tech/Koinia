@@ -279,7 +279,7 @@ export function FirebaseSignInForm({
   }
 
   if (isCompletingAuth) {
-    return <AuthLoading />;
+    return <AuthLoading compact={appearance !== "default"} />;
   }
 
   if (showVerificationStep) {
@@ -409,7 +409,7 @@ export function FirebaseSignInForm({
         {isGoogleLoading ?
           <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
         : <Google className="mr-2 size-4" aria-hidden />}
-        {appearance === "heritage"
+        {appearance !== "default"
           ? tAuth("continueWithGoogle")
           : tAuth("signInWithGoogle")}
       </Button>
@@ -420,7 +420,7 @@ export function FirebaseSignInForm({
           href={signUpHref ?? buildAuthHref("/signup", redirectTo)}
           className={styles.link}
         >
-          {appearance === "heritage" ? tAuth("createOne") : tCommon("signUp")}
+          {appearance !== "default" ? tAuth("createOne") : tCommon("signUp")}
         </Link>
       </p>
     </div>

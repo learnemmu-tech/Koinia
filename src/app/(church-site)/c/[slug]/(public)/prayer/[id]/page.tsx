@@ -24,7 +24,7 @@ export default async function ChurchPrayerDetailPage({
   const { model } = await requireChurchWebsite(slug);
 
   // Church-scoped prayer detail exists only for the Heritage member experience.
-  if (model.templateId !== "heritage") notFound();
+  if (model.templateId !== "heritage" && model.templateId !== "parish") notFound();
 
   return <HeritagePrayerDetailPage model={model} requestId={decodeURIComponent(id)} />;
 }

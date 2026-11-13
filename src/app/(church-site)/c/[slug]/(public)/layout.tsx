@@ -7,6 +7,8 @@ import {
   usesSignatureAppExperience,
 } from "@/lib/templates/signature-experience";
 
+export const dynamic = "force-dynamic";
+
 type LayoutProps = {
   children: React.ReactNode;
   params: Promise<{ slug: string }>;

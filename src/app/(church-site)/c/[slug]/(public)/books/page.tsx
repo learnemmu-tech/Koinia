@@ -4,6 +4,7 @@ import { usesSignatureAppExperience } from "@/lib/templates/signature-experience
 import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { listPublishedCatalogBooks } from "@/lib/postgres/books";
 import { HeritageBooksPage } from "@/templates/heritage/pages/catalog";
+import { ParishBooksPage } from "@/templates/parish/pages/catalog";
 
 export async function generateMetadata({
   params,
@@ -29,6 +30,10 @@ export default async function ChurchBooksPage({
       ? [model.church.id]
       : undefined,
   });
+
+  if (model.templateId === "parish") {
+    return <ParishBooksPage model={model} books={books} />;
+  }
 
   return <HeritageBooksPage model={model} books={books} />;
 }

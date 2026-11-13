@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   foreignKey,
   index,
   jsonb,
@@ -92,6 +93,10 @@ export const churchWebsites = pgTable(
     }).onDelete("cascade"),
     index("church_websites_organization_id_idx").on(table.organizationId),
     index("church_websites_active_template_idx").on(table.activeTemplate),
+    check(
+      "church_websites_active_template_check",
+      sql`${table.activeTemplate} in ('signature', 'heritage', 'parish', 'sanctuary')`
+    ),
     index("church_websites_setup_completed_idx").on(table.websiteSetupCompletedAt),
   ]
 );

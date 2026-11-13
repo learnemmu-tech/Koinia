@@ -33,6 +33,7 @@ type NotificationBellProps = {
   userId: string;
   variant?: "icon" | "sidebar";
   className?: string;
+  menuClassName?: string;
 };
 
 function NotificationTypeIcon({
@@ -72,6 +73,7 @@ export function NotificationBell({
   userId,
   variant = "icon",
   className,
+  menuClassName,
 }: NotificationBellProps) {
   const router = useRouter();
   const t = useTranslations("notifications");
@@ -171,7 +173,7 @@ export function NotificationBell({
         }
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80 p-0">
+      <DropdownMenuContent align="end" className={cn("w-80 p-0", menuClassName)}>
         <div className="flex items-center justify-between px-3 py-2.5">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">
             {t("title")}

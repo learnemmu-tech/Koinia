@@ -4,6 +4,7 @@ import { sanitizeCallbackUrl } from "@/lib/callback-url";
 import { loadChurchWebsiteBySlug } from "@/lib/templates/load-church-website";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import { HeritageForgotPasswordPage } from "@/templates/heritage/pages/forgot-password";
+import { ParishForgotPasswordPage } from "@/templates/parish/pages/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,10 @@ export default async function ChurchForgotPasswordPage({
   }
 
   if (model.viewer.isMember) redirect(churchWebsitePath(model.church.slug));
+
+  if (model.templateId === "parish") {
+    return <ParishForgotPasswordPage model={model} callbackUrl={redirectTo} />;
+  }
 
   if (model.templateId !== "heritage") {
     redirect(`/forgot-password?callbackUrl=${encodeURIComponent(redirectTo)}`);

@@ -571,21 +571,29 @@ export async function getOrganizationSnapshot(
         .select({
           churchId: churchWebsites.churchId,
           activeTemplate: churchWebsites.activeTemplate,
+          logoUrl: churchWebsites.logoUrl,
         })
         .from(churchWebsites)
         .where(eq(churchWebsites.organizationId, organizationId)),
       appUser ? listChurchMembershipsForUser(appUser.id) : Promise.resolve([]),
     ]);
 
-  const templateByChurchId = new Map(
-    websiteRows.map((row) => [row.churchId, row.activeTemplate])
-  );
+  const websiteByChurchId = new Map(websiteRows.map((row) => [row.churchId, row]));
 
   const churchList = churchRows.map((row) => {
     const church = mapChurch(row);
-    const storedTemplate = templateByChurchId.get(row.id);
-    if (isTemplateId(storedTemplate)) {
-      church.activeTemplate = storedTemplate;
+    const website = websiteByChurchId.get(row.id);
+    if (isTemplateId(website?.activeTemplate)) {
+      church.activeTemplate = website.activeTemplate;
+    }
+    const websiteLogo = website?.logoUrl?.trim();
+    const churchLogo = church.logoUrl?.trim();
+    if (
+      websiteLogo &&
+      websiteLogo !== DEFAULT_CHURCH_LOGO &&
+      (!churchLogo || churchLogo === DEFAULT_CHURCH_LOGO)
+    ) {
+      church.logoUrl = websiteLogo;
     }
     return church;
   });

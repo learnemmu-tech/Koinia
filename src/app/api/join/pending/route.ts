@@ -16,7 +16,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ pending: null });
     }
 
-    return NextResponse.json({ pending });
+    return NextResponse.json(
+      { pending },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch (error) {
     console.error("[api/join/pending]", error);
     return NextResponse.json(

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { loadChurchWebsiteBySlug } from "@/lib/templates/load-church-website";
 import { HeritageAuthShell } from "@/templates/heritage/components/heritage-auth-shell";
+import { ParishAuthShell } from "@/templates/parish/components/parish-auth-shell";
 
 type LayoutProps = {
   children: React.ReactNode;
@@ -15,6 +16,10 @@ export default async function ChurchAuthLayout({
   const { slug } = await params;
   const model = await loadChurchWebsiteBySlug(slug, { includeContent: false });
   if (!model) notFound();
+
+  if (model.templateId === "parish") {
+    return <ParishAuthShell model={model}>{children}</ParishAuthShell>;
+  }
 
   if (model.templateId !== "heritage") {
     return children;

@@ -70,7 +70,8 @@ export function memberExperiencePath(input: {
 }): string {
   const slug = input.slug?.trim();
   if (!slug) return MEMBER_HOME_PATH;
-  if (resolvePublicTemplateId(input.activeTemplate) === "heritage") {
+  const templateId = resolvePublicTemplateId(input.activeTemplate);
+  if (templateId === "heritage" || templateId === "parish") {
     return churchWebsitePath(slug);
   }
   return MEMBER_HOME_PATH;

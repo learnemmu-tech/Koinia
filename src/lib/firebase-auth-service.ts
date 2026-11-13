@@ -271,6 +271,10 @@ export function rememberSyncedProfile(profile: FirestoreUser & { id?: string }) 
   };
 }
 
+export function clearRecentSyncedProfile() {
+  recentSyncedProfile = null;
+}
+
 function takeRecentSyncedProfile(uid: string): FirestoreUser | null {
   if (
     !recentSyncedProfile ||

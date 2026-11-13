@@ -1200,6 +1200,9 @@
       "chat": "చాట్",
       "shepherd": "షెఫర్డ్ AI",
       "ministries": "పరిచర్యలు",
+      "pages": "పేజీలు",
+      "visit": "సందర్శన",
+      "explore": "అన్వేషించండి",
       "closeMenu": "మెనూ మూసివేయండి",
       "openMenu": "మెనూ తెరవండి",
       "mobile": "మొబైల్",
@@ -1352,6 +1355,8 @@
       "articles": "వ్యాసాలు",
       "articlesDescription": "{name} వ్యాసాలు మరియు వనరులు.",
       "noVideos": "ఇంకా వీడియోలు ప్రచురించబడలేదు",
+      "shorts": "షార్ట్స్",
+      "submitVideo": "వీడియో సమర్పించండి",
       "searchVideos": "వీడియోలు వెతకండి…",
       "noVideoMatch": "ఆ శోధనకు వీడియోలు లేవు."
     },

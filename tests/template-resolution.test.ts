@@ -12,6 +12,10 @@ test("heritage organizations stay on the heritage public website", () => {
   assert.equal(usesSignatureAppExperience("heritage"), false);
 });
 
+test("parish organizations stay on the parish public website", () => {
+  assert.equal(usesSignatureAppExperience("parish"), false);
+});
+
 test("an unimplemented template does not take the heritage website", () => {
   assert.equal(usesSignatureAppExperience("sanctuary"), true);
 });

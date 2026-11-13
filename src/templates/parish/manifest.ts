@@ -1,0 +1,35 @@
+import type { TemplateManifest } from "@/lib/templates/types";
+
+export const parishManifest: TemplateManifest = {
+  id: "parish",
+  name: "Parish",
+  description: "A warm parish church website with forest, ivory, and gold.",
+  previewImage: "/templates/parish/hero.jpg",
+  implemented: true,
+  supportedSections: [
+    "home",
+    "about",
+    "sermons",
+    "sermonDetail",
+    "events",
+    "eventDetail",
+    "ministries",
+    "articles",
+    "articleDetail",
+    "videos",
+    "give",
+    "giveDetail",
+    "contact",
+    "prayer",
+    "memberGate",
+  ],
+  imageSlots: [
+    "hero",
+    "about",
+    "featuredMinistry",
+    "worship",
+    "socialPreview",
+    "logo",
+    "favicon",
+  ],
+};

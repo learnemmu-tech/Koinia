@@ -161,6 +161,8 @@ export function FirebaseSignUpForm({
       navigateAfterAuth(destination);
     } catch {
       navigateAfterAuth(postAuthContinueHref(redirectTo));
+    } finally {
+      window.setTimeout(() => setIsCompletingAuth(false), 8000);
     }
   }
 
@@ -280,7 +282,7 @@ export function FirebaseSignUpForm({
   }
 
   if (isCompletingAuth) {
-    return <AuthLoading />;
+    return <AuthLoading compact={appearance !== "default"} />;
   }
 
   if (showVerificationStep) {
@@ -434,7 +436,7 @@ export function FirebaseSignUpForm({
           <span className={styles.dividerLine} />
         </div>
         <span className={styles.divider}>
-          {appearance === "heritage" ? tAuth("orContinueWith") : tAuth("orJoinWith")}
+          {appearance !== "default" ? tAuth("orContinueWith") : tAuth("orJoinWith")}
         </span>
       </div>
 
@@ -448,7 +450,7 @@ export function FirebaseSignUpForm({
         {isGoogleLoading ?
           <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
         : <Google className="mr-2 size-4" aria-hidden />}
-        {appearance === "heritage"
+        {appearance !== "default"
           ? tAuth("continueWithGoogle")
           : tAuth("signUpWithGoogle")}
       </Button>

@@ -1,5 +1,7 @@
 import { WaitingApprovalClient } from "@/components/join/waiting-approval-client";
 
+import "@/templates/parish/parish.css";
+
 export const metadata = {
   title: "Waiting for approval",
   description: "Your church membership request is pending administrator approval.",

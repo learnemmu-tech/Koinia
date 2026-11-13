@@ -32,16 +32,20 @@ export function PublicChurchProviders({ children }: { children: React.ReactNode 
       disableTransitionOnChange
       themes={["light", "dark", "system"]}
     >
-      <ActiveChurchProvider initialChurches={[]} initialActiveChurchId={null}>
-        <FirebaseAuthProvider>
-          <QueryClientProvider client={queryClient}>
-            <ContentAuthDialogProvider>
-              <TooltipProvider>{children}</TooltipProvider>
-            </ContentAuthDialogProvider>
-          </QueryClientProvider>
-        </FirebaseAuthProvider>
-      </ActiveChurchProvider>
-      <Toaster />
+      <>
+        <ActiveChurchProvider initialChurches={[]} initialActiveChurchId={null}>
+          <FirebaseAuthProvider>
+            <QueryClientProvider client={queryClient}>
+              <ContentAuthDialogProvider>
+                <TooltipProvider>
+                  <div className="contents">{children}</div>
+                </TooltipProvider>
+              </ContentAuthDialogProvider>
+            </QueryClientProvider>
+          </FirebaseAuthProvider>
+        </ActiveChurchProvider>
+        <Toaster />
+      </>
     </ThemeProvider>
   );
 }

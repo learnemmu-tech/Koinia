@@ -26,9 +26,10 @@ export default async function ChurchSongsPage({
     return <AppSongsPage searchParams={searchParams} />;
   }
 
-  const [{ listSongs }, { HeritageSongsPage }] = await Promise.all([
+  const [{ listSongs }, heritageCatalog, parishCatalog] = await Promise.all([
     import("@/lib/postgres/features"),
     import("@/templates/heritage/pages/catalog"),
+    import("@/templates/parish/pages/catalog"),
   ]);
   const songs = await listSongs(
     tenantContentQuery({
@@ -38,5 +39,9 @@ export default async function ChurchSongsPage({
     { publishedOnly: true, limit: 80 }
   );
 
-  return <HeritageSongsPage model={model} songs={songs} />;
+  if (model.templateId === "parish") {
+    return <parishCatalog.ParishSongsPage model={model} songs={songs} />;
+  }
+
+  return <heritageCatalog.HeritageSongsPage model={model} songs={songs} />;
 }

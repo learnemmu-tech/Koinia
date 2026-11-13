@@ -25,9 +25,11 @@ export function PublicRootShell({
   return (
     <I18nProvider initialLocale={initialLocale} messages={messages}>
       <PublicChurchProviders>
-        <SiteJsonLd />
-        {children}
-        {modal}
+        <>
+          <SiteJsonLd />
+          {children}
+          {modal}
+        </>
       </PublicChurchProviders>
     </I18nProvider>
   );

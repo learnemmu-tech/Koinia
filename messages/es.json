@@ -1200,6 +1200,9 @@
       "chat": "Chat",
       "shepherd": "Shepherd AI",
       "ministries": "Ministerios",
+      "pages": "Páginas",
+      "visit": "Visita",
+      "explore": "Explorar",
       "closeMenu": "Cerrar menú",
       "openMenu": "Abrir menú",
       "mobile": "Móvil",
@@ -1352,6 +1355,8 @@
       "articles": "Artículos",
       "articlesDescription": "Artículos y recursos de {name}.",
       "noVideos": "Aún no hay videos publicados",
+      "shorts": "Shorts",
+      "submitVideo": "Enviar video",
       "searchVideos": "Buscar videos…",
       "noVideoMatch": "Ningún video coincide con esa búsqueda."
     },

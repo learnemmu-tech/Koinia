@@ -1,0 +1,970 @@
+.parish-theme {
+  position: relative;
+  --background: 40 33% 93%;
+  --foreground: 150 14% 17%;
+  --card: 40 60% 98%;
+  --card-foreground: 150 14% 17%;
+  --popover: 40 60% 98%;
+  --popover-foreground: 150 14% 17%;
+  --primary: 158 37% 17%;
+  --primary-foreground: 40 33% 93%;
+  --primary-hover: 156 39% 12%;
+  --primary-active: 156 39% 10%;
+  --primary-subtle: 40 33% 90%;
+  --secondary: 36 32% 90%;
+  --secondary-foreground: 158 37% 17%;
+  --muted: 36 28% 90%;
+  --muted-foreground: 30 8% 40%;
+  --accent: 36 43% 90%;
+  --accent-foreground: 158 37% 17%;
+  --border: 33 32% 82%;
+  --input: 33 32% 82%;
+  --ring: 36 43% 60%;
+  --parish-bg: #f4efe4;
+  --parish-paper: #fffcf7;
+  --parish-ink: #24312c;
+  --parish-forest: #1b3c32;
+  --parish-forest-deep: #122820;
+  --parish-gold: #c6a36a;
+  --parish-gold-ink: #8a6a32;
+  --parish-line: #e3d6c2;
+  --parish-muted: #6e675f;
+  --heritage-background: var(--parish-bg);
+  --heritage-text: var(--parish-ink);
+  --heritage-muted: var(--parish-muted);
+  --heritage-border: var(--parish-line);
+  --heritage-surface: var(--parish-paper);
+  --heritage-accent: var(--parish-gold);
+  --heritage-accent-ink: var(--parish-gold-ink);
+  --heritage-primary: var(--parish-forest);
+  --heritage-primary-foreground: var(--parish-bg);
+  --heritage-muted-bg: #efe6d6;
+  background: var(--parish-bg);
+  color: var(--parish-ink);
+  font-family: var(--font-parish-sans), "Outfit", sans-serif;
+}
+
+.parish-display,
+.parish-theme .heritage-display {
+  font-family: var(--font-parish-display), "Cormorant Garamond", serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.parish-eyebrow,
+.parish-theme .heritage-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--parish-gold-ink);
+}
+
+.parish-theme .heritage-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.parish-theme .heritage-btn-primary,
+.parish-theme .heritage-btn-oxblood {
+  background: var(--parish-forest);
+  color: var(--parish-bg);
+}
+
+.parish-theme .heritage-btn-outline {
+  border: 1px solid var(--parish-line);
+  color: var(--parish-forest);
+}
+
+.parish-skip {
+  position: absolute;
+  left: 1rem;
+  top: 0.5rem;
+  z-index: 80;
+  transform: translateY(-12rem);
+  background: var(--parish-paper);
+  padding: 0.5rem 0.75rem;
+}
+
+.parish-skip:focus {
+  transform: none;
+}
+
+.parish-header {
+  position: absolute;
+  top: 1.15rem;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: transparent;
+  border: 0;
+}
+
+.parish-header-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  width: min(76rem, calc(100% - 2.5rem));
+  max-width: 72rem;
+  margin: 0 auto;
+  min-height: 4.4rem;
+  padding: 0.4rem 0.55rem 0.4rem 1.15rem;
+  background: #fff;
+  border-radius: 0.85rem;
+  box-shadow: 0 10px 28px rgb(20 32 24 / 14%);
+}
+
+.parish-theme main {
+  padding-top: 6.5rem;
+}
+
+.parish-theme main:has(> .parish-hero),
+.parish-theme main:has(> .parish-inner-banner) {
+  padding-top: 0;
+}
+
+.parish-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  color: var(--parish-forest);
+}
+
+.parish-brand-mark {
+  position: relative;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  overflow: hidden;
+  border: 1px solid var(--parish-line);
+  background: var(--parish-paper);
+}
+
+.parish-brand-name {
+  font-family: var(--font-parish-display), serif;
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.parish-locale {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  min-width: 2.5rem;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+  border: 1px solid #e3d6c2 !important;
+  background: #fffcf7 !important;
+  color: #1b3c32 !important;
+  box-shadow: 0 1px 2px rgb(20 32 24 / 6%);
+}
+
+.parish-locale:hover,
+.parish-locale:active {
+  background: #efe6d6 !important;
+  color: #1b3c32 !important;
+}
+
+.parish-locale:focus-visible {
+  outline: 2px solid #c6a36a;
+  outline-offset: 2px;
+}
+
+.parish-portal-menu,
+.parish-locale-menu {
+  border: 1px solid #e3d6c2 !important;
+  border-radius: 0.75rem !important;
+  background: #fffcf7 !important;
+  color: #1b3c32 !important;
+  box-shadow: 0 10px 28px rgb(20 32 24 / 14%) !important;
+}
+
+.parish-locale-menu .parish-locale-item {
+  color: #1b3c32 !important;
+  background: transparent;
+}
+
+.parish-locale-menu .parish-locale-item:hover,
+.parish-locale-menu .parish-locale-item:focus,
+.parish-locale-menu .parish-locale-item[data-highlighted] {
+  background: #efe6d6 !important;
+  color: #1b3c32 !important;
+}
+
+.parish-locale-menu .parish-locale-item.is-selected,
+.parish-locale-menu .parish-locale-item.is-selected:hover,
+.parish-locale-menu .parish-locale-item.is-selected:focus {
+  background: #1b3c32 !important;
+  color: #fffcf7 !important;
+}
+
+.parish-locale-menu .parish-locale-item.is-selected svg {
+  color: #c6a36a !important;
+}
+
+.parish-theme .parish-video-tabs [role="tablist"] {
+  height: auto;
+  gap: 0.25rem;
+  border: 1px solid var(--parish-line);
+  background: #fff;
+  padding: 0.25rem;
+}
+
+.parish-theme .parish-video-tabs [role="tab"][data-state="active"] {
+  background: var(--parish-forest);
+  color: #f4efe4;
+}
+
+.parish-bar {
+  display: contents;
+}
+
+.parish-header-actions {
+  display: flex;
+  justify-self: end;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.parish-header-auth {
+  display: none;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.parish-header-inner {
+  position: relative;
+}
+
+.parish-nav-links {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 1.35rem;
+}
+
+.parish-pages {
+  position: relative;
+}
+
+.parish-pages::after {
+  content: "";
+  position: absolute;
+  left: -0.75rem;
+  right: -0.75rem;
+  top: 100%;
+  height: 0.9rem;
+}
+
+.parish-pages-menu {
+  position: absolute;
+  left: 50%;
+  z-index: 60;
+  display: grid;
+  min-width: 15rem;
+  margin-top: 0.65rem;
+  transform: translateX(-50%) translateY(6px);
+  border: 1px solid var(--parish-line);
+  border-radius: 0.7rem;
+  background: #fff;
+  padding: 0.4rem;
+  box-shadow: 0 16px 36px rgb(20 32 24 / 14%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+}
+
+.parish-pages-menu.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.parish-pages-menu a {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.45rem;
+  font-size: 0.92rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--parish-ink);
+}
+
+.parish-pages-menu a:hover {
+  background: #f6f1e7;
+  color: var(--parish-forest);
+}
+
+.parish-nav-links details {
+  position: relative;
+}
+
+.parish-nav-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--parish-ink);
+}
+
+.parish-nav-link.is-active,
+.parish-nav-link:hover {
+  color: var(--parish-gold-ink);
+}
+
+.parish-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 0.4rem;
+  background: var(--parish-forest);
+  color: #f4efe4;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.parish-btn-gold {
+  background: var(--parish-gold);
+  color: #1b3c32;
+}
+
+.parish-btn-ghost {
+  background: transparent;
+  color: #f4efe4;
+  border: 1px solid color-mix(in srgb, #f4efe4 70%, transparent);
+}
+
+.parish-menu-btn {
+  display: inline-flex;
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.parish-drawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.45rem);
+  border: 1px solid var(--parish-line);
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 0.5rem 1.25rem 1.25rem;
+  box-shadow: 0 16px 36px rgb(20 32 24 / 14%);
+}
+
+.parish-drawer a {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.parish-hero {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100svh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #1c2a22;
+  color: #fff;
+}
+
+.parish-hero-media {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.parish-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 58%;
+}
+
+.parish-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(16 24 18 / 28%);
+}
+
+.parish-hero-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 76rem;
+  min-height: 100svh;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  padding: 4.5rem 1.25rem 4.5rem;
+}
+
+.parish-hero-copy-center {
+  text-align: center;
+}
+
+.parish-hero-copy-center h1,
+.parish-hero-copy-center p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.parish-hero-tagline {
+  font-family: var(--font-parish-display), serif;
+  font-style: italic;
+  font-weight: 500;
+  color: #e6c98a;
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+}
+
+.parish-btn-light {
+  background: #fff;
+  color: #24312b;
+}
+
+.parish-actions-center {
+  justify-content: center;
+}
+
+.parish-service-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.25rem;
+  background: var(--parish-paper);
+  border-bottom: 1px solid var(--parish-line);
+}
+
+.parish-countdown {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.parish-countdown strong {
+  display: block;
+  font-family: var(--font-parish-display), serif;
+  font-size: 1.8rem;
+  color: var(--parish-forest);
+}
+
+.parish-countdown span {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--parish-muted);
+}
+
+.parish-center {
+  text-align: center;
+}
+
+.parish-lead {
+  max-width: 46rem;
+  margin: 0 auto;
+  font-family: var(--font-parish-display), serif;
+  font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+  line-height: 1.35;
+  color: var(--parish-forest);
+}
+
+.parish-card-grid.cols-4 {
+  grid-template-columns: 1fr;
+}
+
+.parish-photo-card {
+  display: block;
+  background: var(--parish-paper);
+  border: 1px solid var(--parish-line);
+  overflow: hidden;
+  text-align: left;
+}
+
+.parish-photo-card h3 {
+  padding: 0.85rem 0.9rem 0.2rem;
+  font-family: var(--font-parish-display), serif;
+  font-size: 1.35rem;
+  color: var(--parish-forest);
+}
+
+.parish-photo-card p {
+  padding: 0 0.9rem 0.9rem;
+}
+
+.parish-resource-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.parish-resource-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgb(18 40 32 / 12%);
+}
+
+.parish-resource-card p {
+  flex: 1;
+}
+
+.parish-card-action {
+  display: inline-block;
+  padding: 0 0.9rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--parish-gold-ink);
+}
+
+.parish-section-compact {
+  padding-top: 2.75rem;
+  padding-bottom: 2.75rem;
+}
+
+.parish-watch {
+  display: grid;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.parish-watch-intro h2 {
+  font-size: clamp(2.4rem, 4vw, 3.4rem);
+}
+
+.parish-watch-cta {
+  min-height: 2.35rem;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 0.92rem;
+}
+
+.parish-watch-cards {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.parish-watch-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--parish-line);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 10px 24px rgb(20 32 24 / 8%);
+  color: var(--parish-ink);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.parish-watch-card:hover,
+.parish-watch-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgb(20 32 24 / 14%);
+  outline: 2px solid var(--parish-gold);
+  outline-offset: 2px;
+}
+
+.parish-watch-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: #d9d0c2;
+}
+
+.parish-watch-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--parish-forest);
+}
+
+.parish-watch-play svg {
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0.65rem;
+  border-radius: 999px;
+  background: rgb(255 252 247 / 90%);
+  box-shadow: 0 6px 16px rgb(18 40 32 / 18%);
+}
+
+.parish-watch-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem 0.8rem;
+}
+
+.parish-watch-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.parish-watch-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--parish-gold-ink);
+}
+
+.parish-media-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .parish-watch-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 980px) {
+  .parish-watch {
+    grid-template-columns: minmax(16rem, 0.72fr) minmax(0, 1.28fr);
+    gap: 2.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .parish-media-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .parish-media-grid-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.parish-event-row {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  background: var(--parish-paper);
+  border: 1px solid var(--parish-line);
+}
+
+.parish-event-row > div {
+  padding: 1rem;
+}
+
+.parish-quote {
+  display: grid;
+  background: #efe6d4;
+}
+
+.parish-service-card {
+  position: relative;
+  min-height: 16rem;
+  overflow: hidden;
+  color: #fff;
+}
+
+.parish-service-card img {
+  position: absolute;
+  inset: 0;
+}
+
+.parish-service-card div {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 1rem;
+  background: linear-gradient(transparent, rgb(12 28 22 / 78%));
+}
+
+.parish-quote blockquote {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  color: var(--parish-forest);
+}
+
+.parish-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .parish-hero-copy {
+    padding-top: 5rem;
+    padding-bottom: 4.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .parish-hero-copy {
+    padding-top: 0.75rem;
+    padding-bottom: 5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .parish-hero {
+    align-items: center;
+  }
+
+  .parish-hero-copy {
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 6.5rem;
+    padding-bottom: 2.5rem;
+  }
+
+  .parish-hero-media img {
+    object-position: 44% 52%;
+  }
+}
+
+.parish-hero h1 {
+  max-width: 12ch;
+  font-size: clamp(2.8rem, 5.4vw, 4.6rem);
+  font-weight: 500;
+  line-height: 1.05;
+  color: #fff;
+}
+
+.parish-hero p {
+  max-width: 38rem;
+  margin-top: 1rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, #f4efe4 86%, transparent);
+}
+
+.parish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.parish-section {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 4.5rem 1.25rem;
+}
+
+.parish-section h2 {
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+}
+
+.parish-split {
+  display: grid;
+  gap: 2rem;
+}
+
+.parish-card-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.parish-card {
+  background: var(--parish-paper);
+  border: 1px solid var(--parish-line);
+  padding: 1.25rem;
+}
+
+.parish-card h3 {
+  font-family: var(--font-parish-display), serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.parish-muted {
+  color: var(--parish-muted);
+  line-height: 1.6;
+}
+
+.parish-band {
+  background: var(--parish-forest);
+  color: #f4efe4;
+}
+
+.parish-band .parish-section {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+.parish-footer {
+  background: var(--parish-forest-deep);
+  color: #efe6d6;
+}
+
+.parish-footer-inner {
+  display: grid;
+  gap: 2rem;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 3.5rem 1.25rem 2rem;
+}
+
+.parish-footer-base {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 2rem;
+  font-size: 0.85rem;
+  color: #e3d6c2;
+}
+
+.parish-footer a:hover {
+  color: var(--parish-gold);
+}
+
+.parish-inner-banner {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: min(26rem, 420px);
+  min-height: 20rem;
+  overflow: hidden;
+  color: #fff;
+}
+
+.parish-inner-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(12 24 18 / 18%) 0%, rgb(12 24 18 / 62%) 100%);
+}
+
+.parish-inner-copy {
+  position: relative;
+  z-index: 1;
+  width: min(72rem, 100%);
+  margin: 0 auto;
+  padding: 6.5rem 1.25rem 2.75rem;
+}
+
+.parish-page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.parish-page :is(img, video) {
+  max-width: 100%;
+}
+
+.parish-auth {
+  display: grid;
+  min-height: 100svh;
+  background: var(--parish-bg);
+}
+
+.parish-auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+}
+
+.parish-auth-card {
+  width: min(100%, 28rem);
+  background: var(--parish-paper);
+  border: 1px solid var(--parish-line);
+  padding: 2rem 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .parish-split {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: center;
+  }
+
+  .parish-card-grid.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .parish-card-grid.cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .parish-event-row {
+    grid-template-columns: 11rem minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .parish-quote {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .parish-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .parish-card-grid.cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .parish-footer-inner {
+    grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  }
+}
+
+@media (min-width: 1100px) {
+  .parish-nav-links,
+  .parish-header-auth {
+    display: flex;
+  }
+
+  .parish-menu-btn,
+  .parish-drawer {
+    display: none;
+  }
+
+  .parish-auth {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+
+  .parish-auth-visual {
+    display: flex;
+  }
+}
+
+.parish-auth-visual {
+  display: none;
+  position: relative;
+  align-items: flex-end;
+  overflow: hidden;
+  background: var(--parish-forest);
+  color: #f4efe4;
+  padding: 3rem;
+}

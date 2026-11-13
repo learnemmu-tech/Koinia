@@ -53,11 +53,13 @@ type AccountMenuItemsProps = {
   chatHref?: string;
   shepherdHref?: string;
   prayerHref?: string;
+  profileHref?: string;
   signOutRedirect?: string;
 };
 
 export function AccountMenuItems({
   onNavigate,
+  profileHref = "/profile",
   signOutRedirect,
 }: AccountMenuItemsProps) {
   const { setTheme } = useTheme();
@@ -71,7 +73,7 @@ export function AccountMenuItems({
   return (
     <>
       <DropdownMenuItem asChild className="cursor-pointer">
-        <Link href="/profile" onClick={onNavigate}>
+        <Link href={profileHref} onClick={onNavigate}>
           <User2 className="mr-2 size-4" />
           {tn("myProfile")}
         </Link>

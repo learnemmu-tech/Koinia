@@ -4,6 +4,7 @@ import { usesSignatureAppExperience } from "@/lib/templates/signature-experience
 import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { HeritageCommunityPage } from "@/templates/heritage/pages/catalog";
 import { HeritageMemberChatPage } from "@/templates/heritage/pages/member-features";
+import { ParishCommunityPage } from "@/templates/parish/pages/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,9 @@ export default async function CommunityPage({
     return <AppCommunityPage searchParams={searchParams} />;
   }
   const { tab } = await searchParams;
+  if (model.templateId === "parish") {
+    return <ParishCommunityPage model={model} tab={tab} />;
+  }
   if (model.templateId === "heritage") {
     if (model.viewer.isMember) {
       return <HeritageMemberChatPage model={model} tab={tab} />;

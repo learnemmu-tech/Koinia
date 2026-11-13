@@ -5,6 +5,7 @@ import { sanitizeCallbackUrl } from "@/lib/callback-url";
 import { loadChurchWebsiteBySlug } from "@/lib/templates/load-church-website";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import { HeritageSignupPage } from "@/templates/heritage/pages/signup";
+import { ParishSignupPage } from "@/templates/parish/pages/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,10 @@ export default async function ChurchSignupPage({
   }
 
   if (model.viewer.isMember) redirect(churchWebsitePath(model.church.slug));
+
+  if (model.templateId === "parish") {
+    return <ParishSignupPage model={model} callbackUrl={redirectTo} />;
+  }
 
   if (model.templateId !== "heritage") {
     redirect(`/signup?callbackUrl=${encodeURIComponent(redirectTo)}`);

@@ -5,7 +5,7 @@ import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
 import type { FirebaseEvent } from "@/types/firebase-event";
 import type { FirebaseSermon } from "@/types/firebase-sermon";
 
-export const TEMPLATE_IDS = ["signature", "heritage", "sanctuary"] as const;
+export const TEMPLATE_IDS = ["signature", "heritage", "parish", "sanctuary"] as const;
 
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 

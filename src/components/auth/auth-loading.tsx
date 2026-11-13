@@ -3,9 +3,9 @@ import Image from "next/image";
 
 import { siteConfig } from "@/config/site";
 
-export function AuthLoading() {
+export function AuthLoading({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background">
+    <div className={compact ? "flex items-center justify-center py-16" : "flex min-h-svh items-center justify-center bg-background"}>
       <div className="flex flex-col items-center gap-3 text-muted-foreground">
         <Image
           src={siteConfig.icon}

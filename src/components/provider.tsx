@@ -81,7 +81,9 @@ export default function Providers({
                         <MembershipStatusGuard />
                         <SubscriptionShell>
                           <TooltipProvider>
-                            <DeferredWorkspaceAudio>{children}</DeferredWorkspaceAudio>
+                            <div className="contents">
+                              <DeferredWorkspaceAudio>{children}</DeferredWorkspaceAudio>
+                            </div>
                           </TooltipProvider>
                         </SubscriptionShell>
                       </WorkspaceBootstrapGate>

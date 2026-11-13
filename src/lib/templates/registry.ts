@@ -1,4 +1,5 @@
 import { heritageManifest } from "@/templates/heritage/manifest";
+import { parishManifest } from "@/templates/parish/manifest";
 import { sanctuaryManifest } from "@/templates/sanctuary/manifest";
 import { signatureManifest } from "@/templates/signature/manifest";
 import type { TemplateId, TemplateManifest } from "@/lib/templates/types";
@@ -6,13 +7,14 @@ import type { TemplateId, TemplateManifest } from "@/lib/templates/types";
 const MANIFESTS: Record<TemplateId, TemplateManifest> = {
   signature: signatureManifest,
   heritage: heritageManifest,
+  parish: parishManifest,
   sanctuary: sanctuaryManifest,
 };
 
 export const DEFAULT_TEMPLATE_ID: TemplateId = "signature";
 
 export function listTemplateManifests(): TemplateManifest[] {
-  return [signatureManifest, heritageManifest, sanctuaryManifest];
+  return [signatureManifest, heritageManifest, parishManifest, sanctuaryManifest];
 }
 
 export function getTemplateManifest(id: TemplateId): TemplateManifest {
@@ -20,7 +22,12 @@ export function getTemplateManifest(id: TemplateId): TemplateManifest {
 }
 
 export function isTemplateId(value: string | null | undefined): value is TemplateId {
-  return value === "signature" || value === "heritage" || value === "sanctuary";
+  return (
+    value === "signature" ||
+    value === "heritage" ||
+    value === "parish" ||
+    value === "sanctuary"
+  );
 }
 
 export function parseTemplateId(

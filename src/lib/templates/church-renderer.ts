@@ -1,9 +1,13 @@
+import type { TemplateId } from "@/lib/templates/types";
+
 /**
- * Heritage is the only public website template. Signature keeps the existing
- * application. Any other id must not fall through to the Heritage site.
+ * Signature keeps the existing application. Heritage and Parish are dedicated
+ * public church websites. Unimplemented ids must not fall through to them.
  */
-export function usesSignatureAppExperience(
-  templateId: "signature" | "heritage" | "sanctuary"
-): boolean {
-  return templateId !== "heritage";
+export function usesDedicatedChurchWebsite(templateId: TemplateId): boolean {
+  return templateId === "heritage" || templateId === "parish";
+}
+
+export function usesSignatureAppExperience(templateId: TemplateId): boolean {
+  return !usesDedicatedChurchWebsite(templateId);
 }

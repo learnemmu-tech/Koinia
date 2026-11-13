@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -136,6 +136,7 @@ export function WaitingApprovalClient() {
       try {
         const token = await user.getIdToken();
         const res = await fetch("/api/join/pending", {
+          cache: "no-store",
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
@@ -178,6 +179,7 @@ export function WaitingApprovalClient() {
       try {
         const token = await user.getIdToken();
         const res = await fetch("/api/join/pending", {
+          cache: "no-store",
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok || cancelled) return;
@@ -192,6 +194,7 @@ export function WaitingApprovalClient() {
             handleApproved(pending);
             return;
           }
+          if (profile?.pendingBranchId?.trim()) return;
           router.replace(ACCESS_DENIED_PATH);
         }
       } catch {
@@ -233,13 +236,17 @@ export function WaitingApprovalClient() {
     router.refresh();
   }, [isApproved, countdown, pending, rememberJoinedChurch, router]);
 
+  const parish = pending?.activeTemplate === "parish";
+  const frame = (node: ReactNode) =>
+    parish ? <div className="parish-theme min-h-svh">{node}</div> : node;
+
   if (authLoading || loading) return <AuthLoading />;
   if (!authUser) return <AuthLoading />;
 
   if (isApproved && pending) {
     const progress = ((REDIRECT_SECONDS - countdown) / REDIRECT_SECONDS) * 100;
 
-    return (
+    return frame(
       <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-12 text-center">
         <div className="animate-in zoom-in-50 fade-in duration-500">
           <CheckCircle2 className="size-20 text-foreground" aria-hidden />
@@ -263,7 +270,7 @@ export function WaitingApprovalClient() {
   }
 
   if (!pending) {
-    return (
+    return frame(
       <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4 py-12 text-center">
         <h1 className="font-heading text-2xl font-bold">No pending request</h1>
         <p className="mt-3 text-muted-foreground">
@@ -276,7 +283,7 @@ export function WaitingApprovalClient() {
     );
   }
 
-  return (
+  return frame(
     <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-12 text-center">
       <div className="flex size-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
         <Clock3 className="size-8" />

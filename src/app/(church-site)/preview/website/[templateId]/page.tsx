@@ -6,6 +6,7 @@ import { loadChurchWebsiteBySlug } from "@/lib/templates/load-church-website";
 import { getTemplatePages } from "@/lib/templates/pages";
 import { parseTemplateId } from "@/lib/templates/registry";
 import { heritageDisplay, heritageSans } from "@/templates/heritage/fonts";
+import { parishDisplay, parishSans } from "@/templates/parish/fonts";
 import { userCanManageChurch } from "@/lib/postgres/session";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +49,9 @@ export default async function WebsitePreviewPage({
   const fontClass =
     templateId === "heritage"
       ? cn(heritageDisplay.variable, heritageSans.variable)
-      : undefined;
+      : templateId === "parish"
+        ? cn(parishDisplay.variable, parishSans.variable)
+        : undefined;
 
   return (
     <div className={fontClass}>

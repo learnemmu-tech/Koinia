@@ -8,6 +8,7 @@ import { getBookById } from "@/lib/postgres/books";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import { requireChurchWebsite } from "@/lib/templates/require-church-website";
 import { HeritageDetailFrame } from "@/templates/heritage/components/heritage-content-frame";
+import { ParishDetailFrame } from "@/templates/parish/components/parish-frame";
 
 export default async function ChurchBookDetailPage({
   params,
@@ -38,9 +39,9 @@ export default async function ChurchBookDetailPage({
         listHref={listHref}
       />
     );
-    return model.templateId === "heritage" ?
-        <HeritageDetailFrame>{gate}</HeritageDetailFrame>
-      : gate;
+    if (model.templateId === "heritage") return <HeritageDetailFrame>{gate}</HeritageDetailFrame>;
+    if (model.templateId === "parish") return <ParishDetailFrame>{gate}</ParishDetailFrame>;
+    return gate;
   }
 
   const detail = (
@@ -54,7 +55,7 @@ export default async function ChurchBookDetailPage({
     />
   );
 
-  return model.templateId === "heritage" ?
-      <HeritageDetailFrame>{detail}</HeritageDetailFrame>
-    : detail;
+  if (model.templateId === "heritage") return <HeritageDetailFrame>{detail}</HeritageDetailFrame>;
+  if (model.templateId === "parish") return <ParishDetailFrame>{detail}</ParishDetailFrame>;
+  return detail;
 }

@@ -297,7 +297,7 @@ export async function getPendingJoinRequestForUser(
   const appUser = await getAppUserByClerkId(clerkId);
   if (!appUser) return null;
 
-  const churchId = appUser.pendingChurchId;
+  const churchId = appUser.pendingChurchId || appUser.activeChurchId;
   if (!churchId) return null;
 
   const [church] = await db

@@ -22,12 +22,16 @@ type LocaleSwitcherProps = {
   className?: string;
   align?: "start" | "center" | "end";
   display?: "name" | "code";
+  iconOnly?: boolean;
+  menuClassName?: string;
 };
 
 export function LocaleSwitcher({
   className,
   align = "end",
   display = "name",
+  iconOnly = false,
+  menuClassName,
 }: LocaleSwitcherProps) {
   const t = useTranslations("common");
   const locale = useLocale() as Locale;
@@ -53,16 +57,21 @@ export function LocaleSwitcher({
             className
           )}
         >
-          <Globe className="size-3.5 shrink-0 opacity-80" aria-hidden />
-          <span className="hidden max-w-[7rem] truncate min-[360px]:inline">
-            {currentLabel}
-          </span>
-          <ChevronDown className="size-3.5 shrink-0 opacity-70" aria-hidden />
+          <Globe className={cn("shrink-0", iconOnly ? "size-4" : "size-3.5 opacity-80")} aria-hidden />
+          {iconOnly ? null : (
+            <span className="hidden max-w-[7rem] truncate min-[360px]:inline">
+              {currentLabel}
+            </span>
+          )}
+          {iconOnly ? null : <ChevronDown className="size-3.5 shrink-0 opacity-70" aria-hidden />}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
-        className="min-w-[10rem] border-border bg-card p-1 text-foreground shadow-dropdown dark:bg-popover dark:shadow-md"
+        className={cn(
+          "min-w-[10rem] border-border bg-card p-1 text-foreground shadow-dropdown dark:bg-popover dark:shadow-md",
+          menuClassName
+        )}
       >
         {locales.map((item) => {
           const selected = item === locale;
@@ -70,8 +79,11 @@ export function LocaleSwitcher({
             <DropdownMenuItem
               key={item}
               className={cn(
-                "cursor-pointer rounded-md text-sm focus:bg-surface-raised focus:text-foreground dark:focus:bg-accent",
-                selected && "bg-primary-subtle text-foreground"
+                "cursor-pointer rounded-md text-sm",
+                menuClassName
+                  ? "parish-locale-item"
+                  : "focus:bg-surface-raised focus:text-foreground dark:focus:bg-accent",
+                selected && (menuClassName ? "is-selected" : "bg-primary-subtle text-foreground")
               )}
               onSelect={() => {
                 if (!selected) setLocale(item);

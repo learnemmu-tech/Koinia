@@ -29,7 +29,10 @@ export default async function PrayerPage({
 
   // Heritage members stay inside the church website and see this church's
   // prayer wall. Visitors and non-members keep the public request form.
-  if (model.templateId === "heritage" && (await shouldShowHeritageMemberPrayer(model))) {
+  if (
+    (model.templateId === "heritage" || model.templateId === "parish") &&
+    (await shouldShowHeritageMemberPrayer(model))
+  ) {
     return <HeritageMemberPrayerPage model={model} />;
   }
   return <pages.Prayer model={model} />;

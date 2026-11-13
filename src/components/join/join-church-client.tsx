@@ -52,7 +52,41 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
   const [church, setChurch] = useState<JoinChurchPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
+  const [requestState, setRequestState] = useState<"idle" | "pending" | "active">("idle");
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authUser || authLoading) return;
+    let cancelled = false;
+    async function loadStatus() {
+      const user = firebaseAuth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      const res = await fetch("/api/join/pending", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok || cancelled) return;
+      const data = (await res.json()) as {
+        pending: { slug?: string; status?: "pending" | "active"; activeTemplate?: TemplateId | null } | null;
+      };
+      const pending = data.pending;
+      if (!pending || pending.slug !== slug) return;
+      if (pending.status === "active") {
+        router.replace(
+          memberExperiencePath({ slug, activeTemplate: pending.activeTemplate })
+        );
+        return;
+      }
+      setRequestState("pending");
+    }
+    void loadStatus();
+    const interval = window.setInterval(() => void loadStatus(), 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [authUser, authLoading, router, slug]);
 
   useEffect(() => {
     async function loadChurch() {
@@ -240,7 +274,7 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
                 <Button
                   className="w-full"
                   size="lg"
-                  disabled={joining}
+                  disabled={joining || requestState === "pending"}
                   onClick={() => void submitJoinRequest()}
                 >
                   {joining ?
@@ -250,6 +284,8 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
                         "Joining…"
                       : "Sending request…"}
                     </>
+                  : requestState === "pending" ?
+                    "Request pending approval"
                   : church.enrollmentMode === "open" ?
                     `Join ${church.name}`
                   : `Request to join ${church.name}`}

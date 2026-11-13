@@ -49,6 +49,8 @@ type HeaderUserMenuProps = {
   variant?: "default" | "heritage";
   guestFallback?: "signin" | "skeleton";
   onNavigate?: () => void;
+  profileHref?: string;
+  menuClassName?: string;
   signOutRedirect?: string;
 };
 
@@ -56,6 +58,8 @@ export function HeaderUserMenu({
   variant = "default",
   guestFallback = "signin",
   onNavigate,
+  profileHref,
+  menuClassName,
   signOutRedirect,
 }: HeaderUserMenuProps) {
   const tCommon = useTranslations("common");
@@ -142,7 +146,7 @@ export function HeaderUserMenu({
       <DropdownMenuContent
         align="end"
         collisionPadding={8}
-        className="w-56 rounded-xl"
+        className={cn("w-56 rounded-xl", menuClassName)}
       >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col gap-0.5">
@@ -155,6 +159,7 @@ export function HeaderUserMenu({
         <DropdownMenuSeparator />
         <AccountMenuItems
           onNavigate={onNavigate}
+          profileHref={profileHref}
           signOutRedirect={signOutRedirect}
         />
       </DropdownMenuContent>

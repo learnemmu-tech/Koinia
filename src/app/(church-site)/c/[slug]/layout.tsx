@@ -5,6 +5,7 @@ import { loadChurchWebsiteBySlug } from "@/lib/templates/load-church-website";
 import { churchCanonicalPath } from "@/lib/templates/paths";
 import { cn } from "@/lib/utils";
 import { heritageDisplay, heritageSans } from "@/templates/heritage/fonts";
+import { parishDisplay, parishSans } from "@/templates/parish/fonts";
 
 type LayoutProps = {
   children: React.ReactNode;
@@ -63,6 +64,9 @@ export async function generateViewport({
   if (model?.templateId === "heritage") {
     return { themeColor: "#F5F1E8" };
   }
+  if (model?.templateId === "parish") {
+    return { themeColor: "#F4EFE4" };
+  }
   return {};
 }
 
@@ -77,7 +81,9 @@ export default async function ChurchWebsiteLayout({
   const fontClass =
     model.templateId === "heritage"
       ? cn(heritageDisplay.variable, heritageSans.variable)
-      : undefined;
+      : model.templateId === "parish"
+        ? cn(parishDisplay.variable, parishSans.variable)
+        : undefined;
 
   return <div className={fontClass}>{children}</div>;
 }

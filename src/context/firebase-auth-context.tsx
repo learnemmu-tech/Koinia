@@ -305,6 +305,10 @@ export function FirebaseAuthProvider({
       if (!current) return null;
 
       try {
+        const { clearRecentSyncedProfile } = await import(
+          "@/lib/firebase-auth-service"
+        );
+        clearRecentSyncedProfile();
         const serverProfile = await createOrUpdateUserInFirestore(current);
         const userProfile =
           serverProfile && patch ? { ...serverProfile, ...patch } : serverProfile;
