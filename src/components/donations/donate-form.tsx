@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Heart, Loader2, Lock } from "lucide-react";
 import { useForm, type Resolver } from "react-hook-form";
@@ -53,9 +53,39 @@ const fieldClassName =
 
 const labelClassName = "text-sm font-medium text-foreground/80";
 
+type ChurchMethod = {
+  method: "upi_qr" | "upi_id" | "bank_transfer";
+  displayName: string;
+  instructions: string;
+  qrUrl?: string;
+  upiId?: string;
+  accountHolderName?: string | null;
+  bankName?: string | null;
+  accountNumber?: string;
+  ifscCode?: string | null;
+  branchName?: string;
+};
+
 export function DonateForm({ campaign }: DonateFormProps) {
   const [processing, setProcessing] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [methods, setMethods] = useState<ChurchMethod[]>([]);
+  const [methodId, setMethodId] = useState<ChurchMethod["method"] | "">("");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [submittedStatus, setSubmittedStatus] = useState<string | null>(null);
+  const paysChurchDirectly = Boolean(campaign.churchId) && campaign.currency === "INR";
+
+  useEffect(() => {
+    if (!paysChurchDirectly) return;
+    void fetch(`/api/donations/methods?campaignId=${encodeURIComponent(campaign.id)}`)
+      .then((response) => response.json())
+      .then((payload: unknown) => {
+        const next = (payload as { methods?: ChurchMethod[] }).methods ?? [];
+        setMethods(next);
+        setMethodId(next[0]?.method ?? "");
+      })
+      .catch(() => setMethods([]));
+  }, [campaign.id, paysChurchDirectly]);
 
   const suggestedAmounts = useMemo(() => {
     if (campaign.currency === "INR") {
@@ -157,6 +187,35 @@ export function DonateForm({ campaign }: DonateFormProps) {
     setProcessing(true);
 
     try {
+      if (paysChurchDirectly) {
+        if (!methodId) {
+          throw new Error("This church has not enabled a donation method yet.");
+        }
+        const idempotencyKey =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random()}`;
+        const response = await fetch("/api/donations/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campaignId: campaign.id,
+            method: methodId,
+            donorName: values.donorName,
+            donorEmail: values.donorEmail,
+            amount: values.amount,
+            isAnonymous: values.isAnonymous,
+            paymentReference,
+            idempotencyKey,
+          }),
+        });
+        const data = (await response.json()) as { error?: string; message?: string };
+        if (!response.ok) throw new Error(data.error ?? "Could not submit the donation.");
+        setSubmittedStatus("awaiting_verification");
+        toast.success(data.message ?? "Submitted for church verification.");
+        return;
+      }
+
       const idempotencyKey =
         typeof crypto !== "undefined" && "randomUUID" in crypto ?
           crypto.randomUUID()
@@ -267,6 +326,54 @@ export function DonateForm({ campaign }: DonateFormProps) {
             </FormItem>
           )}
         />
+
+        {paysChurchDirectly ? (
+          <div className="space-y-3 border-t border-border/60 pt-4">
+            <p className="text-sm font-semibold text-foreground">Pay the church directly</p>
+            <p className="text-sm text-muted-foreground">
+              Koinia does not receive this donation. Pay the church using one of its methods, then submit your reference. The church must verify it before it counts.
+            </p>
+            {methods.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No receiving method is enabled for this campaign.</p>
+            ) : (
+              methods.map((method) => (
+                <label key={method.method} className="flex gap-3 rounded-xl border border-border/70 p-3">
+                  <input
+                    type="radio"
+                    name="receiving-method"
+                    checked={methodId === method.method}
+                    onChange={() => setMethodId(method.method)}
+                  />
+                  <span className="space-y-1 text-sm">
+                    <span className="block font-medium">{method.displayName}</span>
+                    {method.upiId ? <span className="block">UPI ID: {method.upiId}</span> : null}
+                    {method.qrUrl ? <img src={method.qrUrl} alt="Church UPI QR" className="h-36 w-36 rounded-md border" /> : null}
+                    {method.accountNumber ? (
+                      <span className="block">
+                        {method.accountHolderName} · {method.bankName} · {method.accountNumber} · IFSC {method.ifscCode}
+                        {method.branchName ? ` · ${method.branchName}` : ""}
+                      </span>
+                    ) : null}
+                    {method.instructions ? <span className="block text-muted-foreground">{method.instructions}</span> : null}
+                  </span>
+                </label>
+              ))
+            )}
+            <label className="block space-y-1 text-sm font-medium" htmlFor="payment-reference">
+              Payment reference
+              <Input
+                id="payment-reference"
+                value={paymentReference}
+                onChange={(event) => setPaymentReference(event.target.value)}
+                placeholder="UPI or bank reference"
+                className={fieldClassName}
+              />
+            </label>
+            {submittedStatus ? (
+              <p className="text-sm font-medium">Status: Awaiting verification</p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="space-y-3.5 border-t border-border/60 pt-4">
           <p className="text-sm font-semibold text-foreground">Your details</p>

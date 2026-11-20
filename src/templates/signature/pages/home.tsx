@@ -1,9 +1,13 @@
+import { getTranslations } from "next-intl/server";
+
 import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
 import { isSectionVisible } from "@/lib/templates/visibility";
 import { formatLongDate, heritageJoinHref } from "@/templates/heritage/lib";
 
-export function SignatureHomePage({ model }: { model: ChurchWebsiteViewModel }) {
+export async function SignatureHomePage({ model }: { model: ChurchWebsiteViewModel }) {
+  const t = await getTranslations("signature");
+  const tNav = await getTranslations("heritage.nav");
   const slug = model.church.slug;
   const hero = model.website.images.hero;
   const featured = model.sermons[0];
@@ -17,7 +21,7 @@ export function SignatureHomePage({ model }: { model: ChurchWebsiteViewModel }) 
         : null}
         <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <p className="text-sm font-medium uppercase tracking-widest text-primary">
-            {model.website.heroEyebrow || `Welcome to ${model.church.name}`}
+            {model.website.heroEyebrow || t("welcomeTo", { name: model.church.name })}
           </p>
           <h1 className="font-heading mt-4 max-w-3xl whitespace-pre-line text-4xl font-semibold sm:text-6xl">
             {model.website.heroHeadline || model.church.name}
@@ -30,14 +34,14 @@ export function SignatureHomePage({ model }: { model: ChurchWebsiteViewModel }) 
               href={heritageJoinHref(model, "/join")}
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
-              Join our community
+              {t("joinCommunity")}
             </a>
             {isSectionVisible(model.website.visibility, "sermons") ?
               <a
                 href={churchWebsitePath(slug, "/sermons")}
                 className="rounded-md border border-border px-4 py-2 text-sm"
               >
-                Watch sermons
+                {t("watchSermons")}
               </a>
             : null}
           </div>
@@ -45,7 +49,7 @@ export function SignatureHomePage({ model }: { model: ChurchWebsiteViewModel }) 
       </section>
       {featured && isSectionVisible(model.website.visibility, "sermons") ?
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-          <h2 className="font-heading text-3xl">Featured sermon</h2>
+          <h2 className="font-heading text-3xl">{t("featuredSermon")}</h2>
           <a href={churchWebsitePath(slug, `/sermons/${featured.id}`)} className="mt-6 block rounded-xl border border-border bg-card p-6">
             <h3 className="text-xl font-semibold">{featured.title}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -56,7 +60,7 @@ export function SignatureHomePage({ model }: { model: ChurchWebsiteViewModel }) 
       : null}
       {model.events.length > 0 && isSectionVisible(model.website.visibility, "events") ?
         <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
-          <h2 className="font-heading text-3xl">Events</h2>
+          <h2 className="font-heading text-3xl">{tNav("events")}</h2>
           <ul className="mt-6 space-y-4">
             {model.events.slice(0, 3).map((event) => (
               <li key={event.id} className="rounded-xl border border-border bg-card p-5">

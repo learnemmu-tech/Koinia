@@ -166,27 +166,29 @@ export type TemplateDetailPageProps<T> = TemplatePageProps & {
   item: T;
 };
 
+type PageResult = React.ReactNode | Promise<React.ReactNode>;
+
 export type TemplatePages = {
-  Shell: (props: TemplatePageProps & { children: React.ReactNode }) => React.ReactNode;
-  Home: (props: TemplatePageProps) => React.ReactNode;
-  About: (props: TemplatePageProps) => React.ReactNode;
-  Sermons: (props: TemplatePageProps) => React.ReactNode;
-  SermonDetail: (props: TemplateDetailPageProps<FirebaseSermon>) => React.ReactNode;
-  Events: (props: TemplatePageProps) => React.ReactNode;
-  EventDetail: (props: TemplateDetailPageProps<FirebaseEvent>) => React.ReactNode;
-  Ministries: (props: TemplatePageProps) => React.ReactNode;
-  Articles: (props: TemplatePageProps) => React.ReactNode;
-  ArticleDetail: (props: TemplateDetailPageProps<FirebaseArticle>) => React.ReactNode;
-  Videos: (props: TemplatePageProps) => React.ReactNode;
-  Give: (props: TemplatePageProps) => React.ReactNode;
+  Shell: (props: TemplatePageProps & { children: React.ReactNode }) => PageResult;
+  Home: (props: TemplatePageProps) => PageResult;
+  About: (props: TemplatePageProps) => PageResult;
+  Sermons: (props: TemplatePageProps) => PageResult;
+  SermonDetail: (props: TemplateDetailPageProps<FirebaseSermon>) => PageResult;
+  Events: (props: TemplatePageProps) => PageResult;
+  EventDetail: (props: TemplateDetailPageProps<FirebaseEvent>) => PageResult;
+  Ministries: (props: TemplatePageProps) => PageResult;
+  Articles: (props: TemplatePageProps) => PageResult;
+  ArticleDetail: (props: TemplateDetailPageProps<FirebaseArticle>) => PageResult;
+  Videos: (props: TemplatePageProps) => PageResult;
+  Give: (props: TemplatePageProps) => PageResult;
   GiveDetail: (
     props: TemplateDetailPageProps<FirebaseDonationCampaign>
-  ) => React.ReactNode;
-  Contact: (props: TemplatePageProps) => React.ReactNode;
-  Prayer: (props: TemplatePageProps) => React.ReactNode;
+  ) => PageResult;
+  Contact: (props: TemplatePageProps) => PageResult;
+  Prayer: (props: TemplatePageProps) => PageResult;
   MemberGate: (
     props: TemplatePageProps & { featureLabel: string }
-  ) => React.ReactNode;
+  ) => PageResult;
 };
 
 export type WebsiteTemplate = {

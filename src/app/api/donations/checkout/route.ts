@@ -61,6 +61,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (campaign.contentScope !== "platform_public") {
+      return NextResponse.json(
+        {
+          error:
+            "Church donations are paid directly to the church. Use the church's UPI or bank details. Koinia does not collect these funds.",
+        },
+        { status: 409 }
+      );
+    }
+
     const provider = getConfiguredPaymentProvider();
     const baseUrl = getBaseUrl();
 

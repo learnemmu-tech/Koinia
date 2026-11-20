@@ -1,17 +1,31 @@
+import { getTranslations } from "next-intl/server";
+
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import { getFooterNavItems, getPrimaryNavItems, getUtilityNavItems } from "@/lib/templates/nav";
 import { configuredSocialLinks } from "@/lib/templates/social-links";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
 import { HeritageSocialIcon } from "@/templates/heritage/components/heritage-social-icon";
 import { formatChurchAddress, heritageJoinHref } from "@/templates/heritage/lib";
+import { heritageNavMessageKey } from "@/templates/heritage/public-nav";
 
-export function SignatureShell({
+export async function SignatureShell({
   model,
   children,
 }: {
   model: ChurchWebsiteViewModel;
   children: React.ReactNode;
 }) {
+  const tNav = await getTranslations("heritage.nav");
+  const tFooter = await getTranslations("heritage.footer");
+  const tCommon = await getTranslations("heritage.common");
+  const tSig = await getTranslations("signature");
+  const labelOf = (label: string) => {
+    if (label === "Privacy") return tFooter("privacy");
+    if (label === "Terms") return tFooter("terms");
+    const key = heritageNavMessageKey(label);
+    return key ? tNav(key) : label;
+  };
   const primary = getPrimaryNavItems(model);
   const utility = getUtilityNavItems(model);
   const footer = getFooterNavItems(model);
@@ -23,9 +37,9 @@ export function SignatureShell({
     : heritageJoinHref(model, "/signin");
   const memberLabel = model.viewer.isAuthenticated
     ? model.viewer.isMember
-      ? "Member home"
-      : "Join this church"
-    : "Sign in";
+      ? tSig("memberHome")
+      : tSig("joinChurch")
+    : tCommon("signIn");
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -34,23 +48,25 @@ export function SignatureShell({
           <a href={churchWebsitePath(model.church.slug)} className="font-heading text-lg font-semibold">
             {model.church.name}
           </a>
-          <nav aria-label="Primary" className="ml-auto hidden items-center gap-5 md:flex">
+          <nav aria-label={tNav("primary")} className="ml-auto hidden items-center gap-5 md:flex">
             {[...primary, ...utility].map((item) => (
               <a key={item.href} href={item.href} className="text-sm text-muted-foreground hover:text-foreground">
-                {item.label}
+                {labelOf(item.label)}
               </a>
             ))}
+            <LocaleSwitcher />
             <a href={memberHref} className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">
               {memberLabel}
             </a>
           </nav>
         </div>
-        <nav aria-label="Mobile" className="flex gap-3 overflow-x-auto px-4 pb-3 md:hidden">
+        <nav aria-label={tNav("mobile")} className="flex gap-3 overflow-x-auto px-4 pb-3 md:hidden">
           {[...primary, ...utility].map((item) => (
             <a key={item.href} href={item.href} className="whitespace-nowrap text-sm text-muted-foreground">
-              {item.label}
+              {labelOf(item.label)}
             </a>
           ))}
+          <LocaleSwitcher />
         </nav>
       </header>
       <main>{children}</main>
@@ -65,7 +81,7 @@ export function SignatureShell({
           <ul className="space-y-2 text-sm">
             {footer.slice(0, 8).map((item) => (
               <li key={`${item.href}-${item.label}`}>
-                <a href={item.href}>{item.label}</a>
+                <a href={item.href}>{labelOf(item.label)}</a>
               </li>
             ))}
           </ul>
@@ -77,7 +93,7 @@ export function SignatureShell({
               <ul className="flex gap-3 pt-2">
                 {social.map((item) => (
                   <li key={item.platform}>
-                    <a href={item.url} target="_blank" rel="noreferrer" aria-label={item.platform}>
+                    <a href={item.url} target="_blank" rel="noreferrer" aria-label={tNav("socialNewTab", { platform: item.platform })}>
                       <HeritageSocialIcon platform={item.platform} />
                     </a>
                   </li>

@@ -211,6 +211,13 @@
       "when": 1789624000000,
       "tag": "0029_parish_template",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1789628000000,
+      "tag": "0030_church_donation_receiving",
+      "breakpoints": true
     }
   ]
 }

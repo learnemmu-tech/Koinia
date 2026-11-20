@@ -9,7 +9,6 @@ import { toast } from "sonner";
 
 import { siteConfig } from "@/config/site";
 import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
-import { DONATION_CURRENCIES } from "@/types/firebase-donation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -339,11 +338,7 @@ export function AddDonationCampaignModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {DONATION_CURRENCIES.map((currency) => (
-                          <SelectItem key={currency} value={currency}>
-                            {currency}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="INR">INR</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

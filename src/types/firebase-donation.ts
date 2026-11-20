@@ -47,7 +47,7 @@ export type FirebaseDonation = {
   amount: number;
   currency: DonationCurrency;
   paymentStatus: PaymentStatus;
-  paymentProvider: PaymentProviderId;
+  paymentProvider: PaymentProviderId | "church_direct";
   transactionId: string;
   isAnonymous: boolean;
   createdAt: number;

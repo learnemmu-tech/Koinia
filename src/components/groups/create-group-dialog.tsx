@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +44,9 @@ export function CreateGroupDialog({
   getToken,
   onCreated,
 }: CreateGroupDialogProps) {
+  const t = useTranslations("community");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [nameError, setNameError] = useState("");
@@ -69,12 +73,12 @@ export function CreateGroupDialog({
   async function handleCreate() {
     const trimmed = name.trim();
     if (!trimmed) {
-      setNameError("Enter a group name.");
+      setNameError(t("enterGroupName"));
       return;
     }
     const token = await getToken();
     if (!token) {
-      toast.error("Sign in to create a group.");
+      toast.error(t("signInToCreateGroup"));
       return;
     }
     setSaving(true);
@@ -95,19 +99,19 @@ export function CreateGroupDialog({
           group = await updateChurchGroup(group.id, { imageUrl }, token);
         } catch (error) {
           const message =
-            error instanceof Error ? error.message : "Image upload failed.";
+            error instanceof Error ? error.message : t("imageUploadFailed");
           setUploadError(message);
-          toast.error("Group created, but the image could not be uploaded.");
+          toast.error(t("groupCreatedImageFailed"));
         } finally {
           setUploading(false);
         }
       }
-      toast.success("Group created.");
+      toast.success(t("groupCreated"));
       reset();
       onOpenChange(false);
       onCreated(group);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create group.");
+      toast.error(error instanceof Error ? error.message : t("couldNotCreateGroup"));
     } finally {
       setSaving(false);
       setUploading(false);
@@ -125,11 +129,11 @@ export function CreateGroupDialog({
     >
       <DialogContent className={responsiveDialogContentClass}>
         <DialogHeader>
-          <DialogTitle>Create Group</DialogTitle>
+          <DialogTitle>{t("createGroup")}</DialogTitle>
           <DialogDescription>
-            Create a dedicated space for members to connect around a shared
-            ministry, study, or community
-            {churchName ? ` at ${churchName}` : ""}.
+            {t("createGroupDescription", {
+              church: churchName ? t("createGroupChurch", { name: churchName }) : "",
+            })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-5">
@@ -141,7 +145,7 @@ export function CreateGroupDialog({
           />
           <GroupImageUploadStatus uploading={uploading} error={uploadError} />
           <div className="space-y-1.5">
-            <Label htmlFor="group-name">Group name *</Label>
+            <Label htmlFor="group-name">{t("groupName")} *</Label>
             <Input
               id="group-name"
               value={name}
@@ -149,7 +153,7 @@ export function CreateGroupDialog({
                 setName(event.target.value);
                 if (nameError) setNameError("");
               }}
-              placeholder="Bible Study"
+              placeholder={t("groupNamePlaceholder")}
               className="h-11 rounded-xl"
               aria-invalid={Boolean(nameError)}
               aria-describedby={nameError ? "group-name-error" : undefined}
@@ -162,12 +166,12 @@ export function CreateGroupDialog({
             : null}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="group-description">Description</Label>
+            <Label htmlFor="group-description">{tForms("description")}</Label>
             <Textarea
               id="group-description"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Weekly Bible study and discussion"
+              placeholder={t("groupDescriptionPlaceholder")}
               rows={3}
               className="min-h-[5.5rem] rounded-xl"
               maxLength={400}
@@ -182,7 +186,7 @@ export function CreateGroupDialog({
             onClick={() => onOpenChange(false)}
             disabled={saving}
           >
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             type="button"
@@ -195,7 +199,7 @@ export function CreateGroupDialog({
                 <Loader2 className="size-4 animate-spin" />
                 Creating...
               </>
-            : "Create Group"}
+            : t("createGroup")}
           </Button>
         </DialogFooter>
       </DialogContent>

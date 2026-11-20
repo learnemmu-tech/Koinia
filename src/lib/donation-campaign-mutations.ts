@@ -1,7 +1,10 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { revalidateTag } from "next/cache";
 import { after } from "next/server";
+
+import { userCanReviewChurchMemberships } from "@/lib/postgres/session";
 
 import {
   createDonationCampaign as insertCampaign,
@@ -25,12 +28,33 @@ async function refreshDonationSurfaces(
   await revalidateChurchPublicSite(churchId);
 }
 
+async function assertChurchDonationAdmin(
+  churchId: string | null | undefined,
+  contentScope?: string | null
+) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Sign in to manage donations.");
+  if (contentScope === "platform_public") {
+    const { requirePlatformSuperAdmin } = await import(
+      "@/lib/auth/require-platform-super-admin"
+    );
+    await requirePlatformSuperAdmin();
+    return;
+  }
+  if (!churchId?.trim()) throw new Error("You do not have permission to manage donations.");
+  const allowed = await userCanReviewChurchMemberships(userId, undefined, churchId);
+  if (!allowed) {
+    throw new Error("You do not have permission to manage this church's donations.");
+  }
+}
+
 export async function createDonationCampaign(
   input: CreateDonationCampaignInput
 ): Promise<string> {
   const organizationId = input.organizationId?.trim();
   const churchId = input.churchId?.trim();
   if (input.contentScope !== "platform_public") {
+    await assertChurchDonationAdmin(churchId);
     if (organizationId) {
       const { assertFeatureAllowed, assertUsageAllowed } = await import(
         "@/lib/subscription/subscription-server"
@@ -64,6 +88,7 @@ export async function updateDonationCampaign(
   input: UpdateDonationCampaignInput
 ): Promise<void> {
   const existing = await getDonationCampaignById(campaignId);
+  await assertChurchDonationAdmin(existing?.churchId, existing?.contentScope);
   await saveCampaign(campaignId, input);
   await refreshDonationSurfaces(existing?.churchId, campaignId);
   const nextStatus = input.status ?? existing?.status;
@@ -77,6 +102,7 @@ export async function setDonationCampaignStatus(
   status: DonationCampaignStatus
 ): Promise<void> {
   const existing = await getDonationCampaignById(campaignId);
+  await assertChurchDonationAdmin(existing?.churchId, existing?.contentScope);
   await saveCampaign(campaignId, { status });
   await refreshDonationSurfaces(existing?.churchId, campaignId);
   if (status === "active" && existing?.status !== "active") {
@@ -101,6 +127,7 @@ function scheduleDonationAnnouncement(campaignId: string) {
 
 export async function deleteDonationCampaign(campaignId: string): Promise<void> {
   const existing = await getDonationCampaignById(campaignId);
+  await assertChurchDonationAdmin(existing?.churchId, existing?.contentScope);
   await removeCampaign(campaignId);
   await refreshDonationSurfaces(existing?.churchId, campaignId);
 }

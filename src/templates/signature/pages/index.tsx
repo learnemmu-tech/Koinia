@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { DonateForm } from "@/components/donations/donate-form";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel, TemplatePages } from "@/lib/templates/types";
@@ -24,25 +26,26 @@ function SimplePage({
   );
 }
 
-function MemberGate({
+async function MemberGate({
   model,
   featureLabel,
 }: {
   model: ChurchWebsiteViewModel;
   featureLabel: string;
 }) {
+  const t = await getTranslations("signature");
+  const tCommon = await getTranslations("heritage.common");
   return (
-    <SimplePage title="Members only">
+    <SimplePage title={t("membersOnly")}>
       <p className="text-muted-foreground">
-        {featureLabel} is available to church members. Sign in to continue or
-        create an account to request access.
+        {t("membersOnlyBody", { feature: featureLabel })}
       </p>
       <div className="mt-6 flex gap-3">
         <a className="rounded-md bg-primary px-4 py-2 text-primary-foreground" href={heritageJoinHref(model, "/signin")}>
-          Sign in
+          {tCommon("signIn")}
         </a>
         <a className="rounded-md border border-border px-4 py-2" href={heritageJoinHref(model, "/join")}>
-          Join this church
+          {t("joinChurch")}
         </a>
       </div>
     </SimplePage>
@@ -52,15 +55,20 @@ function MemberGate({
 export const signaturePages: TemplatePages = {
   Shell: SignatureShell,
   Home: SignatureHomePage,
-  About: ({ model }) => (
-    <SimplePage title={`About ${model.church.name}`}>
+  About: async ({ model }) => {
+    const t = await getTranslations("signature");
+    return (
+    <SimplePage title={t("aboutTitle", { name: model.church.name })}>
       <p className="text-muted-foreground">
         {model.church.description || model.church.welcomeMessage}
       </p>
     </SimplePage>
-  ),
-  Sermons: ({ model }) => (
-    <SimplePage title="Sermons">
+    );
+  },
+  Sermons: async ({ model }) => {
+    const t = await getTranslations("heritage.nav");
+    return (
+    <SimplePage title={t("sermons")}>
       <ul className="space-y-4">
         {model.sermons.map((sermon) => (
           <li key={sermon.id}>
@@ -71,20 +79,26 @@ export const signaturePages: TemplatePages = {
         ))}
       </ul>
     </SimplePage>
-  ),
-  SermonDetail: ({ model, item }: { model: ChurchWebsiteViewModel; item: FirebaseSermon }) => (
+    );
+  },
+  SermonDetail: async ({ model, item }: { model: ChurchWebsiteViewModel; item: FirebaseSermon }) => {
+    const t = await getTranslations("signature");
+    return (
     <SimplePage title={item.title}>
       <p className="text-sm text-muted-foreground">
         {[item.speaker, formatLongDate(item.dateCreated)].filter(Boolean).join(" · ")}
       </p>
       <p className="mt-4">{item.shortDescription}</p>
       <a className="mt-6 inline-block text-sm" href={churchWebsitePath(model.church.slug, "/sermons")}>
-        All sermons
+        {t("allSermons")}
       </a>
     </SimplePage>
-  ),
-  Events: ({ model }) => (
-    <SimplePage title="Events">
+    );
+  },
+  Events: async ({ model }) => {
+    const t = await getTranslations("heritage.nav");
+    return (
+    <SimplePage title={t("events")}>
       <ul className="space-y-4">
         {model.events.map((event) => (
           <li key={event.id}>
@@ -93,15 +107,18 @@ export const signaturePages: TemplatePages = {
         ))}
       </ul>
     </SimplePage>
-  ),
+    );
+  },
   EventDetail: ({ item }: { model: ChurchWebsiteViewModel; item: FirebaseEvent }) => (
     <SimplePage title={item.title}>
       <p>{[formatLongDate(item.eventDate), item.eventTime, item.location].filter(Boolean).join(" · ")}</p>
       <p className="mt-4">{item.description}</p>
     </SimplePage>
   ),
-  Ministries: ({ model }) => (
-    <SimplePage title="Ministries">
+  Ministries: async ({ model }) => {
+    const t = await getTranslations("heritage.nav");
+    return (
+    <SimplePage title={t("ministries")}>
       <ul className="space-y-4">
         {model.ministries.map((ministry) => (
           <li key={ministry.id}>
@@ -111,9 +128,12 @@ export const signaturePages: TemplatePages = {
         ))}
       </ul>
     </SimplePage>
-  ),
-  Articles: ({ model }) => (
-    <SimplePage title="Articles">
+    );
+  },
+  Articles: async ({ model }) => {
+    const t = await getTranslations("heritage.nav");
+    return (
+    <SimplePage title={t("articles")}>
       <ul className="space-y-4">
         {model.articles.map((article) => (
           <li key={article.id}>
@@ -124,15 +144,18 @@ export const signaturePages: TemplatePages = {
         ))}
       </ul>
     </SimplePage>
-  ),
+    );
+  },
   ArticleDetail: ({ item }: { model: ChurchWebsiteViewModel; item: FirebaseArticle }) => (
     <SimplePage title={item.title}>
       <p>{item.shortDescription}</p>
       {item.content ? <p className="mt-4 whitespace-pre-wrap">{item.content}</p> : null}
     </SimplePage>
   ),
-  Videos: ({ model }) => (
-    <SimplePage title="Videos">
+  Videos: async ({ model }) => {
+    const t = await getTranslations("heritage.nav");
+    return (
+    <SimplePage title={t("videos")}>
       <ul className="space-y-4">
         {model.videos.map((video) => (
           <li key={video.id}>
@@ -143,9 +166,12 @@ export const signaturePages: TemplatePages = {
         ))}
       </ul>
     </SimplePage>
-  ),
-  Give: ({ model }) => (
-    <SimplePage title="Give">
+    );
+  },
+  Give: async ({ model }) => {
+    const t = await getTranslations("heritage.nav");
+    return (
+    <SimplePage title={t("give")}>
       <ul className="space-y-4">
         {model.campaigns.map((campaign) => (
           <li key={campaign.id}>
@@ -156,7 +182,8 @@ export const signaturePages: TemplatePages = {
         ))}
       </ul>
     </SimplePage>
-  ),
+    );
+  },
   GiveDetail: ({
     item,
   }: {
@@ -167,24 +194,31 @@ export const signaturePages: TemplatePages = {
       <DonateForm campaign={item} />
     </SimplePage>
   ),
-  Contact: ({ model }) => (
-    <SimplePage title="Contact">
+  Contact: async ({ model }) => {
+    const t = await getTranslations("heritage.nav");
+    return (
+    <SimplePage title={t("contact")}>
       <p>{model.church.email}</p>
       <p>{model.church.phone}</p>
     </SimplePage>
-  ),
-  Prayer: ({ model }) => (
-    <SimplePage title="Need prayer?">
+    );
+  },
+  Prayer: async ({ model }) => {
+    const t = await getTranslations("signature");
+    const tPrayer = await getTranslations("heritage.prayer");
+    return (
+    <SimplePage title={tPrayer("need")}>
       <p className="text-muted-foreground">
-        Prayer requests are private and never shown on this public website.
+        {t("prayerPrivate")}
       </p>
       <a
         className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-primary-foreground"
         href={model.viewer.isMember ? "/prayer-requests" : churchWebsitePath(model.church.slug, "/members")}
       >
-        Share a prayer request
+        {t("sharePrayer")}
       </a>
     </SimplePage>
-  ),
+    );
+  },
   MemberGate,
 };

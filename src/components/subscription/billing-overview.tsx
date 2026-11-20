@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Check, Mail, X } from "lucide-react";
 
@@ -35,12 +36,13 @@ function FeatureRow({
   label: string;
   enabled: boolean;
 }) {
+  const t = useTranslations("billing");
   return (
     <div className="flex items-center justify-between gap-3 py-2 text-sm">
       <span className="text-muted-foreground">{label}</span>
       {enabled ?
-        <Check className="size-4 shrink-0 text-foreground" aria-label="Included" />
-      : <X className="size-4 shrink-0 text-muted-foreground/50" aria-label="Not included" />}
+        <Check className="size-4 shrink-0 text-foreground" aria-label={t("included")} />
+      : <X className="size-4 shrink-0 text-muted-foreground/50" aria-label={t("notIncluded")} />}
     </div>
   );
 }
@@ -53,6 +55,7 @@ export function BillingOverview({
   onRetry,
   section = "overview",
 }: BillingOverviewProps) {
+  const t = useTranslations("billing");
   const receiptsQuery = useBillingReceipts(snapshot?.subscription.organizationId ?? "");
   const paymentMethod =
     receiptsQuery.receipts?.[0]?.paymentMethodSummary ?? null;
@@ -72,7 +75,7 @@ export function BillingOverview({
         <p className="text-sm text-destructive">{error}</p>
         {onRetry ?
           <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
-            Try again
+            {t("tryAgain")}
           </Button>
         : null}
       </div>
@@ -82,7 +85,7 @@ export function BillingOverview({
   if (!snapshot) {
     return (
       <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-        No subscription data available.
+        {t("noSubscription")}
       </div>
     );
   }
@@ -101,38 +104,39 @@ export function BillingOverview({
   const statusLabel =
     trial.access === "paid"
       ? snapshot.subscription.cancelAtPeriodEnd
-        ? "Cancels at period end"
+        ? t("cancelsAtPeriodEnd")
         : snapshot.subscription.status === "past_due"
-          ? "Past due"
-          : "Active"
+          ? t("pastDue")
+          : t("active")
       : trial.access === "trial"
-        ? "Trial"
-        : "Trial ended";
+        ? t("trial")
+        : t("trialEnded");
   const usageByKey = new Map(usageChecks.map((item) => [item.key, item]));
   const displayedChecks = BILLING_USAGE_KEYS.map((key) => usageByKey.get(key)).filter(
     (item): item is NonNullable<typeof item> => Boolean(item)
   );
 
-  const featureRows: { label: string; enabled: boolean }[] = [
-    { label: "Donations", enabled: features.canCreateDonations },
+  const featureRows: { id: string; label: string; enabled: boolean }[] = [
+    { id: "donations", label: t("featureDonations"), enabled: features.canCreateDonations },
     {
+      id: "shepherd",
       label:
         trial.isTrial && features.canUseShepherdAi && trial.shepherdDaysRemaining != null
-          ? `Shepherd AI (${trial.shepherdDaysRemaining} days left)`
+          ? t("featureShepherdDays", { count: trial.shepherdDaysRemaining })
         : trial.isTrial && !features.canUseShepherdAi
-          ? "Shepherd AI (available for first 10 trial days)"
-        : "Shepherd AI",
+          ? t("featureShepherdTrial")
+        : t("featureShepherd"),
       enabled: features.canUseShepherdAi,
     },
-    { label: "Email notifications", enabled: features.canUseEmailNotifications },
-    { label: "Analytics", enabled: features.canUseAnalytics },
-    { label: "Advanced analytics", enabled: features.canUseAdvancedAnalytics },
-    { label: "Custom branding", enabled: features.canCustomizeBranding },
-    { label: "Event registration", enabled: features.canUseEventRegistration },
-    { label: "Multiple admins", enabled: features.canInviteAdmins },
-    { label: "White label", enabled: features.canUseWhiteLabel },
-    { label: "Custom domain", enabled: features.canUseCustomDomain },
-    { label: "API access", enabled: features.canUseApiAccess },
+    { id: "email", label: t("featureEmail"), enabled: features.canUseEmailNotifications },
+    { id: "analytics", label: t("featureAnalytics"), enabled: features.canUseAnalytics },
+    { id: "advanced", label: t("featureAdvancedAnalytics"), enabled: features.canUseAdvancedAnalytics },
+    { id: "branding", label: t("featureBranding"), enabled: features.canCustomizeBranding },
+    { id: "events", label: t("featureEvents"), enabled: features.canUseEventRegistration },
+    { id: "admins", label: t("featureAdmins"), enabled: features.canInviteAdmins },
+    { id: "whiteLabel", label: t("featureWhiteLabel"), enabled: features.canUseWhiteLabel },
+    { id: "domain", label: t("featureDomain"), enabled: features.canUseCustomDomain },
+    { id: "api", label: t("featureApi"), enabled: features.canUseApiAccess },
   ];
 
   const subscriptionCard = (
@@ -141,7 +145,7 @@ export function BillingOverview({
           <div className="min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Current subscription
+                {t("currentSubscription")}
               </p>
               <span className="inline-flex rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium">
                 {statusLabel}
@@ -153,42 +157,42 @@ export function BillingOverview({
             </div>
             <p className="text-sm text-muted-foreground">
               {catalogPrice}
-              {plan.monthlyPrice ? ` · billed ${interval}` : ""}
+              {plan.monthlyPrice ? ` · ${t("billedInterval", { interval: t(interval) })}` : ""}
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end [&_button]:h-9">
             {showUpgradeOptions && !isPaidPlan ?
-              <RazorpaySubscriptionButton planId="starter" label="Upgrade plan" onComplete={onRetry} />
+              <RazorpaySubscriptionButton planId="starter" label={t("upgradePlan")} onComplete={onRetry} />
             : null}
             {showUpgradeOptions && plan.id === "starter" ?
-              <RazorpaySubscriptionButton planId="professional" label="Change plan" onComplete={onRetry} />
+              <RazorpaySubscriptionButton planId="professional" label={t("changePlan")} onComplete={onRetry} />
             : null}
             {plan.id === "enterprise" || plan.contactSales ?
               <Button size="sm" asChild>
                 <Link href={`mailto:${siteConfig.author.email}?subject=Enterprise%20Plan`}>
                   <Mail className="mr-1.5 size-4" />
-                  Contact sales
+                  {t("contactSales")}
                 </Link>
               </Button>
             : null}
             <Button variant="outline" size="sm" asChild>
-              <Link href="/pricing">Compare plans</Link>
+              <Link href="/pricing"> {t("comparePlans")}</Link>
             </Button>
             {isPaidPlan ? <CancelRazorpaySubscriptionButton onComplete={onRetry} /> : null}
           </div>
         </div>
         <dl className="grid gap-px border-t border-border/70 bg-border/70 sm:grid-cols-3">
           {[
-            ["Billing period", periodStart && periodEnd ? `${periodStart} – ${periodEnd}` : "Not started"],
+            [t("billingPeriod"), periodStart && periodEnd ? `${periodStart} – ${periodEnd}` : t("notStarted")],
             [
-              snapshot.subscription.cancelAtPeriodEnd ? "Access ends" : "Next renewal",
-              periodEnd ?? "Not scheduled",
+              snapshot.subscription.cancelAtPeriodEnd ? t("accessEnds") : t("nextRenewal"),
+              periodEnd ?? t("noneScheduled"),
             ],
-            ...(paymentMethod ? [["Payment method", paymentMethod] as const] : []),
+            ...(paymentMethod ? [[t("paymentMethod"), paymentMethod] as const] : []),
             ...(trial.access === "trial"
               ? [[
-                  "Trial",
-                  `${trial.daysRemaining} ${trial.daysRemaining === 1 ? "day" : "days"} left`,
+                  t("trial"),
+                  t("daysLeft", { count: trial.daysRemaining ?? 0 }),
                 ]]
               : []),
           ].map(([label, value]) => (
@@ -200,7 +204,7 @@ export function BillingOverview({
         </dl>
         {trial.access === "expired" ?
           <p className="border-t border-border/70 px-4 py-3 text-sm text-muted-foreground sm:px-5">
-            Your 14-day trial has ended. Existing content stays available to view. Upgrade to restore content management.
+            {t("trialEndedBody")}
           </p>
         : null}
       </section>
@@ -208,9 +212,9 @@ export function BillingOverview({
 
   const usageSection = (
       <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
-        <h3 className="font-semibold">Usage & limits</h3>
+        <h3 className="font-semibold">{t("usageLimits")}</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Live usage for your church workspace.
+          {t("usageLive")}
         </p>
         <div className="mt-4 space-y-4">
           {displayedChecks.map((item) => (
@@ -235,11 +239,11 @@ export function BillingOverview({
 
   const featureSection = (
       <section className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
-        <h3 className="font-semibold">Feature access</h3>
+        <h3 className="font-semibold">{t("featureAccess")}</h3>
         <div className="mt-2 divide-y divide-border/50">
           {featureRows.map((row) => (
             <FeatureRow
-              key={row.label}
+              key={row.id}
               label={row.label}
               enabled={row.enabled}
             />
@@ -250,9 +254,9 @@ export function BillingOverview({
 
   const upgradeSection = showUpgradeOptions ? (
         <section className="rounded-2xl border border-border/60 bg-muted/20 p-5 sm:p-6">
-          <h3 className="font-semibold">Upgrade options</h3>
+          <h3 className="font-semibold">{t("upgradeOptions")}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Start a paid plan with Razorpay or contact sales for Enterprise.
+            {t("upgradeOptionsBody")}
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {PLAN_ORDER.filter((id) => id !== plan.id && id !== "free").map((id) => {
@@ -273,7 +277,7 @@ export function BillingOverview({
                     <div className="mt-3">
                       <RazorpaySubscriptionButton
                         planId={id}
-                        label="Start Subscription"
+                        label={t("startSubscription")}
                         onComplete={onRetry}
                       />
                     </div>
@@ -291,7 +295,7 @@ export function BillingOverview({
         <section className="rounded-xl border border-border/70 bg-card px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current plan</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("currentPlan")}</p>
               <div className="mt-1 flex items-center gap-2">
                 <h2 className="text-lg font-semibold">{plan.name}</h2>
                 <PlanBadge planId={plan.id} showIcon={false} />
@@ -318,13 +322,13 @@ export function BillingOverview({
           href="/dashboard/billing/plans"
           className="rounded-xl border border-border/70 bg-card px-4 py-3 text-sm font-medium hover:bg-muted/40"
         >
-          Review usage and plans
+          {t("reviewUsage")}
         </Link>
         <Link
           href="/dashboard/billing/invoices"
           className="rounded-xl border border-border/70 bg-card px-4 py-3 text-sm font-medium hover:bg-muted/40"
         >
-          View receipts
+          {t("viewReceipts")}
         </Link>
       </div>
     </div>

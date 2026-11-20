@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import Link from "next/link";
 import { Clapperboard, Music, Play } from "lucide-react";
@@ -19,25 +20,23 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
   const path = (suffix = "") => churchWebsitePath(slug, suffix);
   const heroImage = parishHeroImage(model.website.images.hero, model.church.bannerUrl);
   const historyImage = model.website.images.about || PARISH_DEFAULTS.about;
-  const headline = model.website.heroHeadline || `Welcome to ${model.church.name}`;
+  const t = await getTranslations("parish.home");
+  const tNav = await getTranslations("heritage.nav");
+  const headline = model.website.heroHeadline || model.church.name;
   const tagline =
-    model.website.heroSubheadline ||
-    "A place of prayer, tradition, and fellowship in Christ.";
+    model.website.heroSubheadline || t("fallbackTagline");
   const heroDescription =
-    model.church.welcomeMessage ||
-    "We invite you to worship with us and take part in the life of our parish community.";
+    model.church.welcomeMessage || t("fallbackHero");
   const intro =
     model.website.aboutIntro ||
     model.church.description ||
-    `At ${model.church.name}, faith and tradition come together in worship, prayer, and community. We invite you to join us and become part of our parish family.`;
+    t("fallbackIntro", { name: model.church.name });
   const history =
     model.website.aboutMission ||
     model.website.aboutCommunity ||
-    `${model.church.name} gathers for worship, teaching, and the life of the parish.`;
-  const quote =
-    model.website.scriptureText ||
-    "How good and pleasant it is when God's people live together in unity!";
-  const quoteRef = model.website.scriptureReference || "Psalm 133:1";
+    t("fallbackHistory", { name: model.church.name });
+  const quote = model.website.scriptureText || t("fallbackQuote");
+  const quoteRef = model.website.scriptureReference || t("fallbackQuoteRef");
   const address = formatChurchAddress(model);
   const events = upcomingChurchEvents(model.events, 3);
   const nextEvent = events[0];
@@ -55,8 +54,8 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
           <p className="parish-hero-tagline">{tagline}</p>
           <p>{heroDescription}</p>
           <div className="parish-actions parish-actions-center">
-            <ParishButton href={path("/contact")} variant="light">Request help</ParishButton>
-            <ParishButton href={path("/give")} variant="gold">Donate now</ParishButton>
+            <ParishButton href={path("/contact")} variant="light">{t("requestHelp")}</ParishButton>
+            <ParishButton href={path("/give")} variant="gold">{t("donateNow")}</ParishButton>
           </div>
         </div>
       </section>
@@ -64,14 +63,14 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
       {nextEvent ? (
         <section className="parish-service-strip">
           <div>
-            <p className="parish-eyebrow">Next service</p>
+            <p className="parish-eyebrow">{t("nextService")}</p>
             <p className="parish-display text-2xl">{nextEvent.title}</p>
             <p className="text-sm">
               {[nextEvent.eventDate, nextEvent.eventTime, nextEvent.location].filter(Boolean).join(" · ")}
             </p>
           </div>
           <ParishCountdown isoDate={nextEvent.eventDate} time={nextEvent.eventTime} />
-          <ParishButton href={path(`/events/${nextEvent.id}`)} variant="gold">Details</ParishButton>
+          <ParishButton href={path(`/events/${nextEvent.id}`)} variant="gold">{t("details")}</ParishButton>
         </section>
       ) : null}
 
@@ -81,13 +80,13 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
 
       <section className="parish-section parish-split">
         <div>
-          <p className="parish-eyebrow">About us</p>
+          <p className="parish-eyebrow">{t("aboutUs")}</p>
           <h2 className="parish-display mt-2 text-[var(--parish-forest)]">
-            {model.website.aboutHeadline || "Our Parish History"}
+            {model.website.aboutHeadline || t("historyTitle")}
           </h2>
           <p className="parish-muted mt-4">{history}</p>
           <div className="mt-6">
-            <ParishButton href={path("/about")}>More about us</ParishButton>
+            <ParishButton href={path("/about")}>{t("moreAbout")}</ParishButton>
           </div>
         </div>
         <div className="relative aspect-[4/3] overflow-hidden rounded-md">
@@ -98,28 +97,28 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
       <section className="parish-section parish-section-compact">
         <div className="parish-watch">
           <div className="parish-watch-intro">
-            <p className="parish-eyebrow">Media</p>
-            <h2 className="parish-display mt-2 text-[var(--parish-forest)]">Watch & Listen</h2>
+            <p className="parish-eyebrow">{t("media")}</p>
+            <h2 className="parish-display mt-2 text-[var(--parish-forest)]">{t("watchListen")}</h2>
             <p className="parish-muted mt-3 max-w-sm">
-              Explore sermons, worship songs and short videos from our church.
+              {t("mediaLede")}
             </p>
             <ParishButton href={path("/videos")} className="parish-watch-cta mt-5">
-              Explore Media →
+              {t("exploreMedia")} →
             </ParishButton>
           </div>
           <div className="parish-watch-cards">
             {[
               {
                 href: "/videos",
-                title: "Videos",
-                action: "Watch Videos",
+                title: tNav("videos"),
+                action: t("watchVideos"),
                 image: model.videos.find((video) => video.thumbnailUrl)?.thumbnailUrl || PARISH_DEFAULTS.sermons[0],
                 Icon: Clapperboard,
               },
               {
                 href: "/songs",
-                title: "Songs",
-                action: "Listen to Songs",
+                title: tNav("songs"),
+                action: t("listenSongs"),
                 image: PARISH_DEFAULTS.services[1],
                 Icon: Music,
               },
@@ -147,23 +146,23 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
       {isSectionVisible(model.website.visibility, "events") ? (
         <section className="parish-section">
           <div className="parish-center">
-            <p className="parish-eyebrow">Join us</p>
-            <h2 className="parish-display text-[var(--parish-forest)]">Church Events & Gatherings</h2>
+            <p className="parish-eyebrow">{t("joinUs")}</p>
+            <h2 className="parish-display text-[var(--parish-forest)]">{t("eventsTitle")}</h2>
             <p className="parish-muted mx-auto mt-3 max-w-2xl">
-              Upcoming gatherings at {model.church.name}.
+              {t("eventsLede", { name: model.church.name })}
             </p>
           </div>
           <div className="mt-8 space-y-4">
             {events.length === 0
-              ? ["Parish breakfast", "Evening gathering", "Community visit"].map((title, index) => (
+              ? [t("sampleEvent1"), t("sampleEvent2"), t("sampleEvent3")].map((title, index) => (
                   <Link key={title} href={path("/events")} className="parish-event-row">
                     <Image src={PARISH_DEFAULTS.events[index]!} alt="" width={220} height={140} className="h-28 w-full object-cover sm:h-full sm:w-40" />
                     <div>
-                      <p className="parish-eyebrow">Sample</p>
+                      <p className="parish-eyebrow">{t("sample")}</p>
                       <h3 className="parish-display mt-1 text-2xl">{title}</h3>
-                      <p className="parish-muted mt-1 text-sm">Starter card until {model.church.name} publishes an event.</p>
+                      <p className="parish-muted mt-1 text-sm">{t("sampleEventNote", { name: model.church.name })}</p>
                     </div>
-                    <span className="parish-eyebrow px-4">View events</span>
+                    <span className="parish-eyebrow px-4">{t("viewEvents")}</span>
                   </Link>
                 ))
               : events.map((event, index) => (
@@ -176,32 +175,32 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
                       className="h-28 w-full object-cover sm:h-full sm:w-40"
                     />
                     <div>
-                      <p className="parish-eyebrow">{[event.eventDate, event.eventTime].filter(Boolean).join(" · ") || "Upcoming"}</p>
+                      <p className="parish-eyebrow">{[event.eventDate, event.eventTime].filter(Boolean).join(" · ") || t("upcoming")}</p>
                       <h3 className="parish-display mt-1 text-2xl">{event.title}</h3>
                       <p className="parish-muted mt-1 line-clamp-2 text-sm">{event.description}</p>
                     </div>
-                    <span className="parish-eyebrow px-4">View details</span>
+                    <span className="parish-eyebrow px-4">{t("viewDetails")}</span>
                   </Link>
                 ))}
           </div>
           <div className="mt-6 text-center">
-            <ParishButton href={path("/events")}>View all events</ParishButton>
+            <ParishButton href={path("/events")}>{t("viewAllEvents")}</ParishButton>
           </div>
         </section>
       ) : null}
 
       <section className="parish-band">
         <div className="parish-section parish-section-compact">
-          <h2 className="parish-display text-center">Explore Faith Resources</h2>
+          <h2 className="parish-display text-center">{t("resourcesTitle")}</h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-[#efe6d6]">
-            Discover resources to help you grow in faith, learn Scripture and stay connected with our church.
+            {t("resourcesLede")}
           </p>
           <div className="parish-card-grid cols-4 mt-6">
             {[
-              { href: "/community", title: "Community", description: "Join conversations and groups with the church.", action: "Explore Community", image: PARISH_DEFAULTS.gallery[0] },
-              { href: "/books", title: "Books", description: "Explore Christian books and reading resources.", action: "Browse Books", image: PARISH_DEFAULTS.stories[2] },
-              { href: "/shepherd", title: "Shepherd AI", description: "Ask questions and find guidance for your faith.", action: "Open Shepherd AI", image: PARISH_DEFAULTS.quote },
-              { href: "/prayer", title: "Prayer Requests", description: "Share a need or pray with the church.", action: "Submit a Prayer Request", image: PARISH_DEFAULTS.ministries[3] },
+              { href: "/community", title: tNav("community"), description: t("communityCopy"), action: t("exploreCommunity"), image: PARISH_DEFAULTS.gallery[0] },
+              { href: "/books", title: tNav("books"), description: t("booksCopy"), action: t("browseBooks"), image: PARISH_DEFAULTS.stories[2] },
+              { href: "/shepherd", title: tNav("shepherd"), description: t("shepherdCopy"), action: t("openShepherd"), image: PARISH_DEFAULTS.quote },
+              { href: "/prayer", title: tNav("prayerRequests"), description: t("prayerCopy"), action: t("submitPrayer"), image: PARISH_DEFAULTS.ministries[3] },
             ].map((card) => (
               <Link key={card.title} href={path(card.href)} className="parish-photo-card parish-resource-card">
                 <Image src={card.image!} alt="" width={480} height={320} className="aspect-[4/3] w-full object-cover" />
@@ -216,16 +215,16 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
 
       {isSectionVisible(model.website.visibility, "sermons") ? (
         <section className="parish-section parish-center">
-          <p className="parish-eyebrow">Latest sermons</p>
-          <h2 className="parish-display text-[var(--parish-forest)]">Online Sermons</h2>
+          <p className="parish-eyebrow">{t("latestSermons")}</p>
+          <h2 className="parish-display text-[var(--parish-forest)]">{t("onlineSermons")}</h2>
           <p className="parish-muted mx-auto mt-3 max-w-2xl">
-            Messages from {model.church.name}.
+            {t("sermonsLede", { name: model.church.name })}
           </p>
           <div className="parish-card-grid cols-4 mt-8 text-left">
             {(sermons.length > 0 ? sermons : [0, 1, 2, 3].map((index) => ({
               id: `sample-sermon-${index}`,
-              title: ["A welcome to worship", "Living the parish life", "Prayer and fellowship", "The Sunday message"][index]!,
-              speaker: "Sample",
+              title: [t("sampleSermon1"), t("sampleSermon2"), t("sampleSermon3"), t("sampleSermon4")][index]!,
+              speaker: t("sample"),
               coverImage: PARISH_DEFAULTS.sermons[index],
               sample: true,
             }))).map((sermon, index) => (
@@ -241,14 +240,14 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
                     height={320}
                     className="aspect-[4/3] w-full object-cover"
                   />
-                  {"sample" in sermon ? <p className="parish-eyebrow px-4 pt-3">Sample</p> : null}
+                  {"sample" in sermon ? <p className="parish-eyebrow px-4 pt-3">{t("sample")}</p> : null}
                   <h3>{sermon.title}</h3>
                   {sermon.speaker ? <p className="parish-muted px-4 pb-3 text-sm">{sermon.speaker}</p> : null}
                 </Link>
               ))}
           </div>
           <div className="mt-6">
-            <ParishButton href={path("/sermons")}>View all sermons</ParishButton>
+            <ParishButton href={path("/sermons")}>{t("viewAllSermons")}</ParishButton>
           </div>
         </section>
       ) : null}
@@ -265,15 +264,15 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
 
       {isSectionVisible(model.website.visibility, "articles") ? (
         <section className="parish-section parish-center">
-          <p className="parish-eyebrow">Latest stories</p>
-          <h2 className="parish-display text-[var(--parish-forest)]">Stories that Inspire</h2>
-          <p className="parish-muted mx-auto mt-3 max-w-2xl">Writing and stories from the parish.</p>
+          <p className="parish-eyebrow">{t("latestStories")}</p>
+          <h2 className="parish-display text-[var(--parish-forest)]">{t("storiesTitle")}</h2>
+          <p className="parish-muted mx-auto mt-3 max-w-2xl">{t("storiesLede")}</p>
           <div className="parish-card-grid cols-3 mt-8 text-left">
             {(articles.length > 0 ? articles : [0, 1, 2].map((index) => ({
               id: `sample-story-${index}`,
-              title: ["Faith in ordinary days", "A parish welcome", "Serving together"][index]!,
+              title: [t("sampleStory1"), t("sampleStory2"), t("sampleStory3")][index]!,
               coverImage: PARISH_DEFAULTS.stories[index],
-              category: "Sample",
+              category: t("sample"),
               dateCreated: 0,
               sample: true,
             }))).map((article) => (
@@ -294,26 +293,26 @@ export async function ParishHomePage({ model }: { model: ChurchWebsiteViewModel 
                     {article.dateCreated ? ` · ${new Date(article.dateCreated).toLocaleDateString()}` : ""}
                   </p>
                   <h3>{article.title}</h3>
-                  <span className="parish-eyebrow px-4 pb-3">Read more</span>
+                  <span className="parish-eyebrow px-4 pb-3">{t("readMore")}</span>
                 </Link>
               ))}
           </div>
           <div className="mt-6">
-            <ParishButton href={path("/articles")}>View all articles</ParishButton>
+            <ParishButton href={path("/articles")}>{t("viewAllArticles")}</ParishButton>
           </div>
         </section>
       ) : null}
 
       <section className="parish-section parish-center">
-        <h2 className="parish-display text-[var(--parish-forest)]">We&apos;d love to hear from you</h2>
+        <h2 className="parish-display text-[var(--parish-forest)]">{t("hearFromYou")}</h2>
         <p className="parish-muted mx-auto mt-3 max-w-xl">
-          {address || `Contact ${model.church.name} to plan a visit or ask a question.`}
+          {address || t("contactFallback", { name: model.church.name })}
         </p>
         {model.church.email ? <p className="mt-2">{model.church.email}</p> : null}
         {model.church.phone ? <p>{model.church.phone}</p> : null}
         <div className="mt-6 flex justify-center gap-3">
-          <ParishButton href={path("/about")}>Visit us</ParishButton>
-          <ParishButton href={path("/contact")} variant="gold">Contact us</ParishButton>
+          <ParishButton href={path("/about")}>{t("visitUs")}</ParishButton>
+          <ParishButton href={path("/contact")} variant="gold">{t("contactUs")}</ParishButton>
         </div>
       </section>
 

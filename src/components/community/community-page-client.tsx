@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessageCircle, UsersRound } from "lucide-react";
 
@@ -41,6 +42,7 @@ export function CommunityPageClient({
   basePath = "/community",
   embed = false,
 }: CommunityPageClientProps) {
+  const t = useTranslations("community");
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -88,7 +90,7 @@ export function CommunityPageClient({
             </Avatar>
             <div className="min-w-0">
               <h1 id="community-heading" className={typePageTitleClass}>
-                Community
+                {t("title")}
               </h1>
               <p className="truncate text-sm text-muted-foreground">{churchName}</p>
             </div>
@@ -96,7 +98,7 @@ export function CommunityPageClient({
 
           <Tabs value={activeTab} onValueChange={setTab}>
             <TabsList
-              aria-label="Community sections"
+              aria-label={t("sections")}
               className="h-10 w-full max-w-md justify-start rounded-xl bg-muted/70 p-1"
             >
               <TabsTrigger
@@ -104,15 +106,15 @@ export function CommunityPageClient({
                 className="h-8 flex-1 rounded-lg px-3 text-sm data-[state=active]:shadow-sm sm:flex-none"
               >
                 <MessageCircle className="size-3.5" aria-hidden />
-                <span className="hidden sm:inline">Community Chat</span>
-                <span className="sm:hidden">Chat</span>
+                <span className="hidden sm:inline">{t("communityChat")}</span>
+                <span className="sm:hidden">{t("chat")}</span>
               </TabsTrigger>
               <TabsTrigger
                 value="groups"
                 className="h-8 flex-1 rounded-lg px-3 text-sm data-[state=active]:shadow-sm sm:flex-none"
               >
                 <UsersRound className="size-3.5" aria-hidden />
-                Groups
+                {t("groups")}
               </TabsTrigger>
             </TabsList>
           </Tabs>

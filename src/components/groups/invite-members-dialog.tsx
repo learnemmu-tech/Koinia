@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Check, Copy, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -49,6 +50,8 @@ export function InviteMembersDialog({
   onTokenChanged,
   onInvited,
 }: InviteMembersDialogProps) {
+  const t = useTranslations("community");
+  const tCommon = useTranslations("common");
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<ChurchGroupInviteCandidate[]>([]);
   const [searching, setSearching] = useState(false);
@@ -57,10 +60,10 @@ export function InviteMembersDialog({
   const [regenerating, setRegenerating] = useState(false);
 
   const shareUrl = inviteToken ? `${resolveAppOrigin()}/g/${inviteToken}` : "";
-  const memberLabel = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
+  const memberLabel = t("memberCount", { count: memberCount });
   const pendingLabel =
     pendingInvitationCount > 0
-      ? ` · ${pendingInvitationCount} pending ${pendingInvitationCount === 1 ? "invitation" : "invitations"}`
+      ? ` · ${t("pendingCount", { count: pendingInvitationCount })}`
       : "";
 
   useEffect(() => {
@@ -79,7 +82,7 @@ export function InviteMembersDialog({
           const results = await searchInviteCandidates(groupId, trimmed, token);
           setCandidates(results);
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Search failed.");
+          toast.error(error instanceof Error ? error.message : t("searchFailed"));
         } finally {
           setSearching(false);
         }
@@ -93,10 +96,10 @@ export function InviteMembersDialog({
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
-      toast.success("Invite link copied.");
+      toast.success(t("inviteLinkCopied"));
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Could not copy the link.");
+      toast.error(t("couldNotCopyLink"));
     }
   }
 
@@ -107,9 +110,9 @@ export function InviteMembersDialog({
     try {
       const result = await regenerateGroupInviteLink(groupId, token);
       onTokenChanged?.(result.inviteToken);
-      toast.success("Invite link regenerated. The previous link no longer works.");
+      toast.success(t("linkRegenerated"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not regenerate.");
+      toast.error(error instanceof Error ? error.message : t("couldNotRegenerate"));
     } finally {
       setRegenerating(false);
     }
@@ -127,9 +130,9 @@ export function InviteMembersDialog({
         )
       );
       onInvited?.();
-      toast.success("Invitation sent.");
+      toast.success(t("invitationSent"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not invite.");
+      toast.error(error instanceof Error ? error.message : t("couldNotInvite"));
     } finally {
       setBusyId(null);
     }
@@ -143,7 +146,7 @@ export function InviteMembersDialog({
         )}
       >
         <DialogHeader className="shrink-0 space-y-1 px-5 pb-3 pt-5 pr-12">
-          <DialogTitle>Invite members</DialogTitle>
+          <DialogTitle>{t("inviteMembers")}</DialogTitle>
           <DialogDescription>
             {groupName} · {memberLabel}
             {pendingLabel}
@@ -152,13 +155,13 @@ export function InviteMembersDialog({
 
         <div className="min-h-0 flex-1 space-y-4 overflow-hidden px-5">
           <section className="space-y-2">
-            <p className="text-sm font-medium">Share invite link</p>
+            <p className="text-sm font-medium">{t("shareInviteLink")}</p>
             <div className="flex gap-2">
               <p
                 className="min-w-0 flex-1 truncate rounded-xl border border-[#E6E8EC] bg-[#F6F7FB] px-3 py-2.5 text-xs text-muted-foreground"
                 title={shareUrl}
               >
-                {shareUrl || "Generating…"}
+                {shareUrl || t("generating")}
               </p>
               <Button
                 type="button"
@@ -166,10 +169,10 @@ export function InviteMembersDialog({
                 className="h-11 shrink-0 rounded-xl"
                 onClick={() => void copyLink()}
                 disabled={!shareUrl}
-                aria-label="Copy invite link"
+                aria-label={t("copyInviteLink")}
               >
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                Copy
+                {tCommon("copy")}
               </Button>
             </div>
             <Button
@@ -183,19 +186,19 @@ export function InviteMembersDialog({
               {regenerating ?
                 <Loader2 className="size-4 animate-spin" />
               : null}
-              Regenerate link
+              {t("regenerateLink")}
             </Button>
           </section>
 
           <section className="flex min-h-0 flex-1 flex-col">
-            <Label htmlFor="group-member-search">Search members</Label>
+            <Label htmlFor="group-member-search">{t("searchMembers")}</Label>
             <div className="relative mt-1.5">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="group-member-search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by name or email"
+                placeholder={t("searchMembersPlaceholder")}
                 className="h-11 rounded-xl pl-9"
                 autoComplete="off"
               />
@@ -208,8 +211,8 @@ export function InviteMembersDialog({
               : candidates.length === 0 ?
                 <p className="px-4 py-8 text-center text-sm text-muted-foreground">
                   {query.trim()
-                    ? "No church members match that search."
-                    : "No active church members to show."}
+                    ? t("noMemberMatch")
+                    : t("noMembersToShow")}
                 </p>
               : <ul>
                   {candidates.map((person) => (
@@ -228,11 +231,11 @@ export function InviteMembersDialog({
                       {person.state === "member" ?
                         <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
                           <Check className="size-3.5" aria-hidden />
-                          Member
+                          {t("alreadyMember")}
                         </span>
                       : person.state === "pending" ?
                         <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                          Pending
+                          {t("invitationPending")}
                         </span>
                       : <Button
                           type="button"
@@ -244,9 +247,9 @@ export function InviteMembersDialog({
                           {busyId === person.userId ?
                             <>
                               <Loader2 className="size-4 animate-spin" />
-                              Inviting...
+                              {tCommon("loading")}
                             </>
-                          : "Invite"}
+                          : t("invite")}
                         </Button>
                       }
                     </li>
@@ -264,7 +267,7 @@ export function InviteMembersDialog({
             className="h-10 rounded-xl"
             onClick={() => onOpenChange(false)}
           >
-            Done
+            {tCommon("close")}
           </Button>
         </DialogFooter>
       </DialogContent>

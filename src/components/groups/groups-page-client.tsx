@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,7 @@ export function GroupsPageClient({
   active = true,
   embedded = false,
 }: GroupsPageClientProps) {
+  const t = useTranslations("community");
   const router = useRouter();
   const { user } = useFirebaseAuth();
   const allowWrite = useAllowTrialWrite();
@@ -124,10 +126,9 @@ export function GroupsPageClient({
         </ul>
       : groups.length === 0 ?
         <div className="app-card max-w-lg rounded-xl border border-dashed px-4 py-8 text-center">
-          <p className="font-heading text-base font-semibold">No groups yet</p>
+          <p className="font-heading text-base font-semibold">{t("noGroups")}</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-            Create a space for Bible study, worship, prayer, youth, or another
-            church community.
+            {t("noGroupsBody")}
           </p>
           {canManage ?
             <Button size="sm" className="mt-4 gap-1.5" onClick={() => {
@@ -135,7 +136,7 @@ export function GroupsPageClient({
               setCreateOpen(true);
             }}>
               <Plus className="size-4" />
-              Create Group
+              {t("createGroup")}
             </Button>
           : null}
         </div>

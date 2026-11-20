@@ -10,7 +10,7 @@
     "preview": "next build && next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/production-security.test.ts tests/security-audit-fixes.test.ts tests/billing-subscription.test.ts",
+    "test": "node --experimental-strip-types --test tests/production-security.test.ts tests/security-audit-fixes.test.ts tests/billing-subscription.test.ts tests/church-donation-receiving.test.ts tests/i18n-locale.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

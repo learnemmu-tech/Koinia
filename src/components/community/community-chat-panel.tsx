@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -85,6 +86,8 @@ export function CommunityChatPanel({
   initialMessages,
   initialHasMore,
 }: CommunityChatPanelProps) {
+  const t = useTranslations("community");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { user } = useFirebaseAuth();
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -245,7 +248,7 @@ export function CommunityChatPanel({
       setReplyingTo(null);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not send.");
+      toast.error(error instanceof Error ? error.message : t("couldNotSend"));
     },
   });
 
@@ -260,7 +263,7 @@ export function CommunityChatPanel({
       setEditingId(null);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not edit.");
+      toast.error(error instanceof Error ? error.message : t("couldNotEdit"));
     },
   });
 
@@ -276,7 +279,7 @@ export function CommunityChatPanel({
       if (editingId === message.id) setEditingId(null);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not delete.");
+      toast.error(error instanceof Error ? error.message : t("couldNotDelete"));
     },
   });
 
@@ -296,7 +299,7 @@ export function CommunityChatPanel({
       applyReactions(result.messageId, result.reactions);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not react.");
+      toast.error(error instanceof Error ? error.message : t("couldNotReact"));
     },
   });
 
@@ -309,11 +312,11 @@ export function CommunityChatPanel({
     onSuccess: (result) => {
       setReportTarget(null);
       toast.success(
-        result.duplicate ? "You already reported this message." : "Message reported."
+        result.duplicate ? t("alreadyReported") : t("messageReported")
       );
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not report.");
+      toast.error(error instanceof Error ? error.message : t("couldNotReport"));
     },
   });
 
@@ -358,7 +361,7 @@ export function CommunityChatPanel({
       });
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Could not load earlier messages."
+        error instanceof Error ? error.message : t("couldNotLoadEarlier")
       );
     } finally {
       setLoadingOlder(false);
@@ -487,11 +490,11 @@ export function CommunityChatPanel({
                 <div className="mb-2 flex items-start justify-between gap-3 rounded-xl border border-[#E6E8EC] bg-[#F6F7FB] px-3 py-2">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-primary">
-                      Replying to {replyingTo.authorName}
+                      {t("replyingTo", { name: replyingTo.authorName })}
                     </p>
                     <p className="truncate text-xs text-[#64748B]">
                       {replyingTo.deletedAt
-                        ? "This message was deleted"
+                        ? t("messageDeleted")
                         : replyingTo.content}
                     </p>
                   </div>
@@ -500,7 +503,7 @@ export function CommunityChatPanel({
                     variant="ghost"
                     size="icon"
                     className="size-7 shrink-0"
-                    aria-label="Cancel reply"
+                    aria-label={t("cancelReply")}
                     onClick={() => setReplyingTo(null)}
                   >
                     <X className="size-3.5" />
@@ -509,9 +512,9 @@ export function CommunityChatPanel({
               : null}
               <CommunityChatComposer
                 id="community-message"
-                label={`Write a message to ${churchName}`}
+                label={t("writeTo", { name: churchName })}
                 draft={draft}
-                placeholder={replyingTo ? "Write a reply…" : "Write a message…"}
+                placeholder={replyingTo ? t("writeReply") : t("writeMessage")}
                 disabled={sendMutation.isPending}
                 canSubmit={canSubmit}
                 pending={sendMutation.isPending}
@@ -535,7 +538,7 @@ export function CommunityChatPanel({
           <button
             type="button"
             className="absolute inset-0 z-10 hidden bg-[#0F172A]/[0.08] lg:block"
-            aria-label="Close thread"
+            aria-label={t("closeThread")}
             onClick={() => setThreadRootId(null)}
           />
           <CommunityChatThreadPanel
@@ -630,7 +633,7 @@ export function CommunityChatPanel({
             >
               {reportMutation.isPending ?
                 <Loader2 className="size-4 animate-spin" />
-              : "Report"}
+              : tCommon("report")}
             </Button>
           </DialogFooter>
         </DialogContent>

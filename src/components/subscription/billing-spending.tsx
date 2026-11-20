@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function BillingSpending({
 }: {
   snapshot: SubscriptionSnapshot;
 }) {
+  const t = useTranslations("billing");
   const { receipts, error, loading, reload } = useBillingReceipts(
     snapshot.subscription.organizationId
   );
@@ -40,7 +42,7 @@ export function BillingSpending({
     const key =
       date && !Number.isNaN(date.getTime())
         ? date.toLocaleDateString(undefined, { month: "short", year: "numeric" })
-        : "Undated";
+        : t("undated");
     byMonth.set(key, (byMonth.get(key) ?? 0) + receipt.amountMinor);
   }
 
@@ -48,22 +50,22 @@ export function BillingSpending({
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-border/70 bg-card px-4 py-4">
-          <p className="text-xs text-muted-foreground">Confirmed charges</p>
+          <p className="text-xs text-muted-foreground">{t("confirmedCharges")}</p>
           <p className="mt-1 text-xl font-semibold tabular-nums">
             {loading ? "—" : money(totalMinor, currency)}
           </p>
         </div>
         <div className="rounded-xl border border-border/70 bg-card px-4 py-4">
-          <p className="text-xs text-muted-foreground">Upcoming renewal</p>
+          <p className="text-xs text-muted-foreground">{t("upcomingRenewal")}</p>
           <p className="mt-1 text-xl font-semibold">
-            {upcoming ?? "None scheduled"}
+            {upcoming ?? t("noneScheduled")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Catalog price for the current plan. Razorpay bills the subscription amount at renewal. This is not a prorated difference.
+            {t("renewalNote")}
           </p>
         </div>
         <div className="rounded-xl border border-border/70 bg-card px-4 py-4">
-          <p className="text-xs text-muted-foreground">Recorded payments</p>
+          <p className="text-xs text-muted-foreground">{t("recordedPayments")}</p>
           <p className="mt-1 text-xl font-semibold tabular-nums">
             {loading ? "—" : receipts?.length ?? 0}
           </p>
@@ -72,9 +74,9 @@ export function BillingSpending({
 
       <section className="rounded-xl border border-border/70 bg-card">
         <div className="flex items-center justify-between border-b border-border/70 px-4 py-3 sm:px-5">
-          <h2 className="text-sm font-semibold">Spending history</h2>
+          <h2 className="text-sm font-semibold">{t("spendingHistory")}</h2>
           <Button variant="ghost" size="sm" onClick={() => void reload()} disabled={loading}>
-            Refresh
+            {t("refresh")}
           </Button>
         </div>
         {loading ? <Skeleton className="m-4 h-24" /> : null}
@@ -82,7 +84,7 @@ export function BillingSpending({
           <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
             <p className="text-sm text-destructive">{error}</p>
             <Button variant="outline" size="sm" onClick={() => void reload()}>
-              Try again
+              {t("tryAgain")}
             </Button>
           </div>
         ) : null}

@@ -143,6 +143,25 @@ export const donationCurrencyEnum = pgEnum("donation_currency", ["INR", "USD"]);
 export const paymentProviderEnum = pgEnum("payment_provider", [
   "stripe",
   "razorpay",
+  "church_direct",
+]);
+
+export const donationReceivingMethodEnum = pgEnum("donation_receiving_method", [
+  "upi_qr",
+  "upi_id",
+  "bank_transfer",
+  "offline",
+]);
+
+export const donationVerificationStatusEnum = pgEnum(
+  "donation_verification_status",
+  ["awaiting_verification", "verified", "rejected", "cancelled"]
+);
+
+export const donationRecordSourceEnum = pgEnum("donation_record_source", [
+  "gateway",
+  "member_submission",
+  "admin_offline",
 ]);
 
 export const paymentStatusEnum = pgEnum("payment_status", [

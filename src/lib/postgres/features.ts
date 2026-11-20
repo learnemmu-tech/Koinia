@@ -1198,6 +1198,9 @@ export async function createDonationCampaign(
   }
 
   const church = await requireChurch(input.churchId);
+  if (input.currency !== "INR") {
+    throw new Error("Church donation campaigns accept INR only.");
+  }
   const { assertFeatureAllowed, assertUsageAllowed } = await import(
     "@/lib/subscription/subscription-server"
   );
@@ -1236,7 +1239,12 @@ export async function updateDonationCampaign(
   if (updates.description !== undefined) patch.description = updates.description;
   if (updates.bannerImage !== undefined) patch.bannerImage = updates.bannerImage.trim() || null;
   if (updates.targetAmount !== undefined) patch.targetAmount = String(updates.targetAmount);
-  if (updates.currency !== undefined) patch.currency = updates.currency;
+  if (updates.currency !== undefined) {
+    if (existing?.contentScope !== "platform_public" && updates.currency !== "INR") {
+      throw new Error("Church donation campaigns accept INR only.");
+    }
+    patch.currency = updates.currency;
+  }
   if (updates.status !== undefined) patch.status = updates.status;
   await db.update(donationCampaigns).set(patch).where(eq(donationCampaigns.id, campaignId));
 }

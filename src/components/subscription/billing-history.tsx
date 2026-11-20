@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,9 @@ export function BillingHistory({
   organizationId: string;
   onPaymentMethod?: (summary: string | null) => void;
 }) {
+  const t = useTranslations("billing");
+  const tCommon = useTranslations("common");
+  const tForms = useTranslations("forms");
   const { receipts, notice, error, loading, reload } = useBillingReceipts(organizationId);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -105,7 +109,7 @@ export function BillingHistory({
   async function openReceipt(receipt: BillingReceiptRecord, download: boolean) {
     const preview = download ? null : window.open("", "_blank");
     if (!download && !preview) {
-      setActionError("Allow pop-ups for this site to view the receipt.");
+      setActionError(t("allowPopups"));
       return;
     }
     setOpeningId(receipt.id);
@@ -117,7 +121,7 @@ export function BillingHistory({
       if (!response.ok) {
         preview?.close();
         const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "This receipt could not be opened.");
+        throw new Error(body.error ?? t("receiptOpenFailed"));
       }
       const blob = new Blob([await response.arrayBuffer()], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
@@ -135,7 +139,7 @@ export function BillingHistory({
       setActionError(
         downloadError instanceof Error
           ? downloadError.message
-          : "This receipt could not be opened."
+          : t("receiptOpenFailed")
       );
     } finally {
       setOpeningId(null);
@@ -146,13 +150,13 @@ export function BillingHistory({
     <section className="overflow-hidden rounded-xl border border-border/70 bg-card">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border/70 px-4 py-3 sm:px-5">
         <div>
-          <h3 className="text-sm font-semibold">Billing history</h3>
+          <h3 className="text-sm font-semibold">{t("historyTitle")}</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Payment receipts for confirmed charges. These are not tax invoices.
+            {t("historyDescription")}
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => void reload()} disabled={loading}>
-          Refresh
+          {t("refresh")}
         </Button>
       </div>
       {notice ? (
@@ -172,26 +176,26 @@ export function BillingHistory({
             {error ?? actionError}
           </p>
           <Button variant="outline" size="sm" onClick={() => void reload()}>
-            Try again
+            {t("tryAgain")}
           </Button>
         </div>
       ) : null}
       {!loading && !error && receipts?.length === 0 ? (
         <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
-          No confirmed subscription payments yet. A receipt appears here after Razorpay records a paid charge.
+          {t("historyEmpty")}
         </p>
       ) : null}
       {!loading && receipts && receipts.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-4 sm:pl-5">Date</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Period</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Receipt</TableHead>
-              <TableHead className="pr-4 text-right sm:pr-5">Actions</TableHead>
+              <TableHead className="pl-4 sm:pl-5">{t("date")}</TableHead>
+              <TableHead>{tForms("description")}</TableHead>
+              <TableHead>{t("period")}</TableHead>
+              <TableHead>{t("amount")}</TableHead>
+              <TableHead>{tForms("status")}</TableHead>
+              <TableHead>{t("receipt")}</TableHead>
+              <TableHead className="pr-4 text-right sm:pr-5">{tCommon("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -228,7 +232,7 @@ export function BillingHistory({
                       disabled={openingId === receipt.id}
                       onClick={() => void openReceipt(receipt, false)}
                     >
-                      View
+                      {tCommon("view")}
                     </Button>
                     <Button
                       variant="outline"
@@ -236,7 +240,7 @@ export function BillingHistory({
                       disabled={openingId === receipt.id}
                       onClick={() => void openReceipt(receipt, true)}
                     >
-                      Download
+                      {tCommon("download")}
                     </Button>
                   </div>
                 </TableCell>

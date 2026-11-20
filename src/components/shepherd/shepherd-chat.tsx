@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslations } from "next-intl";
 import { ArrowUp, ChevronRight, RotateCcw, Square } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 
@@ -74,6 +75,7 @@ export function ShepherdChat({
   displayName: _displayName,
   churchId,
 }: Props) {
+  const t = useTranslations("shepherd");
   const { getToken } = useAuth();
   const subscription = useSubscriptionOptional();
   const shepherdAllowed = subscription?.canUseFeature("canUseShepherdAi") ?? false;
@@ -688,7 +690,7 @@ export function ShepherdChat({
         >
           {!shepherdAllowed ?
             <p className="mb-2 text-center text-sm text-muted-foreground">
-              Shepherd AI is available for the first 10 days of the 14-day trial.
+              {t("trialLimit")}
             </p>
           : null}
           <div
@@ -700,7 +702,7 @@ export function ShepherdChat({
             )}
           >
             <label htmlFor="shepherd-composer" className="sr-only">
-              Ask Shepherd AI
+              {t("askLabel")}
             </label>
             <textarea
               id="shepherd-composer"
@@ -708,7 +710,7 @@ export function ShepherdChat({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Ask Shepherd about Scripture, faith, or ministry…"
+              placeholder={t("placeholder")}
               rows={1}
               disabled={streaming || !shepherdAllowed}
               className={cn(
@@ -725,7 +727,7 @@ export function ShepherdChat({
                   size="sm"
                   variant="secondary"
                   className="h-9 gap-1.5 rounded-full px-3"
-                  aria-label="Stop generating"
+                  aria-label={t("stopGenerating")}
                 >
                   <Square className="size-3 fill-current" />
                   Stop
@@ -735,7 +737,7 @@ export function ShepherdChat({
                   size="icon"
                   className="size-10 rounded-full bg-primary text-primary-foreground hover:bg-[hsl(var(--primary-hover))]"
                   disabled={!canSend}
-                  aria-label="Send message to Shepherd AI"
+                  aria-label={t("send")}
                 >
                   <ArrowUp className="size-4" strokeWidth={2.25} />
                 </Button>

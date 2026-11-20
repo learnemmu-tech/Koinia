@@ -56,7 +56,7 @@ export async function ParishAboutPage({ model }: { model: ChurchWebsiteViewModel
     ? model.website.aboutBeliefs
     : defaultAboutBeliefs(model.church.name);
   return (
-    <ParishContentFrame churchName={model.church.name} eyebrow="About" title={headline} description={intro}>
+    <ParishContentFrame churchName={model.church.name} eyebrow={(await getTranslations("parish.home"))("aboutEyebrow")} title={headline} description={intro}>
       {model.website.aboutMission ? <p className="parish-muted">{model.website.aboutMission}</p> : null}
       <div className="parish-card-grid cols-2 mt-8">
         {values.map((item) => (

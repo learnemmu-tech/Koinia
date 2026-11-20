@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 
+import { ChurchDonationReview } from "@/components/admin/church-donation-review";
 import { DonationCampaignList } from "@/components/admin/donation-campaign-list";
 import { AdminChurchNotice } from "@/components/admin/admin-church-notice";
 import { AdminListPagination } from "@/components/admin/admin-list-pagination";
@@ -181,6 +182,8 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         }}
         onDelete={() => void invalidateDonations()}
       />
+
+      {adminChurchId ? <ChurchDonationReview churchId={adminChurchId} /> : null}
 
       <AdminListPagination
         page={safePage}
