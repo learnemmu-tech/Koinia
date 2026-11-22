@@ -48,15 +48,15 @@ export function isChurchAuthAppearance(appearance: AuthFormAppearance) {
 }
 
 export const HERITAGE_AUTH_INPUT_CLASS =
-  "h-10 min-h-10 rounded-md border-[#DDD5C6] bg-[#FFFDF9] px-3 py-0 text-sm text-[#202624] shadow-none placeholder:text-[#5A615E] focus-visible:border-[#641F32] focus-visible:ring-[#B49A62]/30";
+  "h-11 min-h-11 rounded-md border-[#DDD5C6] bg-[#FFFDF9] px-3 py-0 text-sm text-[#202624] shadow-none placeholder:text-[#5A615E] focus-visible:border-[#641F32] focus-visible:!ring-[#B49A62]/40";
 
 export const HERITAGE_AUTH_INPUT_WITH_ICON_CLASS = `${HERITAGE_AUTH_INPUT_CLASS} pl-10`;
 
 export const HERITAGE_AUTH_PRIMARY_BUTTON_CLASS =
-  "relative inline-flex h-10 min-h-10 w-full items-center justify-center rounded-md bg-[#641F32] px-0 py-0 text-sm font-semibold text-[#FFFDF9] shadow-none hover:bg-[#7A2A40] active:bg-[#4E1727] focus-visible:ring-[#B49A62]/40";
+  "relative inline-flex h-12 min-h-12 w-full items-center justify-center rounded-md bg-[#641F32] px-0 py-0 text-sm font-semibold text-[#FFFDF9] shadow-none hover:!bg-[#7A2A40] active:!bg-[#4E1727] focus-visible:!ring-[#B49A62]/50";
 
 export const HERITAGE_AUTH_GOOGLE_BUTTON_CLASS =
-  "inline-flex h-10 min-h-10 w-full items-center justify-center rounded-md border border-[#DDD5C6] bg-[#FFFDF9] px-5 py-0 text-sm font-medium text-[#202624] shadow-none hover:bg-[#F6F3EC] focus-visible:ring-[#B49A62]/30";
+  "inline-flex h-12 min-h-12 w-full items-center justify-center rounded-md border border-[#DDD5C6] bg-[#FFFDF9] px-5 py-0 text-sm font-medium text-[#202624] shadow-none hover:!bg-[#F6F3EC] hover:!text-[#202624] focus-visible:!ring-[#B49A62]/40";
 
 export const HERITAGE_AUTH_LABEL_CLASS =
   "text-[11px] font-semibold uppercase tracking-[0.1em] text-[#202624]";
@@ -80,7 +80,7 @@ export const HERITAGE_AUTH_PASSWORD_TOGGLE_CLASS =
   "absolute inset-y-0 right-1 my-auto flex size-9 items-center justify-center rounded-md text-[#5A615E] transition-colors hover:text-[#202624] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B49A62]/40";
 
 const PARISH_AUTH_INPUT_CLASS =
-  "h-10 min-h-10 rounded-none border-[#D9CBB4] bg-[#FFFCF7] px-3 py-0 text-sm text-[#24312C] shadow-none placeholder:text-[#6E675F] focus-visible:border-[#1B3C32] focus-visible:ring-[#C6A36A]/40";
+  "h-11 min-h-11 rounded-xl border-[#E6DCC8] bg-white px-3 py-0 text-sm text-[#17251D] shadow-none placeholder:text-[#68736B] focus-visible:border-[#174A32] focus-visible:ring-[#C49A45]/35";
 
 export function authFormStyles(appearance: AuthFormAppearance = "default") {
   if (appearance === "parish") {
@@ -88,20 +88,20 @@ export function authFormStyles(appearance: AuthFormAppearance = "default") {
       input: PARISH_AUTH_INPUT_CLASS,
       inputWithIcon: `${PARISH_AUTH_INPUT_CLASS} pl-10`,
       primaryButton:
-        "relative inline-flex h-10 min-h-10 w-full items-center justify-center rounded-none bg-[#1B3C32] px-0 py-0 text-sm font-semibold tracking-wide text-[#F4EFE4] shadow-none hover:bg-[#163228] focus-visible:ring-[#C6A36A]/40",
+        "relative inline-flex h-12 min-h-12 w-full items-center justify-center rounded-full bg-[#174A32] px-0 py-0 text-sm font-semibold text-[#FBF8EF] shadow-none transition-colors hover:!bg-[#103B29] active:!bg-[#0C2E20] focus-visible:!ring-[#C49A45]/50",
       googleButton:
-        "inline-flex h-10 min-h-10 w-full items-center justify-center rounded-none border border-[#D9CBB4] bg-[#FFFCF7] px-5 py-0 text-sm font-medium text-[#24312C] shadow-none hover:bg-[#F4EFE4] focus-visible:ring-[#C6A36A]/40",
-      label: "text-[11px] font-semibold uppercase tracking-[0.14em] text-[#1B3C32]",
-      link: "text-sm font-medium text-[#8A6A32] underline-offset-4 transition-colors hover:text-[#1B3C32] hover:underline",
-      muted: "text-[15px] leading-snug text-[#6E675F]",
+        "inline-flex h-12 min-h-12 w-full items-center justify-center rounded-full border border-[#E6DCC8] bg-white px-5 py-0 text-sm font-medium text-[#17251D] shadow-none hover:!bg-[#FBF8EF] hover:!text-[#17251D] focus-visible:!ring-[#C49A45]/40",
+      label: "text-sm font-semibold text-[#17251D]",
+      link: "text-sm font-semibold text-[#174A32] underline-offset-4 transition-colors hover:text-[#103B29] hover:underline",
+      muted: "text-[15px] leading-snug text-[#68736B]",
       divider:
-        "relative bg-[#FFFCF7] px-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6E675F]",
-      fieldIcon: "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#6E675F]",
-      error: "rounded-none border border-[#1B3C32]/20 bg-[#1B3C32]/5 px-3 py-2 text-sm text-[#1B3C32]",
+        "relative bg-[#FBF8EF] px-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#68736B]",
+      fieldIcon: "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#68736B]",
+      error: "rounded-xl border border-[#174A32]/20 bg-[#174A32]/5 px-3 py-2 text-sm text-[#174A32]",
       passwordToggle:
-        "absolute inset-y-0 right-1 my-auto flex size-9 items-center justify-center text-[#6E675F] hover:text-[#1B3C32]",
-      dividerLine: "w-full border-t border-[#D9CBB4]",
-      heading: "parish-display text-4xl text-[#1B3C32]",
+        "absolute inset-y-0 right-1 my-auto flex size-9 items-center justify-center rounded-lg text-[#68736B] hover:text-[#174A32] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C49A45]/45",
+      dividerLine: "w-full border-t border-[#E6DCC8]",
+      heading: "parish-display text-4xl text-[#174A32]",
     };
   }
 

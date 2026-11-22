@@ -177,6 +177,8 @@ export const churchDonationProfiles = pgTable(
     foreignDonationsEnabled: boolean("foreign_donations_enabled")
       .notNull()
       .default(false),
+    /** Shown after a direct gift is submitted for verification. Empty uses the product default. */
+    donorAcknowledgement: text("donor_acknowledgement"),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
       .notNull()
       .defaultNow()

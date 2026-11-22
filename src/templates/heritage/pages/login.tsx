@@ -21,6 +21,7 @@ export async function HeritageLoginPage({
   callbackUrl: string;
 }) {
   const t = await getTranslations("heritage.auth");
+  const nav = await getTranslations("navigation");
   const homeHref = churchWebsitePath(model.church.slug);
   const signupHref = isJoinPath(callbackUrl)
     ? heritageSignupHref(model, callbackUrl)
@@ -72,6 +73,11 @@ export async function HeritageLoginPage({
           ← {t("backToWebsite")}
         </Link>
       </p>
+      <nav className="heritage-auth-legal">
+        <Link href="/terms">{nav("termsOfService")}</Link>
+        <span aria-hidden>·</span>
+        <Link href="/privacy">{nav("privacyPolicy")}</Link>
+      </nav>
     </div>
   );
 }

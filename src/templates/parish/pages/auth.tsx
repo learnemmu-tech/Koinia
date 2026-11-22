@@ -16,6 +16,22 @@ import {
 } from "@/templates/heritage/lib";
 import { ParishButton } from "@/templates/parish/components/parish-button";
 
+function ParishLegalLinks({
+  terms,
+  privacy,
+}: {
+  terms: string;
+  privacy: string;
+}) {
+  return (
+    <nav className="parish-auth-legal" aria-label={terms}>
+      <Link href="/terms">{terms}</Link>
+      <span aria-hidden>·</span>
+      <Link href="/privacy">{privacy}</Link>
+    </nav>
+  );
+}
+
 export async function ParishLoginPage({
   model,
   callbackUrl,
@@ -24,6 +40,8 @@ export async function ParishLoginPage({
   callbackUrl: string;
 }) {
   const t = await getTranslations("heritage.auth");
+  const parish = await getTranslations("parish.auth");
+  const nav = await getTranslations("navigation");
   const homeHref = churchWebsitePath(model.church.slug);
   if (model.viewer.isMember) redirect(homeHref);
   const signupHref = heritageSignupHref(
@@ -41,8 +59,10 @@ export async function ParishLoginPage({
         </div>
       ) : (
         <>
-          <p className="parish-eyebrow">{t("welcomeBack")}</p>
-          <h1 className="parish-display mt-2 text-4xl">{t("signIn")}</h1>
+          <div className="parish-auth-intro">
+            <h1>{parish("welcomeTitle")}</h1>
+            <p>{parish("welcomeBody", { name: model.church.name })}</p>
+          </div>
           <div className="mt-5">
             <FirebaseSignInForm
               callbackUrl={callbackUrl}
@@ -55,9 +75,7 @@ export async function ParishLoginPage({
           </div>
         </>
       )}
-      <p className="mt-5">
-        <Link href={homeHref}>← {t("backToWebsite")}</Link>
-      </p>
+      <ParishLegalLinks terms={nav("termsOfService")} privacy={nav("privacyPolicy")} />
     </div>
   );
 }
@@ -70,6 +88,8 @@ export async function ParishSignupPage({
   callbackUrl: string;
 }) {
   const t = await getTranslations("heritage.auth");
+  const parish = await getTranslations("parish.auth");
+  const nav = await getTranslations("navigation");
   const homeHref = churchWebsitePath(model.church.slug);
   if (model.viewer.isMember) redirect(homeHref);
   const joinHref = isJoinPath(callbackUrl) ? callbackUrl : heritageJoinChurchHref(model);
@@ -80,7 +100,10 @@ export async function ParishSignupPage({
         <ParishButton href={joinHref}>{t("continueJoining")}</ParishButton>
       ) : (
         <>
-          <h1 className="parish-display text-4xl">{t("createAccount")}</h1>
+          <div className="parish-auth-intro">
+            <h1>{parish("createTitle")}</h1>
+            <p>{parish("createBody", { name: model.church.name })}</p>
+          </div>
           <div className="mt-5">
             <FirebaseSignUpForm
               callbackUrl={joinHref}
@@ -92,9 +115,7 @@ export async function ParishSignupPage({
           </div>
         </>
       )}
-      <p className="mt-5">
-        <Link href={homeHref}>← {t("backToWebsite")}</Link>
-      </p>
+      <ParishLegalLinks terms={nav("termsOfService")} privacy={nav("privacyPolicy")} />
     </div>
   );
 }

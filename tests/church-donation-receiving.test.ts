@@ -11,6 +11,7 @@ import {
   isIfscFormat,
   isIndianAccountNumber,
   isUpiIdFormat,
+  parseUpiPaymentPayload,
   maskAccountNumber,
   paiseToInrString,
   sameDonationSubmission,
@@ -20,6 +21,16 @@ import {
   offlineSubmissionKey,
 } from "../src/lib/donations/offline-submission.ts";
 import { roleMeetsMinimum } from "../src/types/membership.ts";
+
+test("only a UPI payment URI is accepted from a QR payload", () => {
+  assert.deepEqual(parseUpiPaymentPayload("upi://pay?pa=church.fund@okhdfcbank&pn=Revive%20Church&cu=INR"), {
+    upiId: "church.fund@okhdfcbank",
+    payeeName: "Revive Church",
+  });
+  assert.equal(parseUpiPaymentPayload("https://example.com"), null);
+  assert.equal(parseUpiPaymentPayload("upi://pay?pa=not-an-id&pn=Name"), null);
+  assert.equal(parseUpiPaymentPayload("upi://pay?pa=church.fund@okhdfcbank&cu=USD"), null);
+});
 
 test("UPI and bank formats are checked without claiming verification", () => {
   assert.equal(isUpiIdFormat("church.fund@okhdfcbank"), true);

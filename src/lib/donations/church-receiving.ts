@@ -17,9 +17,9 @@ import { auditLogs } from "@/db/schema/audit-logs";
 import { getAppUserByClerkId } from "@/lib/postgres/app-user";
 import { userCanReviewChurchMemberships } from "@/lib/postgres/session";
 import { churches } from "@/db/schema/tenants";
-import { putObjectBytes, createPresignedGetUrl } from "@/lib/storage/s3";
-import { assertChurchFeatureAllowed } from "@/lib/subscription/subscription-server";
+import { putObjectBytes, createPresignedGetUrl, deleteStoredObject } from "@/lib/storage/s3";
 
+import { decodeUpiQrImage } from "./upi-qr";
 import {
   accountLast4,
   encryptDonationField,
@@ -58,7 +58,6 @@ async function requireManager(clerkId: string, churchId: string) {
     .where(eq(churches.id, churchId))
     .limit(1);
   if (!church) throw new DonationAccessError();
-  await assertChurchFeatureAllowed(churchId, "canCreateDonations");
   return { user, church };
 }
 
@@ -75,8 +74,15 @@ export async function getChurchDonationSettings(clerkId: string, churchId: strin
     .where(eq(churchDonationMethods.churchId, churchId));
   return {
     authorizedDeclaration: profile?.authorizedDeclaration ?? false,
+    declarationAcceptedAt: profile?.declarationAcceptedAt?.toISOString() ?? null,
     foreignDonationsEnabled: false,
     gatewayStatus: "unavailable" as const,
+    donorAcknowledgement: profile?.donorAcknowledgement ?? "",
+    authorizationState: profile?.authorizedDeclaration
+      ? ("confirmed" as const)
+      : profile?.declarationAcceptedAt
+        ? ("needs_review" as const)
+        : ("pending" as const),
     methods: methods.map((method) => ({
       method: method.method,
       enabled: method.enabled,
@@ -92,8 +98,69 @@ export async function getChurchDonationSettings(clerkId: string, churchId: strin
       branchName: method.branchName ?? "",
       ownershipStatus: method.ownershipStatus,
       hasQr: Boolean(method.qrStoredObjectId),
+      donorStatus: receivingStatus({
+        valid:
+          method.method === "upi_qr"
+            ? Boolean(method.qrStoredObjectId && method.upiId && isUpiIdFormat(method.upiId))
+            : method.method === "upi_id"
+              ? Boolean(method.upiId && isUpiIdFormat(method.upiId))
+              : method.method === "bank_transfer"
+                ? Boolean(
+                    method.accountHolderName &&
+                      method.bankName &&
+                      method.accountNumberLast4 &&
+                      method.ifscCode &&
+                      isIfscFormat(method.ifscCode)
+                  )
+                : false,
+        enabled: method.enabled,
+        authorized: profile?.authorizedDeclaration ?? false,
+        needsReview: Boolean(profile?.declarationAcceptedAt) && !profile?.authorizedDeclaration,
+      }),
     })),
   };
+}
+
+function receivingStatus(input: {
+  valid: boolean;
+  enabled: boolean;
+  authorized: boolean;
+  needsReview: boolean;
+}) {
+  if (!input.valid) return "not_configured" as const;
+  if (!input.enabled) return "disabled" as const;
+  if (input.authorized) return "ready" as const;
+  if (input.needsReview) return "needs_review" as const;
+  return "draft" as const;
+}
+
+const DONOR_ACK_LIMIT = 400;
+
+export async function saveDonorAcknowledgement(input: {
+  clerkId: string;
+  churchId: string;
+  message: string;
+}) {
+  const { church } = await requireManager(input.clerkId, input.churchId);
+  const message = input.message.trim();
+  if (message.length > DONOR_ACK_LIMIT) {
+    throw new Error("The thank-you message must be 400 characters or fewer.");
+  }
+  await db
+    .insert(churchDonationProfiles)
+    .values({
+      churchId: church.id,
+      organizationId: church.organizationId,
+      authorizedDeclaration: false,
+      donorAcknowledgement: message || null,
+    })
+    .onConflictDoUpdate({
+      target: churchDonationProfiles.churchId,
+      set: {
+        donorAcknowledgement: message || null,
+        updatedAt: new Date(),
+      },
+    });
 }
 
 export async function saveChurchDonationDeclaration(input: {
@@ -127,15 +194,18 @@ export async function saveChurchDonationDeclaration(input: {
     });
 }
 
-async function assertDeclared(churchId: string) {
+async function revokeAuthorization(churchId: string) {
   const [profile] = await db
     .select({ ok: churchDonationProfiles.authorizedDeclaration })
     .from(churchDonationProfiles)
     .where(eq(churchDonationProfiles.churchId, churchId))
     .limit(1);
-  if (!profile?.ok) {
-    throw new Error("Accept the donation authorization declaration before saving methods.");
-  }
+  if (!profile?.ok) return false;
+  await db
+    .update(churchDonationProfiles)
+    .set({ authorizedDeclaration: false, updatedAt: new Date() })
+    .where(eq(churchDonationProfiles.churchId, churchId));
+  return true;
 }
 
 export async function saveChurchReceivingMethod(input: {
@@ -153,7 +223,6 @@ export async function saveChurchReceivingMethod(input: {
   branchName?: string;
 }) {
   const { church } = await requireManager(input.clerkId, input.churchId);
-  await assertDeclared(church.id);
   const displayName = input.displayName.trim();
   if (input.enabled && displayName.length < 2) {
     throw new Error("A display name is required.");
@@ -188,6 +257,11 @@ export async function saveChurchReceivingMethod(input: {
       id: churchDonationMethods.id,
       ciphertext: churchDonationMethods.accountNumberCiphertext,
       last4: churchDonationMethods.accountNumberLast4,
+      upiId: churchDonationMethods.upiId,
+      accountHolderName: churchDonationMethods.accountHolderName,
+      bankName: churchDonationMethods.bankName,
+      ifscCode: churchDonationMethods.ifscCode,
+      branchName: churchDonationMethods.branchName,
     })
     .from(churchDonationMethods)
     .where(
@@ -227,6 +301,57 @@ export async function saveChurchReceivingMethod(input: {
       target: [churchDonationMethods.churchId, churchDonationMethods.method],
       set: values,
     });
+
+  const prior = existing[0];
+  const material =
+    input.method === "upi_id"
+      ? (prior?.upiId ?? "") !== (values.upiId ?? "")
+      : input.method === "bank_transfer"
+        ? (prior?.accountHolderName ?? "") !== (values.accountHolderName ?? "") ||
+          (prior?.bankName ?? "") !== (values.bankName ?? "") ||
+          (prior?.ifscCode ?? "") !== (values.ifscCode ?? "") ||
+          (prior?.branchName ?? "") !== (values.branchName ?? "") ||
+          (last4 !== null && last4 !== (prior?.last4 ?? null))
+        : false;
+  const authorizationRevoked = material ? await revokeAuthorization(church.id) : false;
+  return { authorizationRevoked };
+}
+
+function assertQrFile(mimeType: string, bytes: Buffer) {
+  if (
+    !IMAGE_TYPES.has(mimeType) ||
+    bytes.length > MAX_IMAGE_BYTES ||
+    bytes.length < 12 ||
+    !imageBytesMatchDeclaredType(mimeType, bytes)
+  ) {
+    throw new Error("Upload a JPEG, PNG, or WebP image up to 2 MB.");
+  }
+}
+
+export async function inspectChurchQr(input: {
+  clerkId: string;
+  churchId: string;
+  mimeType: string;
+  bytes: Buffer;
+}) {
+  const { church } = await requireManager(input.clerkId, input.churchId);
+  assertQrFile(input.mimeType, input.bytes);
+  const decoded = await decodeUpiQrImage(input.bytes);
+  const [configured] = await db
+    .select({ upiId: churchDonationMethods.upiId })
+    .from(churchDonationMethods)
+    .where(
+      and(
+        eq(churchDonationMethods.churchId, church.id),
+        eq(churchDonationMethods.method, "upi_id")
+      )
+    )
+    .limit(1);
+  const configuredUpiId = configured?.upiId?.trim() ?? "";
+  const mismatch = Boolean(
+    configuredUpiId && configuredUpiId.toLowerCase() !== decoded.upiId.toLowerCase()
+  );
+  return { ...decoded, configuredUpiId, mismatch };
 }
 
 export async function saveChurchQrImage(input: {
@@ -235,16 +360,31 @@ export async function saveChurchQrImage(input: {
   fileName: string;
   mimeType: string;
   bytes: Buffer;
+  confirmDetails: boolean;
+  confirmMismatch: boolean;
 }) {
   const { user, church } = await requireManager(input.clerkId, input.churchId);
-  await assertDeclared(church.id);
-  if (
-    !IMAGE_TYPES.has(input.mimeType) ||
-    input.bytes.length > MAX_IMAGE_BYTES ||
-    input.bytes.length < 12 ||
-    !imageBytesMatchDeclaredType(input.mimeType, input.bytes)
-  ) {
-    throw new Error("Upload a JPEG, PNG, or WebP image up to 2 MB.");
+  assertQrFile(input.mimeType, input.bytes);
+  const decoded = await decodeUpiQrImage(input.bytes);
+  if (!input.confirmDetails) {
+    throw new Error("Confirm the decoded payee before saving. This does not prove ownership.");
+  }
+  const [configured] = await db
+    .select({ upiId: churchDonationMethods.upiId })
+    .from(churchDonationMethods)
+    .where(
+      and(
+        eq(churchDonationMethods.churchId, church.id),
+        eq(churchDonationMethods.method, "upi_id")
+      )
+    )
+    .limit(1);
+  const configuredUpiId = configured?.upiId?.trim() ?? "";
+  const mismatch = Boolean(
+    configuredUpiId && configuredUpiId.toLowerCase() !== decoded.upiId.toLowerCase()
+  );
+  if (mismatch && !input.confirmMismatch) {
+    throw new Error("The QR payee does not match the saved UPI ID. Confirm the mismatch before saving.");
   }
   const extension = input.mimeType === "image/png" ? "png" : input.mimeType === "image/webp" ? "webp" : "jpg";
   const objectKey = `churches/${church.id}/donation-qr/${randomUUID()}.${extension}`;
@@ -285,7 +425,8 @@ export async function saveChurchQrImage(input: {
       organizationId: church.organizationId,
       method: "upi_qr",
       enabled: true,
-      displayName: "UPI QR",
+      displayName: decoded.payeeName || "UPI QR",
+      upiId: decoded.upiId,
       qrStoredObjectId: stored.id,
       ownershipStatus: "declared",
     })
@@ -293,10 +434,50 @@ export async function saveChurchQrImage(input: {
       target: [churchDonationMethods.churchId, churchDonationMethods.method],
       set: {
         qrStoredObjectId: stored.id,
+        displayName: decoded.payeeName || "UPI QR",
+        upiId: decoded.upiId,
         updatedAt: new Date(),
       },
     });
-  return { storedObjectId: stored.id };
+  const authorizationRevoked = await revokeAuthorization(church.id);
+  return { storedObjectId: stored.id, authorizationRevoked };
+}
+
+export async function removeChurchQr(clerkId: string, churchId: string) {
+  await requireManager(clerkId, churchId);
+  const [method] = await db
+    .select({ objectId: churchDonationMethods.qrStoredObjectId })
+    .from(churchDonationMethods)
+    .where(
+      and(
+        eq(churchDonationMethods.churchId, churchId),
+        eq(churchDonationMethods.method, "upi_qr")
+      )
+    )
+    .limit(1);
+  if (method?.objectId) {
+    const [object] = await db
+      .select({ key: storedObjects.objectKey, churchId: storedObjects.churchId })
+      .from(storedObjects)
+      .where(eq(storedObjects.id, method.objectId))
+      .limit(1);
+    if (object && object.churchId === churchId) {
+      await deleteStoredObject(object.key).catch(() => "missing" as const);
+    }
+  }
+  await db
+    .update(churchDonationMethods)
+    .set({
+      enabled: false,
+      qrStoredObjectId: null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(churchDonationMethods.churchId, churchId),
+        eq(churchDonationMethods.method, "upi_qr")
+      )
+    );
 }
 
 export async function previewChurchQr(clerkId: string, churchId: string) {
@@ -347,11 +528,28 @@ export async function publicCampaignMethods(campaignId: string) {
     .from(donationCampaigns)
     .where(eq(donationCampaigns.id, campaignId))
     .limit(1);
-  if (!campaign || campaign.status !== "active" || !campaign.churchId) return [];
-  if (campaign.currency !== "INR") return [];
+  if (!campaign || campaign.status !== "active" || !campaign.churchId) {
+    return { methods: [], donorAcknowledgement: "" };
+  }
+  if (campaign.currency !== "INR") return { methods: [], donorAcknowledgement: "" };
   const now = Date.now();
-  if (campaign.startsAt && campaign.startsAt.getTime() > now) return [];
-  if (campaign.endsAt && campaign.endsAt.getTime() < now) return [];
+  if (campaign.startsAt && campaign.startsAt.getTime() > now) {
+    return { methods: [], donorAcknowledgement: "" };
+  }
+  if (campaign.endsAt && campaign.endsAt.getTime() < now) {
+    return { methods: [], donorAcknowledgement: "" };
+  }
+  const [profile] = await db
+    .select({
+      donorAcknowledgement: churchDonationProfiles.donorAcknowledgement,
+      authorized: churchDonationProfiles.authorizedDeclaration,
+    })
+    .from(churchDonationProfiles)
+    .where(eq(churchDonationProfiles.churchId, campaign.churchId))
+    .limit(1);
+  if (!profile?.authorized) {
+    return { methods: [], donorAcknowledgement: profile?.donorAcknowledgement?.trim() ?? "" };
+  }
   const methods = await enabledMethodsForCampaign(campaign.id, campaign.churchId);
   const result = [];
   for (const method of methods) {
@@ -390,7 +588,10 @@ export async function publicCampaignMethods(campaignId: string) {
       });
     }
   }
-  return result;
+  return {
+    methods: result,
+    donorAcknowledgement: profile?.donorAcknowledgement?.trim() ?? "",
+  };
 }
 
 export async function submitChurchDonation(input: {

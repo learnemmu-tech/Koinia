@@ -1554,6 +1554,14 @@
       "backToWebsite": "వెబ్‌సైట్‌కు తిరిగి",
       "createAccount": "మీ ఖాతాను సృష్టించండి",
       "createLede": "ఈ చర్చి సమాజంలో చేరడానికి ఖాతా సృష్టించండి.",
+      "joinLabel": "మా సమాజంలో చేరండి",
+      "visualHeadline": "చెందే చోటు.",
+      "visualBody": "కలిసి ఆరాధించి విశ్వాసంలో ఎదగండి.",
+      "highlightSermons": "ప్రసంగాలు చూడండి",
+      "highlightConnect": "ఇతరులతో కలవండి",
+      "highlightGrow": "విశ్వాసంలో ఎదగండి",
+      "scriptureQuote": "యెహోవా నా కాపరి; నాకు లేమి ఉండదు.",
+      "scriptureRef": "కీర్తన 23:1",
       "accountReady": "మీ ఖాతా సిద్ధంగా ఉంది. {name}లో చేరడం కొనసాగించండి."
     },
     "contact": {
@@ -1682,6 +1690,12 @@
       "sampleStory1": "సాధారణ రోజుల్లో విశ్వాసం",
       "sampleStory2": "పారిష్ స్వాగతం",
       "sampleStory3": "కలిసి సేవించడం"
+    },
+    "auth": {
+      "welcomeTitle": "మళ్లీ స్వాగతం",
+      "welcomeBody": "{name}తో కనెక్ట్ అవ్వడానికి సైన్ ఇన్ చేయండి.",
+      "createTitle": "మీ ఖాతాను సృష్టించండి",
+      "createBody": "{name}లో చేరి మీ చర్చితో కనెక్ట్ అవ్వండి."
     }
   }
 }

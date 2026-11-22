@@ -81,7 +81,7 @@ export function LocaleSwitcher({
               className={cn(
                 "cursor-pointer rounded-md text-sm",
                 menuClassName
-                  ? "parish-locale-item"
+                  ? "parish-locale-item template-locale-item"
                   : "focus:bg-surface-raised focus:text-foreground dark:focus:bg-accent",
                 selected && (menuClassName ? "is-selected" : "bg-primary-subtle text-foreground")
               )}

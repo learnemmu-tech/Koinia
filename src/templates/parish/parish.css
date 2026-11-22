@@ -884,23 +884,160 @@
 }
 
 .parish-auth {
-  display: grid;
+  position: relative;
+  display: flex;
   min-height: 100svh;
-  background: var(--parish-bg);
+  flex-direction: column;
+  overflow: auto;
+  background: #10241b;
+  padding: 0.85rem 0.9rem 1.25rem;
 }
 
-.parish-auth-panel {
+.parish-auth-scene {
+  position: absolute;
+  inset: 0;
+}
+
+.parish-auth-photo {
+  object-fit: cover;
+  object-position: center center;
+}
+
+.parish-auth-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(16 36 27 / 42%) 0%, rgb(16 36 27 / 28%) 100%);
+}
+
+.parish-auth .parish-locale {
+  width: auto !important;
+  min-width: 0;
+  padding: 0 0.7rem !important;
+  background: rgb(16 36 27 / 45%) !important;
+  color: #fbf8ef !important;
+  border-color: rgb(251 248 239 / 40%) !important;
+}
+
+.parish-auth .parish-locale:hover,
+.parish-auth .parish-locale:active {
+  background: #174a32 !important;
+  color: #fbf8ef !important;
+}
+
+.parish-auth-top {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.parish-auth-brand {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+  color: #fbf8ef;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.parish-auth-brand span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parish-auth-mark {
+  position: relative;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(251 248 239 / 92%);
+}
+
+.parish-auth-locale {
+  flex: none;
+  border-color: rgb(251 248 239 / 35%) !important;
+  background: rgb(16 36 27 / 35%) !important;
+  color: #fbf8ef !important;
+}
+
+.parish-auth-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(100%, 28.5rem);
+  flex: 1;
+  align-items: center;
   justify-content: center;
-  padding: 2rem 1.25rem;
+  margin: 0 auto;
 }
 
 .parish-auth-card {
-  width: min(100%, 28rem);
-  background: var(--parish-paper);
-  border: 1px solid var(--parish-line);
-  padding: 2rem 1.5rem;
+  width: 100%;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 22px;
+  background: rgb(251 248 239 / 94%);
+  padding: 1.15rem 1.05rem 0.95rem;
+  box-shadow: 0 16px 40px rgb(16 36 27 / 28%);
+}
+
+.parish-auth-intro {
+  text-align: center;
+}
+
+.parish-auth-intro h1 {
+  margin: 0;
+  color: #174a32;
+  font-family: var(--font-parish-display), Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.parish-auth-intro p {
+  margin: 0.35rem 0 0;
+  color: #68736b;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.parish-auth-intro::after {
+  content: "";
+  display: block;
+  width: 2.75rem;
+  height: 2px;
+  margin: 0.7rem auto 0;
+  background: #c49a45;
+}
+
+.parish-auth-legal {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+  color: #68736b;
+  font-size: 0.75rem;
+}
+
+.parish-auth-legal a {
+  color: #174a32;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .parish-auth {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+
+  .parish-auth-card {
+    padding: 1.35rem 1.35rem 1.1rem;
+  }
 }
 
 @media (min-width: 768px) {
@@ -950,21 +1087,4 @@
     display: none;
   }
 
-  .parish-auth {
-    grid-template-columns: 1.1fr 0.9fr;
-  }
-
-  .parish-auth-visual {
-    display: flex;
-  }
-}
-
-.parish-auth-visual {
-  display: none;
-  position: relative;
-  align-items: flex-end;
-  overflow: hidden;
-  background: var(--parish-forest);
-  color: #f4efe4;
-  padding: 3rem;
 }

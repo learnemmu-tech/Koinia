@@ -1554,6 +1554,14 @@
       "backToWebsite": "Back to website",
       "createAccount": "Create your account",
       "createLede": "Create an account to join this church community.",
+      "joinLabel": "Join our community",
+      "visualHeadline": "A place to belong.",
+      "visualBody": "Worship and grow together in faith.",
+      "highlightSermons": "Watch Sermons",
+      "highlightConnect": "Connect with Others",
+      "highlightGrow": "Grow in Faith",
+      "scriptureQuote": "The Lord is my shepherd; I shall not want.",
+      "scriptureRef": "Psalm 23:1",
       "accountReady": "Your account is ready. Continue to join {name}."
     },
     "contact": {
@@ -1682,6 +1690,12 @@
       "sampleStory1": "Faith in ordinary days",
       "sampleStory2": "A parish welcome",
       "sampleStory3": "Serving together"
+    },
+    "auth": {
+      "welcomeTitle": "Welcome back",
+      "welcomeBody": "Sign in to stay connected with {name}.",
+      "createTitle": "Create your account",
+      "createBody": "Join {name} and stay connected with your church."
     }
   }
 }

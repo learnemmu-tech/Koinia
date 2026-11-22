@@ -286,6 +286,8 @@ test("donation security fixtures stay inside ebenezer_test", async (t) => {
       fileName: "qr.png",
       mimeType: "image/png",
       bytes: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0, 0, 0, 0, 0]),
+      confirmDetails: true,
+      confirmMismatch: false,
     });
   } catch (error) {
     uploadDenied = error instanceof DonationAccessError;

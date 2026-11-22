@@ -5,14 +5,18 @@ import { auth } from "@clerk/nextjs/server";
 import {
   churchDonationReport,
   getChurchDonationSettings,
+  inspectChurchQr,
   previewChurchQr,
+  removeChurchQr,
   recordOfflineDonation,
   reviewChurchDonation,
   saveChurchDonationDeclaration,
+  saveDonorAcknowledgement,
   saveChurchQrImage,
   saveChurchReceivingMethod,
   setCampaignReceivingMethods,
 } from "@/lib/donations/church-receiving";
+import { lookupIfsc } from "@/lib/donations/ifsc-lookup";
 import type { ChurchReceivingMethod } from "@/lib/donations/receiving-validation";
 
 async function clerkId() {
@@ -23,6 +27,14 @@ async function clerkId() {
 
 export async function loadChurchDonationSettings(churchId: string) {
   return getChurchDonationSettings(await clerkId(), churchId);
+}
+
+export async function saveDonationAcknowledgement(churchId: string, message: string) {
+  await saveDonorAcknowledgement({
+    clerkId: await clerkId(),
+    churchId,
+    message,
+  });
 }
 
 export async function acceptDonationDeclaration(churchId: string) {
@@ -46,7 +58,7 @@ export async function saveReceivingMethod(input: {
   ifscCode?: string;
   branchName?: string;
 }) {
-  await saveChurchReceivingMethod({ ...input, clerkId: await clerkId() });
+  return saveChurchReceivingMethod({ ...input, clerkId: await clerkId() });
 }
 
 export async function uploadDonationQr(formData: FormData) {
@@ -60,11 +72,35 @@ export async function uploadDonationQr(formData: FormData) {
     fileName: file.name,
     mimeType: file.type,
     bytes,
+    confirmDetails: formData.get("confirmDetails") === "true",
+    confirmMismatch: formData.get("confirmMismatch") === "true",
   });
+}
+
+export async function inspectDonationQr(formData: FormData) {
+  const churchId = String(formData.get("churchId") ?? "");
+  const file = formData.get("file");
+  if (!(file instanceof File)) throw new Error("Choose a QR image.");
+  const bytes = Buffer.from(await file.arrayBuffer());
+  return inspectChurchQr({
+    clerkId: await clerkId(),
+    churchId,
+    mimeType: file.type,
+    bytes,
+  });
+}
+
+export async function lookupDonationIfsc(code: string) {
+  await clerkId();
+  return lookupIfsc(code);
 }
 
 export async function loadDonationQrPreview(churchId: string) {
   return previewChurchQr(await clerkId(), churchId);
+}
+
+export async function removeDonationQr(churchId: string) {
+  await removeChurchQr(await clerkId(), churchId);
 }
 
 export async function recordOfflineChurchDonation(input: {

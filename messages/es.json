@@ -1554,6 +1554,14 @@
       "backToWebsite": "Volver al sitio",
       "createAccount": "Cree su cuenta",
       "createLede": "Cree una cuenta para unirse a esta comunidad de la iglesia.",
+      "joinLabel": "Únase a nuestra comunidad",
+      "visualHeadline": "Un lugar para pertenecer.",
+      "visualBody": "Adore y crezca juntos en la fe.",
+      "highlightSermons": "Ver sermones",
+      "highlightConnect": "Conectar con otros",
+      "highlightGrow": "Crecer en la fe",
+      "scriptureQuote": "El Señor es mi pastor; nada me faltará.",
+      "scriptureRef": "Salmo 23:1",
       "accountReady": "Su cuenta está lista. Continúe para unirse a {name}."
     },
     "contact": {
@@ -1682,6 +1690,12 @@
       "sampleStory1": "Fe en los días ordinarios",
       "sampleStory2": "Una bienvenida parroquial",
       "sampleStory3": "Sirviendo juntos"
+    },
+    "auth": {
+      "welcomeTitle": "Bienvenido de nuevo",
+      "welcomeBody": "Inicia sesión para seguir conectado con {name}.",
+      "createTitle": "Crea tu cuenta",
+      "createBody": "Únete a {name} y mantente conectado con tu iglesia."
     }
   }
 }

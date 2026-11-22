@@ -62,21 +62,25 @@ export default function Providers({
       themes={["light", "dark", "system"]}
       {...theme}
     >
+      <div className="contents">
       <ActiveChurchProvider
         initialChurches={initialChurches}
         initialActiveChurchId={initialActiveChurchId}
       >
         <FirebaseAuthProvider>
+          <>
           <EmailVerificationBanner />
           <QueryClientProvider client={queryClient}>
             <ContentAuthDialogProvider>
               <FavoritesProvider>
                 <RecentlyViewedProvider>
                   <OrganizationProvider>
+                    <>
                     <OrganizationChurchBridge />
                     <WorkspaceSessionBridge />
                     <ActiveBranchProvider>
                       <WorkspaceBootstrapGate>
+                        <>
                         <OnboardingGuard />
                         <MembershipStatusGuard />
                         <SubscriptionShell>
@@ -86,17 +90,21 @@ export default function Providers({
                             </div>
                           </TooltipProvider>
                         </SubscriptionShell>
+                        </>
                       </WorkspaceBootstrapGate>
                     </ActiveBranchProvider>
+                    </>
                   </OrganizationProvider>
                 </RecentlyViewedProvider>
               </FavoritesProvider>
             </ContentAuthDialogProvider>
           </QueryClientProvider>
+          </>
         </FirebaseAuthProvider>
       </ActiveChurchProvider>
 
       <Toaster />
+      </div>
     </ThemeProvider>
   );
 }

@@ -218,6 +218,13 @@
       "when": 1789628000000,
       "tag": "0030_church_donation_receiving",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1789632000000,
+      "tag": "0031_donor_acknowledgement",
+      "breakpoints": true
     }
   ]
 }

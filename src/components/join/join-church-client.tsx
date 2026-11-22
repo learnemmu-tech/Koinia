@@ -42,9 +42,10 @@ type JoinChurchPreview = {
 
 type JoinChurchClientProps = {
   slug: string;
+  templateId?: TemplateId | null;
 };
 
-export function JoinChurchClient({ slug }: JoinChurchClientProps) {
+export function JoinChurchClient({ slug, templateId = null }: JoinChurchClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { setActiveChurchId } = useActiveChurch();
@@ -219,6 +220,13 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
     church.welcomeMessage?.trim() ||
     "Join our church community on FaithConnectHub.";
   const joinBlocked = !church.joinAvailable;
+  const heritage = templateId === "heritage";
+  const joinButtonClass = heritage
+    ? "bg-[#641F32] text-[#FFFDF9] hover:!bg-[#7A2A40] focus-visible:!ring-[#B49A62]"
+    : undefined;
+  const outlineClass = heritage
+    ? "border-[#DDD5C6] bg-[#FFFDF9] text-[#202624] hover:!bg-[#F6F3EC] hover:!text-[#202624]"
+    : undefined;
   const flowMessage = getJoinFlowMessage(church.enrollmentMode);
 
   return (
@@ -228,12 +236,12 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
         aria-hidden
       />
 
-      <div className="relative w-full max-w-md">
+      <div className={cn("relative w-full", heritage ? "max-w-sm" : "max-w-md")}>
         <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-lg">
           <div className="h-1.5 w-full bg-gradient-to-r from-primary/30 via-primary to-primary/30" />
 
           <div className="p-8 text-center">
-            <div className="mx-auto mb-5 flex size-24 items-center justify-center overflow-hidden rounded-2xl border border-border/50 bg-muted/30 shadow-inner">
+            <div className={cn("mx-auto mb-4 flex items-center justify-center overflow-hidden rounded-2xl border border-border/50 bg-muted/30", heritage ? "size-16" : "size-24")}>
               <Image
                 src={logo}
                 alt=""
@@ -272,7 +280,7 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
               <div className="mt-8 space-y-3">
                 <p className="text-xs text-muted-foreground">{flowMessage}</p>
                 <Button
-                  className="w-full"
+                  className={cn("w-full", joinButtonClass)}
                   size="lg"
                   disabled={joining || requestState === "pending"}
                   onClick={() => void submitJoinRequest()}
@@ -294,7 +302,7 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
             : <div className="mt-8 space-y-3">
                 <p className="text-xs text-muted-foreground">{flowMessage}</p>
                 <Button
-                  className={cn("w-full", googleLoading && "pointer-events-none")}
+                  className={cn("w-full", joinButtonClass, googleLoading && "pointer-events-none")}
                   size="lg"
                   disabled={googleLoading}
                   onClick={() => void handleGoogleContinue()}
@@ -308,7 +316,7 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
                   asChild
                   variant="outline"
                   size="lg"
-                  className="w-full"
+                  className={cn("w-full", outlineClass)}
                 >
                   <Link href={emailSignUpHref}>
                     <Mail className="mr-2 size-4" />
@@ -322,7 +330,7 @@ export function JoinChurchClient({ slug }: JoinChurchClientProps) {
                   Already have an account?{" "}
                   <Link
                     href={emailSignInHref}
-                    className="underline underline-offset-2"
+                    className={cn("underline underline-offset-2", heritage && "text-[#641F32] hover:text-[#4E1727]")}
                   >
                     Sign in
                   </Link>

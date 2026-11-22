@@ -20,6 +20,7 @@ export async function HeritageSignupPage({
   callbackUrl: string;
 }) {
   const t = await getTranslations("heritage.auth");
+  const nav = await getTranslations("navigation");
   const homeHref = churchWebsitePath(model.church.slug);
   const signInHref = heritageLoginHref(model, callbackUrl);
   const joinHref = isJoinPath(callbackUrl)
@@ -47,7 +48,7 @@ export async function HeritageSignupPage({
         </div>
       ) : (
         <>
-          <p className="heritage-eyebrow">{t("welcome")}</p>
+          <p className="heritage-eyebrow">{t("joinLabel")}</p>
           <h1 className="heritage-display mt-1.5 text-[length:var(--heritage-section)] text-[var(--heritage-text)]">
             {t("createAccount")}
           </h1>
@@ -71,6 +72,11 @@ export async function HeritageSignupPage({
           ← {t("backToWebsite")}
         </Link>
       </p>
+      <nav className="heritage-auth-legal">
+        <Link href="/terms">{nav("termsOfService")}</Link>
+        <span aria-hidden>·</span>
+        <Link href="/privacy">{nav("privacyPolicy")}</Link>
+      </nav>
     </div>
   );
 }

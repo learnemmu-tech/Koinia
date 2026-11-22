@@ -1,71 +1,52 @@
+import Image from "next/image";
+import Link from "next/link";
+import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
+import { churchWebsitePath } from "@/lib/templates/paths";
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
-import { HeritageImage } from "@/templates/heritage/components/heritage-image";
-import { resolveHeritageImage } from "@/templates/heritage/lib";
-import {
-  HERITAGE_FALLBACK_HEADLINE,
-  HERITAGE_FALLBACK_IMAGES,
-  HERITAGE_FALLBACK_SCRIPTURE,
-  HERITAGE_FALLBACK_SUPPORTING,
-} from "@/templates/heritage/theme";
+import { HERITAGE_FALLBACK_IMAGES } from "@/templates/heritage/theme";
 
 import "@/templates/heritage/heritage.css";
 
-export function HeritageAuthShell({
+const HERITAGE_AUTH_PHOTO = "/images/heritage-auth-sanctuary.jpg";
+
+export async function HeritageAuthShell({
   model,
   children,
 }: {
   model: ChurchWebsiteViewModel;
   children: React.ReactNode;
 }) {
-  const image = resolveHeritageImage(
-    model.website.images.hero,
-    HERITAGE_FALLBACK_IMAGES.hero
-  );
-  const headline =
-    model.website.heroHeadline?.trim() || HERITAGE_FALLBACK_HEADLINE;
-  const supporting =
-    model.website.heroSubheadline?.trim() ||
-    model.church.welcomeMessage?.trim() ||
-    model.church.description?.trim() ||
-    HERITAGE_FALLBACK_SUPPORTING;
-  const scriptureText =
-    model.website.scriptureText?.trim() || HERITAGE_FALLBACK_SCRIPTURE.text;
-  const scriptureRef =
-    model.website.scriptureReference?.trim() ||
-    HERITAGE_FALLBACK_SCRIPTURE.reference;
+  const logo = model.website.images.logo || model.church.logoUrl || HERITAGE_FALLBACK_IMAGES.mark;
+  const photo =
+    model.website.images.hero?.trim() ||
+    model.website.images.about?.trim() ||
+    model.website.images.worship?.trim() ||
+    HERITAGE_AUTH_PHOTO;
 
   return (
     <div className="heritage-theme heritage-auth-shell">
+      <div className="heritage-auth-locale-bar">
+        <LocaleSwitcher className="heritage-auth-locale" menuClassName="heritage-locale-menu" />
+      </div>
       <div className="heritage-auth-body">
-        <aside className="heritage-auth-visual" aria-hidden={false}>
+        <aside className="heritage-auth-visual">
           <div className="heritage-auth-media">
-            <HeritageImage
-              src={image}
+            <Image
+              src={photo}
               alt=""
-              fallback={HERITAGE_FALLBACK_IMAGES.hero}
-              className="object-cover"
-              sizes="(max-width: 1023px) 100vw, 50vw"
+              fill
               priority
+              sizes="(max-width: 1023px) 100vw, 55vw"
+              className="heritage-auth-photo"
             />
-            <div className="heritage-hero-overlay absolute inset-0" />
+            <div className="heritage-auth-scrim" />
           </div>
-          <div className="heritage-auth-visual-copy">
-            <p className="heritage-eyebrow text-[var(--heritage-accent)]">
-              {model.church.name}
-            </p>
-            <h2 className="heritage-display mt-3 max-w-lg whitespace-pre-line text-[length:var(--heritage-hero)] text-[var(--heritage-primary-foreground)]">
-              {headline}
-            </h2>
-            <p className="mt-4 max-w-md text-[length:var(--heritage-body)] leading-[1.65] text-[color-mix(in_srgb,var(--heritage-primary-foreground)_82%,transparent)]">
-              {supporting}
-            </p>
-            <blockquote className="mt-8 max-w-md border-l border-[color-mix(in_srgb,var(--heritage-accent)_70%,transparent)] pl-4 text-sm italic leading-relaxed text-[color-mix(in_srgb,var(--heritage-primary-foreground)_78%,transparent)]">
-              <p>“{scriptureText}”</p>
-            <footer className="mt-2 not-italic tracking-[0.08em] text-[var(--heritage-accent)]">
-                — {scriptureRef}
-              </footer>
-            </blockquote>
-          </div>
+          <Link href={churchWebsitePath(model.church.slug)} className="heritage-auth-brand">
+            <span className="heritage-auth-mark">
+              <Image src={logo} alt="" fill className="object-contain" sizes="36px" />
+            </span>
+            <span>{model.church.name}</span>
+          </Link>
         </aside>
 
         <section className="heritage-auth-panel">

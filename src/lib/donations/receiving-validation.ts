@@ -17,6 +17,21 @@ export function isUpiIdFormat(value: string): boolean {
   return UPI_ID.test(value.trim());
 }
 
+export function parseUpiPaymentPayload(raw: string): { upiId: string; payeeName: string } | null {
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "upi:" || url.hostname !== "pay") return null;
+  const pa = (url.searchParams.get("pa") ?? "").trim();
+  if (!isUpiIdFormat(pa)) return null;
+  const currency = (url.searchParams.get("cu") ?? "INR").trim().toUpperCase();
+  if (currency !== "INR") return null;
+  return { upiId: pa, payeeName: (url.searchParams.get("pn") ?? "").trim() };
+}
+
 export function isIfscFormat(value: string): boolean {
   return IFSC.test(value.trim().toUpperCase());
 }

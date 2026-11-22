@@ -73,6 +73,7 @@ export function DonateForm({ campaign }: DonateFormProps) {
   const [methodId, setMethodId] = useState<ChurchMethod["method"] | "">("");
   const [paymentReference, setPaymentReference] = useState("");
   const [submittedStatus, setSubmittedStatus] = useState<string | null>(null);
+  const [donorAcknowledgement, setDonorAcknowledgement] = useState("");
   const paysChurchDirectly = Boolean(campaign.churchId) && campaign.currency === "INR";
 
   useEffect(() => {
@@ -80,7 +81,9 @@ export function DonateForm({ campaign }: DonateFormProps) {
     void fetch(`/api/donations/methods?campaignId=${encodeURIComponent(campaign.id)}`)
       .then((response) => response.json())
       .then((payload: unknown) => {
-        const next = (payload as { methods?: ChurchMethod[] }).methods ?? [];
+        const body = payload as { methods?: ChurchMethod[]; donorAcknowledgement?: string };
+        const next = body.methods ?? [];
+        setDonorAcknowledgement(body.donorAcknowledgement?.trim() ?? "");
         setMethods(next);
         setMethodId(next[0]?.method ?? "");
       })
@@ -369,8 +372,15 @@ export function DonateForm({ campaign }: DonateFormProps) {
                 className={fieldClassName}
               />
             </label>
-            {submittedStatus ? (
-              <p className="text-sm font-medium">Status: Awaiting verification</p>
+            {submittedStatus === "awaiting_verification" ? (
+              <div className="space-y-1 rounded-md border px-3 py-2 text-sm">
+                <p className="font-medium">Submitted · awaiting verification</p>
+                <p className="text-muted-foreground">This is not a completed payment. The church still has to verify the reference.</p>
+                <p>
+                  {donorAcknowledgement ||
+                    "Thank you for your generous support. Your contribution helps our church continue its mission and serve our community."}
+                </p>
+              </div>
             ) : null}
           </div>
         ) : null}

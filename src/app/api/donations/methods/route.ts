@@ -20,9 +20,10 @@ export async function GET(request: Request) {
   if (!campaignId) {
     return NextResponse.json({ error: "Campaign is required." }, { status: 400 });
   }
-  const methods = await publicCampaignMethods(campaignId);
+  const payload = await publicCampaignMethods(campaignId);
   return NextResponse.json({
-    methods,
+    methods: payload.methods,
+    donorAcknowledgement: payload.donorAcknowledgement,
     recipient: "church",
     currency: "INR",
     disclosure:
