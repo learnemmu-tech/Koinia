@@ -22,6 +22,7 @@ import { putObjectBytes, createPresignedGetUrl, deleteStoredObject } from "@/lib
 import { decodeUpiQrImage } from "./upi-qr";
 import {
   accountLast4,
+  donationFieldEncryptionConfigured,
   encryptDonationField,
   imageBytesMatchDeclaredType,
   inrAmountToPaise,
@@ -78,6 +79,7 @@ export async function getChurchDonationSettings(clerkId: string, churchId: strin
     foreignDonationsEnabled: false,
     gatewayStatus: "unavailable" as const,
     donorAcknowledgement: profile?.donorAcknowledgement ?? "",
+    encryptionConfigured: donationFieldEncryptionConfigured(),
     authorizationState: profile?.authorizedDeclaration
       ? ("confirmed" as const)
       : profile?.declarationAcceptedAt

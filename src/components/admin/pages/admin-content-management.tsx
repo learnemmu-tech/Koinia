@@ -41,6 +41,13 @@ export function AdminContentManagementClient() {
     (value: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", value);
+      if (value !== "donations") {
+        params.delete("section");
+        params.delete("request");
+        params.delete("status");
+        params.delete("error");
+        params.delete("updated");
+      }
       router.replace(`/dashboard/content?${params.toString()}`, {
         scroll: false,
       });

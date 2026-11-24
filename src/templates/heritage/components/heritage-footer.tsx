@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { CookieSettingsButton } from "@/components/cookies/cookie-consent";
+
 import { getTranslations } from "next-intl/server";
 
 import { configuredSocialLinks } from "@/lib/templates/social-links";
@@ -84,12 +86,13 @@ export async function HeritageFooter({ model }: { model: ChurchWebsiteViewModel 
             {t("rights", { year, name: model.church.name })}
           </p>
           <p className="flex flex-wrap gap-x-6">
-            <Link href="/privacy" className="inline-block rounded-sm py-1.5 hover:text-[var(--heritage-primary-foreground)]">
+            <Link href="/legal/privacy" className="inline-block rounded-sm py-1.5 hover:text-[var(--heritage-primary-foreground)]">
               {t("privacy")}
             </Link>
-            <Link href="/terms" className="inline-block rounded-sm py-1.5 hover:text-[var(--heritage-primary-foreground)]">
+            <Link href="/legal/terms" className="inline-block rounded-sm py-1.5 hover:text-[var(--heritage-primary-foreground)]">
               {t("terms")}
             </Link>
+            <CookieSettingsButton className="inline-block rounded-sm py-1.5 hover:text-[var(--heritage-primary-foreground)]" />
             {isSectionVisible(model.website.visibility, "contact") ? (
               <Link
                 href={churchWebsitePath(model.church.slug, "/contact")}

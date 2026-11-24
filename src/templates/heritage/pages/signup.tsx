@@ -1,5 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { Suspense } from "react";
+
+import { AuthLegalLinks } from "@/components/legal/auth-legal-links";
 import { redirect } from "next/navigation";
 
 import { FirebaseSignUpForm } from "@/app/(firebase-auth)/signup/_components/firebase-signup-form";
@@ -72,11 +75,13 @@ export async function HeritageSignupPage({
           ← {t("backToWebsite")}
         </Link>
       </p>
-      <nav className="heritage-auth-legal">
-        <Link href="/terms">{nav("termsOfService")}</Link>
-        <span aria-hidden>·</span>
-        <Link href="/privacy">{nav("privacyPolicy")}</Link>
-      </nav>
+      <Suspense fallback={null}>
+        <AuthLegalLinks
+          terms={nav("termsOfService")}
+          privacy={nav("privacyPolicy")}
+          className="heritage-auth-legal"
+        />
+      </Suspense>
     </div>
   );
 }

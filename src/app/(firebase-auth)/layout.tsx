@@ -1,5 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
+import { Suspense } from "react";
+
+import { AuthLegalLinks } from "@/components/legal/auth-legal-links";
 
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { cn } from "@/lib/utils";
@@ -70,35 +72,13 @@ export default function FirebaseAuthLayout({
                   <div className="auth-form-slot w-full">{children}</div>
                 </div>
 
-                <nav
-                  aria-label="Legal"
-                  className="auth-footer mt-5 flex shrink-0 flex-wrap items-center gap-x-2.5 gap-y-1 pt-1 text-[11px] leading-none text-[#6B7280] lg:mt-4"
-                >
-                  <Link
-                    href="/privacy"
-                    className="inline-flex min-h-8 items-center hover:text-[#1C2B3A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0623A]/35 lg:min-h-0 lg:py-0.5"
-                  >
-                    Privacy Policy
-                  </Link>
-                  <span aria-hidden className="text-[#D6CDBF]">
-                    |
-                  </span>
-                  <Link
-                    href="/terms"
-                    className="inline-flex min-h-8 items-center hover:text-[#1C2B3A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0623A]/35 lg:min-h-0 lg:py-0.5"
-                  >
-                    Terms of Service
-                  </Link>
-                  <span aria-hidden className="text-[#D6CDBF]">
-                    |
-                  </span>
-                  <Link
-                    href="/contact"
-                    className="inline-flex min-h-8 items-center hover:text-[#1C2B3A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0623A]/35 lg:min-h-0 lg:py-0.5"
-                  >
-                    Help
-                  </Link>
-                </nav>
+                <Suspense fallback={null}>
+                  <AuthLegalLinks
+                    terms="Terms of Service"
+                    privacy="Privacy Policy"
+                    className="auth-footer mt-5 flex shrink-0 flex-wrap items-center gap-x-2.5 gap-y-1 pt-1 text-[11px] leading-none text-[#6B7280] lg:mt-4 [&_a]:inline-flex [&_a]:min-h-8 [&_a]:items-center [&_a]:hover:text-[#1C2B3A] lg:[&_a]:min-h-0"
+                  />
+                </Suspense>
               </div>
             </div>
           </div>

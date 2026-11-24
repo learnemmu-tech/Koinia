@@ -170,11 +170,11 @@ export function LegalDocumentPage({
 
         <p className="mt-8 text-center text-xs text-muted-foreground/60">
           © 2026 {siteConfig.name} · All rights reserved ·{" "}
-          <Link href="/privacy" className="hover:text-foreground hover:underline">
+          <Link href="/legal/privacy" className="hover:text-foreground hover:underline">
             Privacy Policy
           </Link>
           {" · "}
-          <Link href="/terms" className="hover:text-foreground hover:underline">
+          <Link href="/legal/terms" className="hover:text-foreground hover:underline">
             Terms of Service
           </Link>
         </p>

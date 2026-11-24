@@ -183,6 +183,14 @@ export async function rateLimitLike(
   return rateLimitByKey(`like:${identifier}`, "fch-like", limit, windowMs);
 }
 
+export async function rateLimitCookieConsent(
+  identifier: string,
+  limit = 30,
+  windowMs = 60 * 60 * 1000
+): Promise<{ allowed: boolean; retryAfterMs?: number }> {
+  return rateLimitByKey(`cookie:${identifier}`, "fch-cookie", limit, windowMs);
+}
+
 export async function rateLimitPaymentVerify(
   identifier: string,
   limit = 30,

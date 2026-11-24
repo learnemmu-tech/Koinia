@@ -60,7 +60,7 @@ export function getFooterNavItems(
   return [
     ...getPrimaryNavItems(model),
     ...getUtilityNavItems(model),
-    { href: "/privacy", label: "Privacy" },
-    { href: "/terms", label: "Terms" },
+    { href: "/legal/privacy", label: "Privacy" },
+    { href: "/legal/terms", label: "Terms" },
   ];
 }

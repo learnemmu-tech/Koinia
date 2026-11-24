@@ -14,6 +14,7 @@ import { useAllowTrialWrite } from "@/context/subscription-context";
 import { ContentActions } from "@/components/engagement/content-actions";
 import { ImageWithFallback } from "@/components/image-with-fallback";
 import { DEFAULT_SONG_COVER } from "@/config/site";
+import { useExternalMediaAllowed } from "@/components/cookies/cookie-consent";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -174,17 +175,7 @@ export function ChurchVideoCard({
           <DialogHeader className="px-4 pt-4">
             <DialogTitle className="pr-8 text-base">{video.title}</DialogTitle>
           </DialogHeader>
-          {src ?
-            <div className="aspect-video w-full bg-black">
-              <iframe
-                src={src}
-                title={video.title}
-                className="h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          : null}
+          {src ? <ExternalVideo src={src} title={video.title} /> : null}
           <div className={cn("flex justify-end px-4 pb-4", src && "pt-0")}>
             <Button asChild variant="outline" size="sm">
               <a href={video.externalUrl} target="_blank" rel="noopener noreferrer">
@@ -195,5 +186,30 @@ export function ChurchVideoCard({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function ExternalVideo({ src, title }: { src: string; title: string }) {
+  const allowed = useExternalMediaAllowed();
+  const [clicked, setClicked] = useState(false);
+  if (!allowed && !clicked) {
+    return (
+      <div className="flex aspect-video w-full items-center justify-center bg-black p-4">
+        <Button type="button" onClick={() => setClicked(true)}>
+          Load external video
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <div className="aspect-video w-full bg-black">
+      <iframe
+        src={src}
+        title={title}
+        className="h-full w-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
   );
 }

@@ -19,6 +19,7 @@ const TrialLifecycleBanner = dynamic(() =>
     (module) => module.TrialLifecycleBanner
   )
 );
+import { TermsReacceptanceBanner } from "@/components/legal/terms-reacceptance-banner";
 import { pageShellClass } from "@/lib/responsive-classes";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -27,12 +28,17 @@ import { cn } from "@/lib/utils";
 export function AuthenticatedAppShell({
   children,
   publicVisitor = false,
+  termsVersionToAccept = null,
 }: {
   children: ReactNode;
   publicVisitor?: boolean;
+  termsVersionToAccept?: string | null;
 }) {
   return (
     <div className="flex h-svh min-h-0 flex-col overflow-hidden">
+      {termsVersionToAccept ? (
+        <TermsReacceptanceBanner versionLabel={termsVersionToAccept} />
+      ) : null}
       {publicVisitor ? null : <TrialLifecycleBanner />}
       <SidebarProvider
         defaultOpen={true}

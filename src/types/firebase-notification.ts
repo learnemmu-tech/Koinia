@@ -12,7 +12,9 @@ export type NotificationContentType =
   | "short_pending_review"
   | "short_review_result"
   | "group_invitation"
-  | "subscription";
+  | "subscription"
+  | "donation_request_submitted"
+  | "donation_request_decision";
 
 export type FirebaseNotification = {
   id: string;

@@ -158,6 +158,14 @@ const NOTIFICATION_PRESETS: Record<
     message:
       "Your subscription is now active. Your church workspace has been upgraded successfully.",
   },
+  donation_request_submitted: {
+    title: "New Donation Request",
+    message: "A member has submitted a donation request that requires your review.",
+  },
+  donation_request_decision: {
+    title: "Donation Request Update",
+    message: "Your church administrator reviewed your donation request.",
+  },
   short_pending_review: {
     title: "Short awaiting review",
     message: "A member submitted a Short for review.",

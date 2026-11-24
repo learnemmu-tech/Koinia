@@ -187,6 +187,8 @@ const config: NextConfig = {
         destination: "/c/:slug/ministries",
         permanent: false,
       },
+      { source: "/terms", destination: "/legal/terms", permanent: false },
+      { source: "/privacy", destination: "/legal/privacy", permanent: false },
     ];
   },
 };

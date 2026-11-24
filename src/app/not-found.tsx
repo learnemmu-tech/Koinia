@@ -53,7 +53,7 @@ const NotFound = () => {
         </Link>
 
         <Link
-          href="/privacy"
+          href="/legal/privacy"
           className="rounded-lg border px-5 py-2"
         >
           Privacy Policy

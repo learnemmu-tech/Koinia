@@ -15,7 +15,7 @@ export function ParishShell({
   children: ReactNode;
 }) {
   return (
-    <div className="parish-theme min-h-svh">
+    <div className="parish-theme min-h-svh" data-church-template="parish">
       <a href="#parish-main" className="parish-skip">
         Skip to content
       </a>

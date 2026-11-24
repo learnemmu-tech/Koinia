@@ -2,14 +2,12 @@ import "@/styles/globals.css";
 
 import React from "react";
 import { cookies, headers } from "next/headers";
-import Script from "next/script";
-
 import type { Metadata, Viewport } from "next";
 import type { ThemeConfig } from "@/types";
 
 import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
-import { Analytics } from "@vercel/analytics/react";
+import { CookieConsent } from "@/components/cookies/cookie-consent";
 
 import { siteConfig } from "@/config/site";
 import { LOCALE_COOKIE, parseLocale } from "@/i18n/config";
@@ -119,15 +117,8 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
               {children}
             </Shell>
           </ClerkProvider>
-          <Analytics />
+          <CookieConsent umamiWebsiteId={env.UMAMI_WEBSITE_ID} />
         </body>
-
-        {/* Umami Analytics */}
-        <Script
-          async
-          src="https://us.umami.is/script.js"
-          data-website-id={env.UMAMI_WEBSITE_ID}
-        />
       </html>
     </React.StrictMode>
   );

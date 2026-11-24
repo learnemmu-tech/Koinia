@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { CatalogPager } from "@/components/worship/catalog-pager";
 import { DonationsListClient } from "@/components/donations/donations-list-client";
@@ -8,6 +9,7 @@ import { catalogPageQuery, sliceCatalogPage } from "@/lib/content/catalog-page";
 import { resolvePageContentQuery } from "@/lib/content/page-content-query";
 import { getActiveDonationCampaignsCached } from "@/lib/cached-donation-data";
 import { pageContentClass } from "@/lib/responsive-classes";
+import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 60;
@@ -38,9 +40,16 @@ export default async function DonationsPage({
     >
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <I18nPageHeading ns="donations" headingId="donations-heading" />
-        <DonationsAdminBar
-          contentScope={isPlatformPublic ? "platform_public" : "organization"}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {isPlatformPublic ? null : (
+            <Button asChild variant="outline" size="sm" className="rounded-full">
+              <Link href="/donations/requests">Request a Donation</Link>
+            </Button>
+          )}
+          <DonationsAdminBar
+            contentScope={isPlatformPublic ? "platform_public" : "organization"}
+          />
+        </div>
       </header>
 
       <DonationsListClient

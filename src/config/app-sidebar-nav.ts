@@ -113,7 +113,14 @@ export const MANAGE_NAV_ITEMS: AppNavItem[] = [
     icon: Layers,
     match: startsWith(`${ADMIN_BASE}/content`),
     badgeKey: "pendingContent",
-    searchKeywords: ["content", "management", "cms", "admin content"],
+    searchKeywords: [
+      "content",
+      "management",
+      "cms",
+      "admin content",
+      "donation requests",
+      "member requests",
+    ],
   },
 ];
 
@@ -190,7 +197,7 @@ export const COMMUNITY_NAV_ITEMS: AppNavItem[] = [
     href: "/donations",
     icon: Heart,
     match: startsWith("/donations"),
-    searchKeywords: ["donations", "giving", "tithe", "offerings"],
+    searchKeywords: ["donations", "giving", "tithe", "offerings", "request a donation", "donation request"],
   },
   {
     label: "Prayer Requests",

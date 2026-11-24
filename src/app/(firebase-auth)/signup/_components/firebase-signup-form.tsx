@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { AuthEmailVerificationStep } from "@/components/auth/auth-email-verification-step";
+import { SignupLegalAcceptance } from "@/components/legal/signup-legal-acceptance";
 import { AuthLoading } from "@/components/auth/auth-loading";
 import { Google } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,14 @@ export function FirebaseSignUpForm({
   const redirectTo = sanitizeCallbackUrl(callbackUrl, CREATE_WORKSPACE_PATH);
   const { signUp, fetchStatus } = useSignUp();
   const [isCompletingAuth, setIsCompletingAuth] = React.useState(false);
+  const legalRef = React.useRef({
+    termsAccepted: false,
+    termsRequired: false,
+    termsVersionId: null as string | null,
+    privacyVersionId: null as string | null,
+    marketingEmail: false,
+    whatsapp: false,
+  });
 
   const {
     register,
@@ -158,6 +167,21 @@ export function FirebaseSignUpForm({
       });
       rememberSyncedProfile(profile);
       setAuthCookie(true, { role: profile.role, profile });
+      const legal = legalRef.current;
+      if (legal.termsVersionId && legal.termsAccepted) {
+        void fetch("/api/legal/accept", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            termsVersionId: legal.termsVersionId,
+            privacyVersionId: legal.privacyVersionId,
+            locale: document.documentElement.lang || "en",
+            source: "sign-up",
+            marketingEmail: legal.marketingEmail,
+            whatsapp: legal.whatsapp,
+          }),
+        });
+      }
       navigateAfterAuth(destination);
     } catch {
       navigateAfterAuth(postAuthContinueHref(redirectTo));
@@ -167,6 +191,10 @@ export function FirebaseSignUpForm({
   }
 
   async function onSubmit(data: SignUpValues) {
+    if (legalRef.current.termsRequired && !legalRef.current.termsAccepted) {
+      setFormError("Accept the current Terms of Service to create an account.");
+      return;
+    }
     setIsLoading(true);
     setVerificationError(null);
     setFormError(null);
@@ -262,6 +290,10 @@ export function FirebaseSignUpForm({
   }
 
   async function handleGoogleSignUp() {
+    if (legalRef.current.termsRequired && !legalRef.current.termsAccepted) {
+      setFormError("Accept the current Terms of Service to create an account.");
+      return;
+    }
     setIsGoogleLoading(true);
     setFormError(null);
     try {
@@ -413,6 +445,12 @@ export function FirebaseSignUpForm({
             <p className="text-sm text-destructive">{errors.password.message}</p>
           : null}
         </div>
+
+        <SignupLegalAcceptance
+          onChange={(value) => {
+            legalRef.current = value;
+          }}
+        />
 
         <Button
           type="submit"

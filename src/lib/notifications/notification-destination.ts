@@ -94,6 +94,12 @@ export function notificationDestination(input: {
     case "trial_lifecycle":
     case "subscription":
       return "/dashboard/billing";
+    case "donation_request_submitted":
+      return id
+        ? `/dashboard/content?tab=donations&section=requests&request=${encodeURIComponent(id)}`
+        : "/dashboard/content?tab=donations&section=requests";
+    case "donation_request_decision":
+      return "/donations/requests";
     case "song":
       return heritageOrAppPath(input, "/songs", id);
     case "article":

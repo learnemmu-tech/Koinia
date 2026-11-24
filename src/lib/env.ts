@@ -41,6 +41,9 @@ export const env = createEnv({
     AWS_ACCESS_KEY_ID: z.string().min(1),
     AWS_SECRET_ACCESS_KEY: z.string().min(1),
 
+    /** Server-only scrypt passphrase for AES-256-GCM donation account numbers. At least 16 characters. */
+    DONATION_FIELD_KEY: z.string().min(16).optional(),
+
     /** Shepherd AI — server-only. Never expose via NEXT_PUBLIC_. */
     GEMINI_API_KEY: z.string().min(1).optional(),
     GEMINI_MODEL: z.string().min(1).optional(),

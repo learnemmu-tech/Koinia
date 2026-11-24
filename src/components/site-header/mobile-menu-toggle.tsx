@@ -39,7 +39,7 @@
 //               About
 //             </Link>
 //             <Link
-//               href="/privacy"
+//               href="/legal/privacy"
 //               onClick={() => setOpen(false)}
 //               className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 //             >
@@ -108,7 +108,7 @@
 //               About
 //             </Link>
 //             <Link
-//               href="/privacy"
+//               href="/legal/privacy"
 //               onClick={() => setOpen(false)}
 //               className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 //             >
@@ -178,7 +178,7 @@ export function MobileMenuToggle() {
               About
             </Link>
             <Link
-              href="/privacy"
+              href="/legal/privacy"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >

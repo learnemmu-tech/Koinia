@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { CookieSettingsButton } from "@/components/cookies/cookie-consent";
 import { getTranslations } from "next-intl/server";
 
 import type { ChurchWebsiteViewModel } from "@/lib/templates/types";
@@ -78,6 +80,7 @@ export async function ParishFooter({ model }: { model: ChurchWebsiteViewModel })
           ) : null
         )}
         <p>© {new Date().getFullYear()} {model.church.name}</p>
+        <CookieSettingsButton className="underline" />
       </div>
     </footer>
   );

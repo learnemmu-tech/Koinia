@@ -204,6 +204,8 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "short_review_result",
   "group_invitation",
   "subscription",
+  "donation_request_submitted",
+  "donation_request_decision",
 ]);
 
 export const favoriteItemTypeEnum = pgEnum("favorite_item_type", [

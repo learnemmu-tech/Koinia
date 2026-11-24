@@ -96,10 +96,18 @@ export function sameDonationSubmission(
   );
 }
 
-function key(): Buffer {
+export function donationFieldEncryptionConfigured(): boolean {
   const secret = process.env.DONATION_FIELD_KEY?.trim();
-  if (!secret || secret.length < 16) {
+  return Boolean(secret && secret.length >= 16);
+}
+
+function key(): Buffer {
+  const secret = process.env.DONATION_FIELD_KEY?.trim() ?? "";
+  if (!secret) {
     throw new Error("Donation field encryption is not configured.");
+  }
+  if (secret.length < 16) {
+    throw new Error("Donation field encryption key is invalid.");
   }
   return scryptSync(secret, "koinia-donation-bank-v1", 32);
 }

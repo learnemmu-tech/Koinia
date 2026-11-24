@@ -8,6 +8,7 @@ import {
   CreditCard,
   LayoutDashboard,
   LibraryBig,
+  Scale,
   Users,
 } from "lucide-react";
 
@@ -52,6 +53,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Members",
     icon: Users,
     match: (pathname) => pathname.startsWith(`${SUPER_ADMIN_BASE}/members`),
+  },
+  {
+    href: `${SUPER_ADMIN_BASE}/legal`,
+    label: "Legal",
+    icon: Scale,
+    match: (pathname) => pathname.startsWith(`${SUPER_ADMIN_BASE}/legal`),
   },
   {
     href: `${SUPER_ADMIN_BASE}/subscriptions`,

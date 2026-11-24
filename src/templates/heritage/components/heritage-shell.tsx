@@ -12,7 +12,7 @@ export function HeritageShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="heritage-theme min-h-svh w-full max-w-full">
+    <div className="heritage-theme min-h-svh w-full max-w-full" data-church-template="heritage">
       <a href="#heritage-main" className="heritage-skip-link">
         Skip to content
       </a>

@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { CookieSettingsButton } from "@/components/cookies/cookie-consent";
 import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { churchWebsitePath } from "@/lib/templates/paths";
 import { getFooterNavItems, getPrimaryNavItems, getUtilityNavItems } from "@/lib/templates/nav";
@@ -42,7 +43,7 @@ export async function SignatureShell({
     : tCommon("signIn");
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
+    <div className="min-h-svh bg-background text-foreground" data-church-template="signature">
       <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
           <a href={churchWebsitePath(model.church.slug)} className="font-heading text-lg font-semibold">
@@ -86,6 +87,7 @@ export async function SignatureShell({
             ))}
           </ul>
           <div className="space-y-2 text-sm text-muted-foreground">
+            <CookieSettingsButton className="underline" />
             <p>{formatChurchAddress(model)}</p>
             {model.church.email ? <p>{model.church.email}</p> : null}
             {model.church.phone ? <p>{model.church.phone}</p> : null}

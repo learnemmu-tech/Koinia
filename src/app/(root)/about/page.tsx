@@ -432,11 +432,11 @@ export default function AboutPage() {
 
           <p className="text-xs text-muted-foreground">
             Read our{" "}
-            <Link href="/privacy" className="text-primary hover:underline">
+            <Link href="/legal/privacy" className="text-primary hover:underline">
               Privacy Policy
             </Link>{" "}
             and{" "}
-            <Link href="/terms" className="text-primary hover:underline">
+            <Link href="/legal/terms" className="text-primary hover:underline">
               Terms of Service
             </Link>
             .

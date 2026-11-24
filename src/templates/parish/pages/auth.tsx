@@ -1,4 +1,6 @@
-import Link from "next/link";
+import { Suspense } from "react";
+
+import { AuthLegalLinks } from "@/components/legal/auth-legal-links";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
@@ -24,11 +26,9 @@ function ParishLegalLinks({
   privacy: string;
 }) {
   return (
-    <nav className="parish-auth-legal" aria-label={terms}>
-      <Link href="/terms">{terms}</Link>
-      <span aria-hidden>·</span>
-      <Link href="/privacy">{privacy}</Link>
-    </nav>
+    <Suspense fallback={null}>
+      <AuthLegalLinks terms={terms} privacy={privacy} className="parish-auth-legal" />
+    </Suspense>
   );
 }
 

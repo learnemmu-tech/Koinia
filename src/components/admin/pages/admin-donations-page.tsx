@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChurchDonationReview } from "@/components/admin/church-donation-review";
 import { DonationCampaignList } from "@/components/admin/donation-campaign-list";
+import { DonationMemberRequests } from "@/components/admin/donation-member-requests";
 import { AdminChurchNotice } from "@/components/admin/admin-church-notice";
 import { AdminListPagination } from "@/components/admin/admin-list-pagination";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
@@ -31,6 +32,7 @@ import { useInvalidateAdminQueries } from "@/hooks/use-invalidate-admin-queries"
 import { filterBySearch, paginateItems } from "@/lib/admin-list-utils";
 import { downloadDonationsCsv } from "@/lib/donation-export";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { FirebaseDonationCampaign } from "@/types/firebase-donation";
 
 const AddDonationCampaignModal = dynamic(
@@ -47,6 +49,8 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
   const t = useTranslations("donations");
   const tCommon = useTranslations("common");
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const donationsSection = searchParams.get("section") === "requests" ? "requests" : "campaigns";
   const adminChurchId = useAdminChurchId();
   const blocked = useAdminChurchBlocked();
   const allowWrite = useAllowTrialWrite();
@@ -125,6 +129,30 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
 
       {blocked ? <AdminChurchNotice /> : null}
 
+      <Tabs
+        value={donationsSection}
+        onValueChange={(value) => {
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("tab", "donations");
+          if (value === "requests") params.set("section", "requests");
+          else params.delete("section");
+          params.delete("request");
+          params.delete("status");
+          params.delete("error");
+          params.delete("updated");
+          router.replace(`/dashboard/content?${params.toString()}`, { scroll: false });
+        }}
+        className="space-y-4"
+      >
+        <TabsList className="h-auto bg-muted/40 p-1">
+          <TabsTrigger value="campaigns" className="rounded-md px-3 py-1.5 text-xs sm:text-sm">
+            Donation Campaigns
+          </TabsTrigger>
+          <TabsTrigger value="requests" className="rounded-md px-3 py-1.5 text-xs sm:text-sm">
+            Member Requests
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="campaigns" className="mt-0 space-y-4">
       <AdminToolbar
         search={search}
         onSearchChange={setSearch}
@@ -191,6 +219,11 @@ export function AdminDonationsPageClient({ embedded = false }: { embedded?: bool
         totalItems={filteredCampaigns.length}
         onPageChange={setPage}
       />
+        </TabsContent>
+        <TabsContent value="requests" className="mt-0">
+          <DonationMemberRequests />
+        </TabsContent>
+      </Tabs>
 
       {canCreateDonations || selectedCampaign ?
       <AddDonationCampaignModal

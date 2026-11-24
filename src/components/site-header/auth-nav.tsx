@@ -353,7 +353,7 @@ export function AuthNav() {
 
         <DropdownMenuItem asChild className="md:hidden">
 
-          <Link href="/privacy">
+          <Link href="/legal/privacy">
 
             <Lock className="mr-2 size-4" />
 

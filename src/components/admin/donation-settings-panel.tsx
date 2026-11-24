@@ -18,6 +18,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,6 +100,8 @@ export function DonationSettingsPanel() {
   const [ifscIdentity, setIfscIdentity] = useState<{ bankName: string; branch: string; city: string; state: string } | null>(null);
   const [ifscError, setIfscError] = useState<string | null>(null);
   const [donorMessage, setDonorMessage] = useState("");
+  const [bankConfirmOpen, setBankConfirmOpen] = useState(false);
+  const [encryptionConfigured, setEncryptionConfigured] = useState(false);
 
   useEffect(() => {
     if (!churchId) return;
@@ -126,6 +137,7 @@ export function DonationSettingsPanel() {
           setBankEditing(!ready);
         }
         setDonorMessage(settings.donorAcknowledgement ?? "");
+        setEncryptionConfigured(settings.encryptionConfigured);
         setLoadError(null);
       })
       .catch((error: unknown) => {
@@ -226,7 +238,6 @@ export function DonationSettingsPanel() {
 
   async function saveBank() {
     if (!churchId || busy) return;
-    if (!window.confirm("Save these bank details? They are encrypted. This does not verify that the church owns the account.")) return;
     setBusy(true);
     try {
       const saved = await saveReceivingMethod({
@@ -245,12 +256,20 @@ export function DonationSettingsPanel() {
       setAccount("");
       setBankEditing(false);
       if (saved.authorizationRevoked) setDeclared(false);
+      setBankConfirmOpen(false);
       flash("ok", saved.authorizationRevoked ? "Bank details saved securely. Confirm church authorization again before donors can use them." : "Bank details saved securely.");
     } catch (error) {
       flash("err", error instanceof Error ? error.message : "Could not save bank details.");
     } finally {
       setBusy(false);
     }
+  }
+
+  function previewAccount() {
+    const digits = account.replace(/\D/g, "");
+    if (digits.length >= 4) return `•••• ${digits.slice(-4)}`;
+    if (account.trim()) return "••••";
+    return masked || "Not entered";
   }
 
   async function saveQr() {
@@ -608,11 +627,45 @@ export function DonationSettingsPanel() {
                     <Input id="branch" className="h-9" value={branch} onChange={(event) => setBranch(event.target.value)} />
                   </div>
                   <div className="flex items-end gap-2 sm:col-span-2">
-                    <Button type="button" size="sm" className="h-8" disabled={busy || !holder || !bank || !ifscReady || (!masked && !account)} onClick={() => void saveBank()}>{busy ? "Saving…" : "Save account"}</Button>
+                    <Button type="button" size="sm" className="h-8" disabled={busy || !holder || !bank || !ifscReady || (!masked && !account)} onClick={() => setBankConfirmOpen(true)}>{busy ? "Saving…" : "Save Account"}</Button>
                     {bankReady ? <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => { setBankEditing(false); setAccount(""); }}>Cancel</Button> : null}
                   </div>
                 </div>
               )}
+              <AlertDialog open={bankConfirmOpen} onOpenChange={(open) => { if (!busy) setBankConfirmOpen(open); }}>
+                <AlertDialogContent className="max-w-md gap-4">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm bank account details</AlertDialogTitle>
+                    <AlertDialogDescription>Please review the bank account information before saving it.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <dl className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5 text-sm">
+                    <dt className="text-muted-foreground">Account holder</dt>
+                    <dd className="font-medium">{holder}</dd>
+                    <dt className="text-muted-foreground">Bank name</dt>
+                    <dd>{bank}</dd>
+                    <dt className="text-muted-foreground">Account number</dt>
+                    <dd className="font-mono tabular-nums">{previewAccount()}</dd>
+                    <dt className="text-muted-foreground">IFSC code</dt>
+                    <dd className="font-mono">{ifsc.trim().toUpperCase()}</dd>
+                    <dt className="text-muted-foreground">Branch</dt>
+                    <dd>{branch.trim() || "—"}</dd>
+                  </dl>
+                  <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                    <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                    <span>
+                      {encryptionConfigured
+                        ? "Account details are encrypted at rest. Bank and account ownership have not been independently verified by Koinia."
+                        : "Bank and account ownership have not been independently verified by Koinia."}
+                    </span>
+                  </p>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+                    <Button type="button" size="sm" disabled={busy} onClick={() => void saveBank()}>
+                      {busy ? "Saving…" : "Confirm & Save"}
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ) : null}
 
