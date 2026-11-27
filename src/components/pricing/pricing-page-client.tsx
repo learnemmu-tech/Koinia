@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight, Mail, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RazorpaySubscriptionButton } from "@/components/subscription/razorpay-subscription-button";
 import {
   Card,
@@ -22,7 +23,10 @@ import {
 } from "@/components/ui/accordion";
 import { siteConfig } from "@/config/site";
 import { useSubscriptionOptional } from "@/context/subscription-context";
-import { hasActivePaidEntitlement } from "@/lib/subscription/trial";
+import {
+  resolvePricingPaidPlanCta,
+  resolvePricingTrialCta,
+} from "@/lib/subscription/trial";
 import { cn } from "@/lib/utils";
 import type { BillingInterval } from "@/types/subscription";
 import {
@@ -79,11 +83,8 @@ function ComparisonCell({ value }: { value: string | boolean }) {
 
 export function PricingPageClient() {
   const subscription = useSubscriptionOptional();
-  const paidSubscription = subscription?.snapshot?.subscription;
-  const activePaidPlanId =
-    paidSubscription && hasActivePaidEntitlement(paidSubscription)
-      ? paidSubscription.planId
-      : null;
+  const snapshot = subscription?.snapshot;
+  const subscriptionLoading = Boolean(subscription?.loading);
   const [interval, setInterval] = useState<BillingInterval>("monthly");
   const [perView, setPerView] = useState(1);
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -191,6 +192,24 @@ export function PricingPageClient() {
         {PRICING_TABLE_COLUMNS.map((planId) => {
           const plan = planId === "pro_plus" ? PRO_PLUS_DISPLAY : PLANS[planId];
           const price = formatPlanPrice(plan, interval);
+          const paidCta =
+            planId === "starter" || planId === "professional"
+              ? resolvePricingPaidPlanCta({
+                  planId,
+                  subscription: snapshot?.subscription,
+                  trial: snapshot?.trial,
+                  loading: subscriptionLoading,
+                })
+              : null;
+          const trialCta =
+            plan.monthlyPrice === 0 && !plan.comingSoon && !plan.contactSales
+              ? resolvePricingTrialCta({
+                  trial: snapshot?.trial,
+                  loading: subscriptionLoading,
+                })
+              : null;
+          const showCurrentPlanBadge = paidCta?.kind === "current_plan";
+          const showCurrentTrialBadge = trialCta === "current_trial";
 
           return (
             <div
@@ -214,6 +233,15 @@ export function PricingPageClient() {
               : null}
               <CardHeader className="pb-4">
                 <CardTitle className="text-xl">{plan.name}</CardTitle>
+                {showCurrentPlanBadge ?
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Your Current Plan
+                  </p>
+                : showCurrentTrialBadge ?
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Your Current Trial
+                  </p>
+                : null}
                 <CardDescription className="min-h-10">{plan.tagline}</CardDescription>
                 <div className="pt-2">
                   <p className="text-3xl font-bold tracking-tight">{price}</p>
@@ -249,21 +277,33 @@ export function PricingPageClient() {
                       Contact Sales
                     </Link>
                   </Button>
+                : trialCta === "loading" || paidCta?.kind === "loading" ?
+                  <Skeleton className="h-9 w-full rounded-md" />
+                : trialCta === "current_trial" ?
+                  <Button className="w-full" variant="outline" disabled>
+                    Current Trial
+                  </Button>
                 : plan.monthlyPrice === 0 ?
                   <Button variant="outline" className="w-full" asChild>
                     <Link href="/signup">{plan.ctaLabel ?? "Start 14-day trial"}</Link>
                   </Button>
+                : paidCta?.kind === "current_plan" ?
+                  <Button className="w-full" variant="outline" disabled>
+                    Current Plan
+                  </Button>
+                : paidCta?.kind === "pending" ?
+                  <Button className="w-full" variant="outline" disabled>
+                    Payment pending
+                  </Button>
                 : planId === "starter" || planId === "professional" ?
-                  activePaidPlanId === planId ?
-                    <Button className="w-full" variant="outline" disabled>
-                      Current Plan
-                    </Button>
-                  : <div className="w-full">
-                      <RazorpaySubscriptionButton
-                        planId={planId}
-                        label="Start Subscription"
-                      />
-                    </div>
+                  <RazorpaySubscriptionButton
+                    planId={planId}
+                    className="h-9 w-full"
+                    label={
+                      paidCta?.kind === "upgrade" ? paidCta.label : "Start Subscription"
+                    }
+                    onComplete={() => subscription?.refetch()}
+                  />
                 : null}
               </CardFooter>
             </Card>

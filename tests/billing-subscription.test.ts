@@ -136,6 +136,29 @@ test("receipt pdf is a downloadable document without tax claims", () => {
   assert.match(pdf.toString(), /pay_test/);
 });
 
+test("checkout claim reuses a created Razorpay subscription after refresh", () => {
+  const claim = readFileSync(
+    join(root, "src", "lib", "subscription", "razorpay-subscription-server.ts"),
+    "utf8"
+  );
+  const create = readFileSync(
+    join(root, "src", "app", "api", "subscription", "razorpay", "create", "route.ts"),
+    "utf8"
+  );
+  const button = readFileSync(
+    join(root, "src", "components", "subscription", "razorpay-subscription-button.tsx"),
+    "utf8"
+  );
+  assert.match(claim, /evaluateCheckoutClaim/);
+  assert.match(claim, /lookupCheckoutProvider/);
+  assert.match(claim, /resolveProviderLookupForClaim/);
+  assert.match(create, /kind === "already_active"/);
+  assert.match(create, /kind === "reuse"/);
+  assert.match(button, /requestId/);
+  assert.match(button, /subscription_id: data.subscriptionId/);
+  assert.equal(button.includes("order_id"), false);
+});
+
 test("billing routes authorize the organization and subscription reads reconcile", () => {
   const list = readFileSync(
     join(root, "src", "app", "api", "subscription", "invoices", "route.ts"),

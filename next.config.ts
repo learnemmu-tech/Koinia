@@ -63,6 +63,10 @@ const config: NextConfig = {
     },
   },
   output: isDocker ? "standalone" : undefined,
+  onDemandEntries: {
+    maxInactiveAge: 5 * 60 * 1000,
+    pagesBufferLength: 8,
+  },
   webpack: (config, { dev }) => {
     if (!dev) return config;
     const ignored = [
@@ -72,6 +76,13 @@ const config: NextConfig = {
       "**/.next-dev/**",
     ];
     config.watchOptions = { ...config.watchOptions, ignored };
+    // Root layout compiles can take 10–30s in this app. Webpack's default
+    // 120s chunk timeout still fires if a rebuild invalidates layout.js
+    // mid-request; give the browser more time on a hard reload.
+    config.output = {
+      ...config.output,
+      chunkLoadTimeout: 5 * 60 * 1000,
+    };
     return config;
   },
   async headers() {

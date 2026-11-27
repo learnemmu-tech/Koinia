@@ -19,7 +19,7 @@ export function AuthLightShell({ children }: AuthLightShellProps) {
       enableSystem={false}
       disableTransitionOnChange
     >
-      <div className="auth-light light min-h-dvh bg-[#F6F1E7] text-[#1C2B3A] lg:h-dvh lg:overflow-hidden">
+      <div className="auth-light light min-h-svh bg-[#F6F1E7] text-[#1C2B3A] lg:h-dvh lg:overflow-hidden">
         {children}
       </div>
     </ThemeProvider>

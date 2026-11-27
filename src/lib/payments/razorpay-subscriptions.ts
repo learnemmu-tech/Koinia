@@ -96,25 +96,120 @@ function getTotalCount(): number {
   return value;
 }
 
+class RazorpayApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  readonly reason?: string;
+  readonly field?: string;
+  readonly description?: string;
+
+  constructor({
+    status,
+    code,
+    reason,
+    field,
+    description,
+  }: {
+    status: number;
+    code?: string;
+    reason?: string;
+    field?: string;
+    description?: string;
+  }) {
+    const detail = [description, reason, code ? `(${code})` : null, `HTTP ${status}`]
+      .filter(Boolean)
+      .join(" ");
+    super(detail || `Razorpay request failed (HTTP ${status})`);
+    this.name = "RazorpayApiError";
+    this.status = status;
+    this.code = code;
+    this.reason = reason;
+    this.field = field;
+    this.description = description;
+  }
+}
+
+function razorpayErrorMessage(error: unknown, context: string): string {
+  if (error instanceof TypeError) {
+    return `Unable to reach Razorpay during ${context}. Check the network connection and try again.`;
+  }
+  if (!(error instanceof RazorpayApiError)) {
+    return error instanceof Error && error.message
+      ? error.message
+      : `Razorpay ${context} failed.`;
+  }
+  if (
+    error.status === 401 ||
+    /authentication failed/i.test(`${error.description ?? ""} ${error.reason ?? ""}`)
+  ) {
+    return `Razorpay authentication failed during ${context}. Check that the Test or Live Key ID and Key Secret belong to the same account. ${error.message}`;
+  }
+  if (error.status === 429) {
+    return `Razorpay rate limit reached during ${context}. Wait a moment and try again. ${error.message}`;
+  }
+  return `Razorpay ${context} failed. ${error.message}`;
+}
+
+function planLookupFailureMessage(
+  envName: string,
+  razorpayPlanId: string,
+  error: unknown
+): string {
+  if (error instanceof RazorpayApiError) {
+    const text = `${error.description ?? ""} ${error.reason ?? ""}`;
+    const looksMissing =
+      error.status === 404 ||
+      (/could not be found|does not exist|invalid id|invalid or could not be found/i.test(
+        text
+      ) &&
+        error.status !== 401 &&
+        error.status !== 429);
+    if (looksMissing) {
+      return `${envName} (${razorpayPlanId}) was not found on this Razorpay account. ${error.message}`;
+    }
+  }
+  return razorpayErrorMessage(error, "plan lookup");
+}
+
 async function razorpayRequest<T>(
   path: string,
   method: "GET" | "POST" | "PATCH",
   body?: Record<string, unknown>
 ): Promise<T> {
-  const response = await fetch(`https://api.razorpay.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: getAuthHeader(),
-      "Content-Type": "application/json",
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`https://api.razorpay.com/v1${path}`, {
+      method,
+      headers: {
+        Authorization: getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+  } catch (error) {
+    throw error instanceof TypeError
+      ? new TypeError("Failed to fetch Razorpay")
+      : error;
+  }
 
   if (!response.ok) {
     const error = (await response.json().catch(() => null)) as
-      | { error?: { description?: string } }
+      | {
+          error?: {
+            code?: string;
+            description?: string;
+            field?: string;
+            reason?: string;
+          };
+        }
       | null;
-    throw new Error(error?.error?.description ?? "Razorpay request failed.");
+    throw new RazorpayApiError({
+      status: response.status,
+      code: error?.error?.code?.trim(),
+      reason: error?.error?.reason?.trim(),
+      field: error?.error?.field?.trim(),
+      description: error?.error?.description?.trim(),
+    });
   }
 
   return (await response.json()) as T;
@@ -187,8 +282,18 @@ export async function createRazorpaySubscription({
   const email = notifyEmail?.trim() || undefined;
   const phone = notifyPhone?.trim() || undefined;
   const canNotify = Boolean(linkedCustomerId || email || phone);
+  const razorpayPlanId = getRazorpayPlanId(planId);
+  try {
+    await fetchRazorpayPlan(razorpayPlanId);
+  } catch (error) {
+    const envName =
+      planId === "starter"
+        ? "RAZORPAY_STARTER_PLAN_ID"
+        : "RAZORPAY_PROFESSIONAL_PLAN_ID";
+    throw new Error(planLookupFailureMessage(envName, razorpayPlanId, error));
+  }
   return razorpayRequest<RazorpaySubscriptionResponse>("/subscriptions", "POST", {
-    plan_id: getRazorpayPlanId(planId),
+    plan_id: razorpayPlanId,
     total_count: getTotalCount(),
     quantity: 1,
     customer_notify: canNotify ? 1 : 0,

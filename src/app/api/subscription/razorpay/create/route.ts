@@ -19,6 +19,7 @@ import {
   markSubscriptionCheckoutCreated,
   markSubscriptionCheckoutFailed,
   persistRazorpayCustomerId,
+  markRazorpayCheckoutAuthorized,
 } from "@/lib/subscription/razorpay-subscription-server";
 import {
   authErrorResponse,
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
     attemptId = claim.attempt.id;
     const prefill = await resolvePayerPrefill(auth.clerkId);
     const existingCustomerId = existing?.razorpayCustomerId ?? null;
-    let customerId: string | null = existingCustomerId;
+    let customerId: string | null = null;
     try {
       customerId = await ensureRazorpayCustomer({
         existingCustomerId,
@@ -130,6 +131,7 @@ export async function POST(request: Request) {
         organizationId: auth.organizationId,
         error: error instanceof Error ? error.message : "unknown",
       });
+      customerId = null;
     }
 
     if (claim.kind === "scheduled") {
@@ -150,9 +152,26 @@ export async function POST(request: Request) {
         prefill,
       });
     }
+    if (claim.kind === "already_active" && claim.attempt.providerSubscriptionId) {
+      try {
+        await markRazorpayCheckoutAuthorized({
+          organizationId: auth.organizationId,
+          subscriptionId: claim.attempt.providerSubscriptionId,
+        });
+      } catch {
+        // Entitlement still comes from verified Razorpay state / webhooks.
+      }
+      return NextResponse.json(
+        { error: "A subscription for this plan already exists." },
+        { status: 409 }
+      );
+    }
     if (claim.kind === "conflict") {
       return NextResponse.json(
-        { error: "A subscription checkout is already in progress for this organization." },
+        {
+          error:
+            "A subscription checkout is already in progress for this organization. Wait a moment and try again.",
+        },
         { status: 409 }
       );
     }

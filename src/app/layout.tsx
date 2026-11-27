@@ -83,7 +83,6 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
     : (await import("@/components/root-client-shell")).RootClientShell;
 
   return (
-    <React.StrictMode>
       <html
         lang={locale}
         suppressHydrationWarning
@@ -120,7 +119,6 @@ export default async function RootLayout({ children, modal }: RootLayoutProps) {
           <CookieConsent umamiWebsiteId={env.UMAMI_WEBSITE_ID} />
         </body>
       </html>
-    </React.StrictMode>
   );
 }
 

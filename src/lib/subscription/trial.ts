@@ -1,5 +1,6 @@
 import type {
   ChurchSubscription,
+  PlanId,
   SubscriptionFeatureFlags,
   TrialLifecycle,
 } from "@/types/subscription";
@@ -207,4 +208,60 @@ export function getTrialLifecycle(
     shepherdAiAvailable,
     shepherdDaysRemaining,
   };
+}
+
+export type PricingPaidPlanId = Extract<PlanId, "starter" | "professional">;
+
+export type PricingCtaState =
+  | { kind: "loading" }
+  | { kind: "current_plan" }
+  | { kind: "current_trial" }
+  | { kind: "pending" }
+  | { kind: "subscribe"; label: "Start Subscription" }
+  | { kind: "upgrade"; label: "Upgrade" };
+
+export function resolvePricingPaidPlanCta({
+  planId,
+  subscription,
+  trial,
+  loading,
+  now = Date.now(),
+}: {
+  planId: PricingPaidPlanId;
+  subscription?: EntitlementSubscription | null;
+  trial?: Pick<TrialLifecycle, "access" | "isTrial"> | null;
+  loading: boolean;
+  now?: number;
+}): PricingCtaState {
+  if (loading) return { kind: "loading" };
+
+  if (subscription && hasActivePaidEntitlement(subscription, now)) {
+    if (subscription.planId === planId) return { kind: "current_plan" };
+    if (planId === "professional" && subscription.planId === "starter") {
+      return { kind: "upgrade", label: "Upgrade" };
+    }
+    return { kind: "subscribe", label: "Start Subscription" };
+  }
+
+  if (subscription?.status === "incomplete" && subscription.planId === planId) {
+    return { kind: "pending" };
+  }
+
+  if (trial?.access === "trial" && trial.isTrial) {
+    return { kind: "upgrade", label: "Upgrade" };
+  }
+
+  return { kind: "subscribe", label: "Start Subscription" };
+}
+
+export function resolvePricingTrialCta({
+  trial,
+  loading,
+}: {
+  trial?: Pick<TrialLifecycle, "access" | "isTrial"> | null;
+  loading: boolean;
+}): "loading" | "current_trial" | "signup" {
+  if (loading) return "loading";
+  if (trial?.access === "trial" && trial.isTrial) return "current_trial";
+  return "signup";
 }

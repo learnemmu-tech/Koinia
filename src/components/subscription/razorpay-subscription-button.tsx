@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { firebaseAuth } from "@/lib/firebase-auth-service";
+import { cn } from "@/lib/utils";
 import type { PlanId } from "@/types/subscription";
 
 declare global {
@@ -37,6 +38,7 @@ type RazorpayPaymentFailedResponse = {
 type RazorpaySubscriptionButtonProps = {
   planId: Extract<PlanId, "starter" | "professional">;
   label?: string;
+  className?: string;
   onComplete?: () => void;
 };
 
@@ -113,6 +115,7 @@ async function loadRazorpayScript(): Promise<boolean> {
 export function RazorpaySubscriptionButton({
   planId,
   label = "Start Subscription",
+  className,
   onComplete,
 }: RazorpaySubscriptionButtonProps) {
   const [loading, setLoading] = useState(false);
@@ -127,13 +130,24 @@ export function RazorpaySubscriptionButton({
     setLoading(true);
     try {
       const token = await user.getIdToken();
+      const requestStorageKey = `fch-sub-checkout:${planId}`;
+      let requestId: string | null = null;
+      try {
+        requestId = sessionStorage.getItem(requestStorageKey);
+        if (!requestId) {
+          requestId = crypto.randomUUID();
+          sessionStorage.setItem(requestStorageKey, requestId);
+        }
+      } catch {
+        requestId = crypto.randomUUID();
+      }
       const response = await fetch("/api/subscription/razorpay/create", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, requestId }),
       });
       const data = (await response.json()) as CreateResponse;
       if (!response.ok) throw new Error(data.error ?? "Unable to start subscription.");
@@ -249,6 +263,11 @@ export function RazorpaySubscriptionButton({
               if (!verifyResponse.ok) {
                 throw new Error(verifyData.error ?? "Subscription verification failed.");
               }
+              try {
+                sessionStorage.removeItem(requestStorageKey);
+              } catch {
+                /* ignore */
+              }
               toast.success(
                 verifyData.scheduled
                   ? verifyData.message ??
@@ -307,7 +326,10 @@ export function RazorpaySubscriptionButton({
       type="button"
       onClick={() => void startSubscription()}
       disabled={loading}
-      className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+      className={cn(
+        "inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50",
+        className
+      )}
     >
       {loading ? "Opening checkout..." : label}
     </button>

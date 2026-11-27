@@ -30,24 +30,17 @@ import {
 import { recordPaidRazorpayInvoices } from "@/lib/subscription/billing-receipts";
 import { notifySubscriptionPayments } from "@/lib/subscription/subscription-payment-notice";
 import { hasActivePaidEntitlement } from "@/lib/subscription/trial";
+import {
+  evaluateCheckoutClaim,
+  resolveProviderLookupForClaim,
+  TERMINAL_CHECKOUT_ATTEMPT_STATUSES,
+  TERMINAL_PROVIDER_STATUSES,
+  type ProviderLookup,
+} from "@/lib/subscription/checkout-claim";
 
 const AWAITING_CHARGE_STATUSES = new Set(["created", "authenticated", "pending"]);
 
 const PAID_PLAN_IDS = new Set<PlanId>(["starter", "professional"]);
-const TERMINAL_PROVIDER_STATUSES = new Set([
-  "cancelled",
-  "completed",
-  "expired",
-  "failed",
-  "abandoned",
-]);
-const TERMINAL_CHECKOUT_ATTEMPT_STATUSES = new Set([
-  "failed",
-  "cancelled",
-  "expired",
-  "abandoned",
-]);
-const CHECKOUT_ATTEMPT_STALE_MS = 30 * 60 * 1000;
 
 function isPaidPlan(value: string): value is Extract<PlanId, "starter" | "professional"> {
   return PAID_PLAN_IDS.has(value as PlanId);
@@ -109,6 +102,30 @@ export async function getSubscriptionForRazorpayId(subscriptionId: string) {
   return row ?? null;
 }
 
+async function readCheckoutAttemptForOrg(
+  organizationId: string
+): Promise<typeof subscriptionCheckoutAttempts.$inferSelect | null> {
+  const [row] = await db
+    .select()
+    .from(subscriptionCheckoutAttempts)
+    .where(eq(subscriptionCheckoutAttempts.organizationId, organizationId))
+    .limit(1);
+  return row ?? null;
+}
+
+async function lookupCheckoutProvider(
+  providerSubscriptionId: string | null
+): Promise<ProviderLookup> {
+  const id = providerSubscriptionId?.trim();
+  if (!id) return { kind: "none" };
+  try {
+    const subscription = await fetchRazorpaySubscription(id);
+    return { kind: "found", status: subscription.status };
+  } catch {
+    return { kind: "unreachable" };
+  }
+}
+
 export async function claimSubscriptionCheckoutAttempt({
   organizationId,
   requestId,
@@ -118,7 +135,12 @@ export async function claimSubscriptionCheckoutAttempt({
   requestId: string;
   planId: Extract<PlanId, "starter" | "professional">;
 }) {
-  return db.transaction(async (tx) => {
+  const peeked = await readCheckoutAttemptForOrg(organizationId);
+  const provider = await lookupCheckoutProvider(
+    peeked?.providerSubscriptionId ?? null
+  );
+
+  const claimed = await db.transaction(async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${organizationId}))`
     );
@@ -129,30 +151,54 @@ export async function claimSubscriptionCheckoutAttempt({
       .where(eq(subscriptionCheckoutAttempts.organizationId, organizationId))
       .limit(1);
 
-    const providerStatus = existing?.providerStatus?.toLowerCase() ?? "";
-    const isStale =
-      existing != null &&
-      Date.now() - existing.updatedAt.getTime() >= CHECKOUT_ATTEMPT_STALE_MS;
-    const isOpen =
-      existing != null &&
-      !TERMINAL_CHECKOUT_ATTEMPT_STATUSES.has(existing.status.toLowerCase()) &&
-      !TERMINAL_PROVIDER_STATUSES.has(providerStatus) &&
-      !isStale;
+    const providerForRow = resolveProviderLookupForClaim({
+      lockedProviderId: existing?.providerSubscriptionId,
+      peekedProviderId: peeked?.providerSubscriptionId,
+      lookup: provider,
+    });
 
-    if (existing?.status === "scheduled" && existing.planId === planId) {
+    const decision = evaluateCheckoutClaim({
+      existing: existing
+        ? {
+            requestId: existing.requestId,
+            planId: existing.planId,
+            status: existing.status,
+            providerSubscriptionId: existing.providerSubscriptionId,
+            providerStatus: existing.providerStatus,
+            updatedAt: existing.updatedAt,
+          }
+        : null,
+      requestId,
+      planId,
+      now: Date.now(),
+      provider: providerForRow,
+    });
+
+    if (decision.action === "scheduled" && existing) {
       return { kind: "scheduled" as const, attempt: existing };
     }
-
-    if (isOpen) {
-      if (
-        existing.requestId === requestId &&
-        existing.providerSubscriptionId &&
-        existing.status === "pending"
-      ) {
-        return { kind: "reuse" as const, attempt: existing };
-      }
+    if (decision.action === "reuse" && existing) {
+      const [updated] = await tx
+        .update(subscriptionCheckoutAttempts)
+        .set({
+          requestId,
+          status: "pending",
+          providerStatus: "created",
+          updatedAt: new Date(),
+        })
+        .where(eq(subscriptionCheckoutAttempts.id, existing.id))
+        .returning();
+      return { kind: "reuse" as const, attempt: updated ?? existing };
+    }
+    if (decision.action === "already_active" && existing) {
+      return { kind: "already_active" as const, attempt: existing };
+    }
+    if (decision.action === "conflict" && existing) {
       return { kind: "conflict" as const, attempt: existing };
     }
+
+    const cancelProviderId =
+      decision.action === "replace" ? decision.cancelProviderId : undefined;
 
     if (existing) {
       const [updated] = await tx
@@ -167,15 +213,32 @@ export async function claimSubscriptionCheckoutAttempt({
         })
         .where(eq(subscriptionCheckoutAttempts.id, existing.id))
         .returning();
-      return { kind: "claimed" as const, attempt: updated };
+      return {
+        kind: "claimed" as const,
+        attempt: updated,
+        cancelProviderId,
+      };
     }
 
     const [created] = await tx
       .insert(subscriptionCheckoutAttempts)
       .values({ organizationId, requestId, planId, status: "creating" })
       .returning();
-    return { kind: "claimed" as const, attempt: created };
+    return { kind: "claimed" as const, attempt: created, cancelProviderId };
   });
+
+  if (
+    claimed.kind === "claimed" &&
+    claimed.cancelProviderId &&
+    claimed.cancelProviderId !== claimed.attempt.providerSubscriptionId
+  ) {
+    await cancelCheckoutSubscriptionIfUnlinked(
+      organizationId,
+      claimed.cancelProviderId
+    );
+  }
+
+  return claimed;
 }
 
 export async function markSubscriptionCheckoutCreated({
@@ -203,7 +266,11 @@ export async function markSubscriptionCheckoutCreated({
 export async function markSubscriptionCheckoutFailed(attemptId: string) {
   await db
     .update(subscriptionCheckoutAttempts)
-    .set({ status: "failed", updatedAt: new Date() })
+    .set({
+      status: "failed",
+      providerStatus: "cancelled",
+      updatedAt: new Date(),
+    })
     .where(eq(subscriptionCheckoutAttempts.id, attemptId));
 }
 
@@ -256,7 +323,11 @@ export async function abandonSubscriptionCheckoutAttempt({
 
     const updated = await tx
       .update(subscriptionCheckoutAttempts)
-      .set({ status: "abandoned", updatedAt: new Date() })
+      .set({
+        status: "abandoned",
+        providerStatus: "cancelled",
+        updatedAt: new Date(),
+      })
       .where(eq(subscriptionCheckoutAttempts.id, attempt.id))
       .returning({ id: subscriptionCheckoutAttempts.id });
 
@@ -301,7 +372,11 @@ export async function failSubscriptionCheckoutAttempt({
 
     const updated = await tx
       .update(subscriptionCheckoutAttempts)
-      .set({ status: "failed", updatedAt: new Date() })
+      .set({
+        status: "failed",
+        providerStatus: "cancelled",
+        updatedAt: new Date(),
+      })
       .where(eq(subscriptionCheckoutAttempts.id, attempt.id))
       .returning({ id: subscriptionCheckoutAttempts.id });
 

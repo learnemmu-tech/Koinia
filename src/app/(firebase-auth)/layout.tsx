@@ -20,17 +20,24 @@ export default function FirebaseAuthLayout({
   return (
     <AuthLightShell>
       {/*
-        Desktop: exact viewport shell (100dvh) — both columns equal height,
-        no page scrollbar. Content is compacted to fit; mobile may scroll.
+        Form column fills the viewport. Logo + form + legal links are one
+        block with vertical auto margins: centered when they fit, start at
+        the top and scroll when they do not (signup). Do not center the form
+        independently of the logo — that overlapped the lockup.
       */}
       <div
         className={cn(
           "auth-shell grid w-full overflow-x-hidden bg-[#F6F1E7] text-[#1C2B3A]",
-          "min-h-dvh",
+          "min-h-svh",
           "lg:h-dvh lg:max-h-dvh lg:grid-cols-2 lg:overflow-hidden"
         )}
       >
-        <div className="relative flex min-h-dvh flex-col bg-[#F6F1E7] lg:h-full lg:min-h-0 lg:overflow-hidden">
+        <div
+          className={cn(
+            "relative flex min-h-svh flex-col bg-[#F6F1E7] lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overflow-x-hidden",
+            "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          )}
+        >
           <div className="relative h-[6.5rem] w-full shrink-0 overflow-hidden sm:h-28 lg:hidden">
             <Image
               src="/images/auth-hero.png"
@@ -61,25 +68,21 @@ export default function FirebaseAuthLayout({
             </div>
           </div>
 
-          <div className="auth-panel flex min-h-0 flex-1 flex-col px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 sm:px-8 sm:pt-6 lg:px-12 lg:pb-5 lg:pt-7 xl:px-16 xl:pb-6 xl:pt-8">
-            <div className="mx-auto flex min-h-0 w-full max-w-[490px] flex-1 flex-col">
-              <div className="auth-logo mb-6 flex shrink-0 items-center lg:mb-7">
+          <div className="auth-panel flex min-h-0 flex-1 flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-8 sm:pt-6 lg:px-12 lg:pb-6 lg:pt-7 xl:px-16 xl:pb-8 xl:pt-8">
+            <div className="mx-auto my-auto flex w-full max-w-[490px] flex-col">
+              <div className="auth-logo mb-8 flex shrink-0 items-center lg:mb-8">
                 <AuthPlatformBrand />
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col">
-                <div className="flex min-h-0 flex-1 flex-col justify-center">
-                  <div className="auth-form-slot w-full">{children}</div>
-                </div>
+              <div className="auth-form-slot w-full">{children}</div>
 
-                <Suspense fallback={null}>
-                  <AuthLegalLinks
-                    terms="Terms of Service"
-                    privacy="Privacy Policy"
-                    className="auth-footer mt-5 flex shrink-0 flex-wrap items-center gap-x-2.5 gap-y-1 pt-1 text-[11px] leading-none text-[#6B7280] lg:mt-4 [&_a]:inline-flex [&_a]:min-h-8 [&_a]:items-center [&_a]:hover:text-[#1C2B3A] lg:[&_a]:min-h-0"
-                  />
-                </Suspense>
-              </div>
+              <Suspense fallback={null}>
+                <AuthLegalLinks
+                  terms="Terms of Service"
+                  privacy="Privacy Policy"
+                  className="auth-footer mt-8 flex shrink-0 flex-wrap items-center gap-x-2.5 gap-y-1 pt-2 text-[11px] leading-none text-[#6B7280] [&_a]:inline-flex [&_a]:min-h-8 [&_a]:items-center [&_a]:hover:text-[#1C2B3A] lg:[&_a]:min-h-0"
+                />
+              </Suspense>
             </div>
           </div>
         </div>
